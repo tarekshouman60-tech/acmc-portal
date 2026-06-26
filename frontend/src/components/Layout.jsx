@@ -25,7 +25,6 @@ export default function Layout({ page, navigate, children }) {
 
   return (
     <div style={{display:'flex',minHeight:'100vh'}}>
-      {/* Sidebar */}
       <div style={{width:228,background:'#0b4f82',display:'flex',flexDirection:'column',position:'fixed',top:0,left:0,bottom:0,zIndex:100}}>
         <div style={{padding:'20px 18px',borderBottom:'1px solid rgba(255,255,255,.12)'}}>
           <div style={{color:'#fff',fontSize:16,fontWeight:700,letterSpacing:'-.01em'}}>ACMC</div>
@@ -43,12 +42,18 @@ export default function Layout({ page, navigate, children }) {
           ))}
         </nav>
         <div style={{padding:'14px 16px',borderTop:'1px solid rgba(255,255,255,.12)'}}>
-          <div style={{color:'rgba(255,255,255,.85)',fontSize:12.5,fontWeight:600,marginBottom:2}}>{user?.full_name}</div>
-          <div style={{color:'rgba(255,255,255,.4)',fontSize:11,marginBottom:10,textTransform:'uppercase',letterSpacing:'.04em'}}>{user?.role}</div>
-          <button onClick={logout} style={{width:'100%',padding:'7px',borderRadius:6,border:'1px solid rgba(255,255,255,.2)',background:'transparent',color:'rgba(255,255,255,.6)',cursor:'pointer',fontSize:12,fontWeight:500}}>Sign out</button>
+          <div style={{color:'rgba(255,255,255,.85)',fontSize:12.5,fontWeight:600,marginBottom:1}}>{user?.full_name}</div>
+          <div style={{color:'rgba(255,255,255,.4)',fontSize:11,textTransform:'uppercase',letterSpacing:'.04em',marginBottom:10}}>{user?.role}</div>
+          <button onClick={()=>navigate('change-password')}
+            style={{width:'100%',padding:'7px',borderRadius:6,border:'1px solid rgba(255,255,255,.2)',background:'transparent',color:'rgba(255,255,255,.6)',cursor:'pointer',fontSize:12,fontWeight:500,marginBottom:6}}>
+            🔑 Change Password
+          </button>
+          <button onClick={logout}
+            style={{width:'100%',padding:'7px',borderRadius:6,border:'1px solid rgba(255,255,255,.2)',background:'transparent',color:'rgba(255,255,255,.6)',cursor:'pointer',fontSize:12,fontWeight:500}}>
+            Sign out
+          </button>
         </div>
       </div>
-      {/* Main */}
       <div style={{marginLeft:228,flex:1,padding:'28px 32px',maxWidth:'100%',minHeight:'100vh',background:'#f0f4f8'}}>
         {children}
       </div>

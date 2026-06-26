@@ -40,6 +40,7 @@ export const api = {
 
   allOrders: () => req('GET','/orders'),
   addPayment: (data) => req('POST','/payments',data),
+  changePassword: (current_password, new_password) => req('POST','/auth/change-password',{current_password,new_password}),
 }
 
 export function fmtEGP(amount) {

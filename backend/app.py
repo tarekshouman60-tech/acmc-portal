@@ -333,3 +333,27 @@ async def all_orders(db=Depends(get_db), tok=Depends(admin_only)):
     ests = await db.fetch("SELECT e.id,'estimate' as type,e.order_ref,e.status,e.created_at,p.full_name as patient,d.full_name as doctor FROM cost_estimates e JOIN patients p ON p.id=e.patient_id JOIN doctors d ON d.id=e.doctor_id ORDER BY e.created_at DESC")
     combined = sorted([dict(r) for r in list(sims)+list(clns)+list(ests)], key=lambda x: x["created_at"], reverse=True)
     return combined
+
+# ── change password ───────────────────────────────────────────────────────────
+class ChangePasswordReq(BaseModel):
+    current_password: str
+    new_password: str
+
+@app.post("/api/auth/change-password")
+async def change_password(body: ChangePasswordReq, db=Depends(get_db), tok=Depends(decode_token)):
+    if len(body.new_password) < 8:
+        raise HTTPException(400, "Password must be at least 8 characters")
+    if tok["role"] == "admin":
+        row = await db.fetchrow("SELECT id, password_hash FROM admins WHERE id=$1", int(tok["sub"]))
+    else:
+        row = await db.fetchrow("SELECT id, password_hash FROM doctors WHERE id=$1", int(tok["sub"]))
+    if not row:
+        raise HTTPException(404, "User not found")
+    if not bcrypt.checkpw(body.current_password.encode(), row["password_hash"].encode()):
+        raise HTTPException(400, "Current password is incorrect")
+    new_hash = bcrypt.hashpw(body.new_password.encode(), bcrypt.gensalt()).decode()
+    if tok["role"] == "admin":
+        await db.execute("UPDATE admins SET password_hash=$1 WHERE id=$2", new_hash, int(tok["sub"]))
+    else:
+        await db.execute("UPDATE doctors SET password_hash=$1 WHERE id=$2", new_hash, int(tok["sub"]))
+    return {"ok": True}
