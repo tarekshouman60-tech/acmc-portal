@@ -7,7 +7,7 @@ echo "╚═══════════════════════�
 
 # Config
 APP_DIR="/opt/acmc"
-REPO="https://github.com/YOUR_USERNAME/acmc-portal.git"  # update this
+REPO="https://github.com/tarekshouman60-tech/acmc-portal.git"  # update this
 
 # 1. Install Docker if not present
 if ! command -v docker &> /dev/null; then
