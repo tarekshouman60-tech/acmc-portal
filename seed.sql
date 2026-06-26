@@ -1,0 +1,63 @@
+-- Seed services (updated from 1782196853836_service.xlsx)
+INSERT INTO services (code, name, category, unit, per_fraction, notes) VALUES
+
+-- Simulation
+('SIM-001','CT-sim without contrast','Simulation','Per patient',false,NULL),
+('SIM-002','CT-sim with contrast','Simulation','Per patient',false,NULL),
+('SIM-003','MRI-sim with contrast','Simulation','Per patient',false,'MRI compatible fixation system, flat table'),
+('SIM-004','PET-CT-sim','Simulation','Per patient',false,NULL),
+
+-- Immobilization
+('IMM-001','Head mask','Immobilization','Per patient',false,NULL),
+('IMM-002','Head & neck mask','Immobilization','Per patient',false,NULL),
+('IMM-003','Open head mask','Immobilization','Per patient',false,NULL),
+('IMM-004','Open head and chest mask','Immobilization','Per patient',false,NULL),
+('IMM-005','SRS brain mask','Immobilization','Per patient',false,NULL),
+('IMM-006','Pelvis mask','Immobilization','Per patient',false,NULL),
+('IMM-007','Prone breast board','Immobilization','Per patient',false,NULL),
+('IMM-008','Vac-Lok cushion','Immobilization','Per patient',false,NULL),
+
+-- Special Technique
+('TECH-001','Surface Guided RT (SGRT – Identify)','Special Technique','Per patient',false,NULL),
+('TECH-002','Respiratory Gating (Advanced Resp Motion Management System)','Special Technique','Per patient',false,NULL),
+
+-- Planning
+('PLAN-001','IMRT/VMAT Plan','Planning','Per plan',false,NULL),
+('PLAN-002','SRS / SBRT Plan','Planning','Per plan',false,NULL),
+('PLAN-003','3D Conformal Plan (3D-CRT)','Planning','Per plan',false,NULL),
+('PLAN-004','Physics QA – IMRT/VMAT/SBRT/SRS','Planning','Per plan',false,NULL),
+
+-- Treatment Delivery
+('DEL-001','Treatment Delivery – 3D-CRT','Treatment Delivery','Per fraction',true,NULL),
+('DEL-002','Treatment Delivery – IMRT/VMAT','Treatment Delivery','Per fraction',true,NULL),
+('DEL-003','IGRT – HyperSight CBCT (Pre-treatment verification)','Treatment Delivery','Per fraction',true,NULL),
+('DEL-004','IGRT – HyperSight CBCT (Online verification / adaptive)','Treatment Delivery','Per fraction',true,NULL),
+('DEL-005','Electron Beam','Treatment Delivery','Per fraction',true,'Max 2 fields'),
+('DEL-006','TSE – Stanford Technique','Treatment Delivery','Per fraction',true,NULL),
+
+-- SBRT/SRS Packages
+('PKG-001','SBRT 1–5 Fractions – Prostate','SBRT/SRS Package','Package',false,'Fixation, SGRT, QA, CT/MRI-sim, HyperSight, Auto-tracking, 6DoF Couch'),
+('PKG-002','SBRT 1–5 Fractions – Lung','SBRT/SRS Package','Package',false,'Fixation, SGRT, QA, Respiratory Gating, CT-sim, HyperSight, Auto-tracking, 6DoF Couch'),
+('PKG-003','SBRT 1–5 Fractions – Liver / Pancreas / Suprarenal','SBRT/SRS Package','Package',false,'Fixation, SGRT, QA, Respiratory Gating, CT-sim, HyperSight, Auto-tracking, 6DoF Couch'),
+('PKG-004','SBRT 1–5 Fractions – Spine','SBRT/SRS Package','Package',false,'Fixation, SGRT, QA, Respiratory Gating, CT-sim, HyperSight, Auto-tracking, 6DoF Couch'),
+('PKG-005','SBRT 1–5 Fractions – Head & Neck','SBRT/SRS Package','Package',false,'Fixation, SGRT, QA, CT/MRI-sim, HyperSight, Auto-tracking, 6DoF Couch'),
+('PKG-006','SBRT 1–5 Fractions – Oligometastases','SBRT/SRS Package','Package',false,'Fixation, SGRT, QA, Respiratory Gating, CT-sim, HyperSight, Auto-tracking, 6DoF Couch'),
+('PKG-007','SRS 1–5 Fractions – Brain Metastases','SBRT/SRS Package','Package',false,'Fixation, SGRT, QA, MRI/CT-sim, HyperArc, HyperSight, Auto-tracking, 6DoF Couch'),
+('PKG-008','SRS 1–5 Fractions – Benign Lesions','SBRT/SRS Package','Package',false,'Fixation, SGRT, QA, MRI/CT-sim, HyperArc, HyperSight, Auto-tracking, 6DoF Couch'),
+
+-- Special Procedures
+('SPEC-001','Palliative RT (1–5 Fractions)','Special Procedure','Package',false,'Includes sim, plan, and delivery'),
+('SPEC-002','Emergency RT (Same-day simulation + delivery)','Special Procedure','Package',false,'Same-day urgent setup'),
+('SPEC-003','Total Body Irradiation (TBI)','Special Procedure','Package',false,NULL),
+('SPEC-004','Anesthesia (General)','Special Procedure','Per event',false,NULL),
+
+-- Quality & Review
+('QA-001','Velocity – Adaptive RT / Re-irradiation / Plan Sum','Quality & Review','Per plan',false,'Adaptive radiotherapy, re-irradiation, sum of plans'),
+('QA-002','Peer Review','Quality & Review','Per plan',false,NULL),
+('QA-003','Initial Consultation (Oncologist)','Quality & Review','Per event',false,'Online review and acceptance of plan'),
+('QA-004','Follow-up Consultation','Quality & Review','Per event',false,NULL),
+('QA-005','Multidisciplinary Board Review','Quality & Review','Per event',false,NULL);
+
+-- Default admin (password: Admin@ACMC2024 — change on first login)
+INSERT INTO admins (full_name, email, password_hash) VALUES
+('ACMC Admin','admin@acmc.eg','$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TiGninemf0GaRr8UuSqJfWQrVq1i');
