@@ -41,6 +41,9 @@ export const api = {
   allOrders: () => req('GET','/orders'),
   addPayment: (data) => req('POST','/payments',data),
   changePassword: (current_password, new_password) => req('POST','/auth/change-password',{current_password,new_password}),
+  updateSimStatus: (id, status) => req('PATCH',`/sim-orders/${id}/status`,{status}),
+  updateClinicalStatus: (id, status) => req('PATCH',`/clinical-orders/${id}/status`,{status}),
+  updateEstimateStatus: (id, status) => req('PATCH',`/estimates/${id}/status`,{status}),
 }
 
 export function fmtEGP(amount) {

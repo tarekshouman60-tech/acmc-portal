@@ -357,3 +357,66 @@ async def change_password(body: ChangePasswordReq, db=Depends(get_db), tok=Depen
     else:
         await db.execute("UPDATE doctors SET password_hash=$1 WHERE id=$2", new_hash, int(tok["sub"]))
     return {"ok": True}
+
+# ── update order status (admin) ───────────────────────────────────────────────
+class StatusUpdate(BaseModel):
+    status: str
+
+@app.patch("/api/sim-orders/{oid}/status")
+async def update_sim_status(oid: int, body: StatusUpdate, db=Depends(get_db), tok=Depends(admin_only)):
+    valid = ['pending','scheduled','done','cancelled']
+    if body.status not in valid:
+        raise HTTPException(400, f"Invalid status. Must be one of: {valid}")
+    await db.execute("UPDATE sim_orders SET status=$1 WHERE id=$2", body.status, oid)
+    return {"ok": True}
+
+@app.patch("/api/clinical-orders/{oid}/status")
+async def update_clinical_status(oid: int, body: StatusUpdate, db=Depends(get_db), tok=Depends(admin_only)):
+    valid = ['pending','in_progress','completed','cancelled']
+    if body.status not in valid:
+        raise HTTPException(400, f"Invalid status. Must be one of: {valid}")
+    await db.execute("UPDATE clinical_orders SET status=$1 WHERE id=$2", body.status, oid)
+    return {"ok": True}
+
+@app.patch("/api/estimates/{eid}/status")
+async def update_estimate_status(eid: int, body: StatusUpdate, db=Depends(get_db), tok=Depends(admin_only)):
+    valid = ['unpaid','partial','in_settlement','paid','cancelled']
+    if body.status not in valid:
+        raise HTTPException(400, f"Invalid status. Must be one of: {valid}")
+    await db.execute("UPDATE cost_estimates SET status=$1 WHERE id=$2", body.status, eid)
+    # sync billing status too
+    await db.execute("UPDATE billing SET status=$1 WHERE estimate_id=$2", body.status, eid)
+    return {"ok": True}
+
+# ── update order status (admin) ───────────────────────────────────────────────
+class StatusUpdate(BaseModel):
+    status: str
+
+@app.patch("/api/sim-orders/{oid}/status")
+async def update_sim_status(oid: int, body: StatusUpdate, db=Depends(get_db), tok=Depends(admin_only)):
+    valid = ['pending','scheduled','done','cancelled']
+    if body.status not in valid:
+        raise HTTPException(400, f"Status must be one of: {valid}")
+    await db.execute("UPDATE sim_orders SET status=$1 WHERE id=$2", body.status, oid)
+    return {"ok": True}
+
+@app.patch("/api/clinical-orders/{oid}/status")
+async def update_clinical_status(oid: int, body: StatusUpdate, db=Depends(get_db), tok=Depends(admin_only)):
+    valid = ['pending','in_progress','completed','cancelled']
+    if body.status not in valid:
+        raise HTTPException(400, f"Status must be one of: {valid}")
+    await db.execute("UPDATE clinical_orders SET status=$1 WHERE id=$2", body.status, oid)
+    return {"ok": True}
+
+@app.patch("/api/estimates/{eid}/status")
+async def update_estimate_status(eid: int, body: StatusUpdate, db=Depends(get_db), tok=Depends(admin_only)):
+    valid = ['pending','in_settlement','paid','cancelled']
+    if body.status not in valid:
+        raise HTTPException(400, f"Status must be one of: {valid}")
+    await db.execute("UPDATE cost_estimates SET status=$1 WHERE id=$2", body.status, eid)
+    # sync billing status too
+    if body.status == 'paid':
+        await db.execute("UPDATE billing SET status='paid' WHERE estimate_id=$1", eid)
+    elif body.status == 'in_settlement':
+        await db.execute("UPDATE billing SET status='partial' WHERE estimate_id=$1", eid)
+    return {"ok": True}
