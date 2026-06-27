@@ -297,8 +297,14 @@ async def add_payment(body: PaymentCreate, db=Depends(get_db), tok=Depends(admin
         "INSERT INTO payments(billing_id,amount_egp,payment_date,method,reference,recorded_by,notes) VALUES($1,$2,$3,$4,$5,$6,$7)",
         body.billing_id, body.amount_egp, body.payment_date or date.today(), body.method, body.reference, int(tok["sub"]), body.notes)
     paid = await db.fetchval("SELECT COALESCE(SUM(amount_egp),0) FROM payments WHERE billing_id=$1", body.billing_id)
-    bal = float(b["total_amount_egp"]) - float(paid)
-    st = "paid" if bal<=0 else ("partial" if paid>0 else "unpaid")
+    bal = round(float(b["total_amount_egp"]) - float(paid), 2)
+    if bal <= 0:
+        st = "paid"
+        bal = 0
+    elif float(paid) > 0:
+        st = "partial"
+    else:
+        st = "unpaid"
     await db.execute("UPDATE billing SET amount_paid_egp=$1,balance_egp=$2,status=$3,updated_at=NOW() WHERE id=$4", paid, bal, st, body.billing_id)
     return {"ok":True,"balance_egp":bal}
 
