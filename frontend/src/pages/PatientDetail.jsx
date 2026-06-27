@@ -3,7 +3,7 @@ import { api, fmtEGP, fmtDate } from '../api.js'
 import { useAuth } from '../App.jsx'
 import { StatusBadge, StatusDropdown } from '../components/StatusBadge.jsx'
 
-function Milestone({ label, done, date }) {
+function MilestoneStep({ label, done, date }) {
   return (
     <div style={{flex:1,textAlign:'center'}}>
       <div style={{width:28,height:28,borderRadius:'50%',margin:'0 auto',position:'relative',zIndex:1,
@@ -17,10 +17,59 @@ function Milestone({ label, done, date }) {
   )
 }
 
+const MILESTONE_FIELDS = [
+  {doneKey:'simulation_done',    dateKey:'simulation_date',      label:'CT Simulation'},
+  {doneKey:'planning_done',      dateKey:'planning_date',        label:'Treatment Planning'},
+  {doneKey:'treatment_started',  dateKey:'treatment_start_date', label:'Treatment Started'},
+  {doneKey:'treatment_completed',dateKey:'treatment_end_date',   label:'Treatment Completed'},
+]
+
+function MilestoneEditor({ patientId, milestones, onSaved }) {
+  const [form, setForm] = useState(milestones || {})
+  const [saving, setSaving] = useState(false)
+  const inp = {border:'1px solid #dde3ec',borderRadius:5,padding:'6px 9px',fontSize:13,fontFamily:'inherit',outline:'none'}
+
+  async function save() {
+    setSaving(true)
+    try {
+      await api.updateMilestones(patientId, form)
+      onSaved(form)
+    } catch(e) { alert(e.message) } finally { setSaving(false) }
+  }
+
+  return (
+    <div style={{marginTop:16,borderTop:'1px solid #dde3ec',paddingTop:16}}>
+      {MILESTONE_FIELDS.map(({doneKey,dateKey,label}) => (
+        <div key={doneKey} style={{display:'grid',gridTemplateColumns:'1fr auto auto',alignItems:'center',gap:14,padding:'10px 0',borderBottom:'1px solid #f0f4f8'}}>
+          <div style={{fontSize:13,fontWeight:500}}>{label}</div>
+          <input type="date" style={inp} value={form[dateKey]||''} onChange={e=>setForm(f=>({...f,[dateKey]:e.target.value}))}/>
+          <label style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',fontSize:13,whiteSpace:'nowrap'}}>
+            <input type="checkbox" checked={!!form[doneKey]} onChange={e=>setForm(f=>({...f,[doneKey]:e.target.checked}))}
+              style={{width:16,height:16,cursor:'pointer'}}/>
+            Done
+          </label>
+        </div>
+      ))}
+      <div style={{marginTop:12}}>
+        <label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>Notes</label>
+        <textarea value={form.notes||''} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} rows={2}
+          style={{...inp,width:'100%',resize:'vertical'}} placeholder="Optional progress notes…"/>
+      </div>
+      <div style={{display:'flex',justifyContent:'flex-end',marginTop:10}}>
+        <button onClick={save} disabled={saving}
+          style={{padding:'8px 18px',borderRadius:7,border:'none',background:'#0b4f82',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
+          {saving?'Saving…':'Save Milestones'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function PatientDetail({ navigate, patientId }) {
   const { user } = useAuth()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [editMilestones, setEditMilestones] = useState(false)
   const isAdmin = user?.role === 'admin'
 
   useEffect(() => {
@@ -43,6 +92,7 @@ export default function PatientDetail({ navigate, patientId }) {
 
   return (
     <div>
+      {/* Header */}
       <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:20}}>
         <div>
           <button onClick={()=>navigate('patients')} style={{background:'none',border:'none',color:'#0b4f82',cursor:'pointer',fontSize:13,fontWeight:500,marginBottom:8,padding:0}}>← Back to patients</button>
@@ -67,25 +117,51 @@ export default function PatientDetail({ navigate, patientId }) {
 
       {/* Milestones */}
       <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'18px 22px',marginBottom:12}}>
-        <div style={{fontSize:11,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:16}}>Treatment progress</div>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+          <div style={{fontSize:11,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em'}}>Treatment progress</div>
+          {isAdmin && (
+            <button onClick={()=>setEditMilestones(e=>!e)}
+              style={{padding:'5px 12px',borderRadius:6,border:'1px solid #dde3ec',background:editMilestones?'#0b4f82':'#fff',
+                color:editMilestones?'#fff':'#0b4f82',cursor:'pointer',fontSize:12,fontWeight:600}}>
+              {editMilestones ? '✕ Close' : '✏️ Edit Milestones'}
+            </button>
+          )}
+        </div>
+
         {milestones
           ? <div style={{display:'flex',gap:0,position:'relative'}}>
               <div style={{position:'absolute',top:14,left:'12.5%',right:'12.5%',height:2,background:'#dde3ec',zIndex:0}}/>
-              <Milestone label="Simulation" done={milestones.simulation_done} date={milestones.simulation_date}/>
-              <Milestone label="Planning" done={milestones.planning_done} date={milestones.planning_date}/>
-              <Milestone label="Treatment start" done={milestones.treatment_started} date={milestones.treatment_start_date}/>
-              <Milestone label="Completed" done={milestones.treatment_completed} date={milestones.treatment_end_date}/>
+              <MilestoneStep label="Simulation"      done={milestones.simulation_done}      date={milestones.simulation_date}/>
+              <MilestoneStep label="Planning"        done={milestones.planning_done}        date={milestones.planning_date}/>
+              <MilestoneStep label="Treatment start" done={milestones.treatment_started}    date={milestones.treatment_start_date}/>
+              <MilestoneStep label="Completed"       done={milestones.treatment_completed}  date={milestones.treatment_end_date}/>
             </div>
           : <div style={{color:'#8898aa',fontSize:13}}>No milestones recorded yet.</div>
         }
-        {milestones?.notes && <div style={{marginTop:12,fontSize:12.5,color:'#4a5a70',borderTop:'1px solid #f0f4f8',paddingTop:10}}><strong>Notes:</strong> {milestones.notes}</div>}
+
+        {milestones?.notes && !editMilestones && (
+          <div style={{marginTop:12,fontSize:12.5,color:'#4a5a70',borderTop:'1px solid #f0f4f8',paddingTop:10}}>
+            <strong>Notes:</strong> {milestones.notes}
+          </div>
+        )}
+
+        {isAdmin && editMilestones && (
+          <MilestoneEditor
+            patientId={patientId}
+            milestones={milestones}
+            onSaved={updated => {
+              setData(d => ({...d, milestones: {...d.milestones, ...updated}}))
+              setEditMilestones(false)
+            }}
+          />
+        )}
       </div>
 
       {/* Orders tables */}
       {[
-        {title:'Simulation Orders',         items:sim_orders,      type:'sim',      cols:['Ref','Sim Date','Status']},
-        {title:'Clinical Treatment Orders', items:clinical_orders,  type:'clinical', cols:['Ref','Technique','Dose','Status']},
-        {title:'Cost Estimates',            items:cost_estimates,   type:'estimate', cols:['Ref','Total (EGP)','Status']},
+        {title:'Simulation Orders',         items:sim_orders,     type:'sim',      cols:['Ref','Sim Date','Status']},
+        {title:'Clinical Treatment Orders', items:clinical_orders, type:'clinical', cols:['Ref','Technique','Dose','Status']},
+        {title:'Cost Estimates',            items:cost_estimates,  type:'estimate', cols:['Ref','Total (EGP)','Status']},
       ].map(({title,items,type,cols})=>(
         <div key={type} style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,marginBottom:12,overflow:'hidden'}}>
           <div style={{padding:'13px 20px',borderBottom:'1px solid #dde3ec',fontWeight:600,fontSize:13.5}}>
@@ -110,7 +186,7 @@ export default function PatientDetail({ navigate, patientId }) {
                       <td style={{padding:'10px 16px'}}>
                         {isAdmin
                           ? <StatusDropdown type={type} id={item.id} currentStatus={item.status}
-                              onUpdated={s => updateOrderStatus(type, item.id, s)}/>
+                              onUpdated={s=>updateOrderStatus(type,item.id,s)}/>
                           : <StatusBadge status={item.status}/>
                         }
                       </td>
