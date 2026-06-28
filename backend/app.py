@@ -190,6 +190,18 @@ async def create_sim(body: SimOrderCreate, db=Depends(get_db), tok=Depends(docto
     did = int(tok["sub"])
     p = await db.fetchrow("SELECT id FROM patients WHERE id=$1 AND doctor_id=$2", body.patient_id, did)
     if not p: raise HTTPException(403,"Patient not found")
+    # Check if existing sim order for this patient — replace if exists
+    existing = await db.fetchrow("SELECT id, order_ref FROM sim_orders WHERE patient_id=$1 AND doctor_id=$2 ORDER BY created_at DESC LIMIT 1", body.patient_id, did)
+    if existing:
+        await db.execute("""UPDATE sim_orders SET positioning=$1,fixation=$2,shields=$3,bolus=$4,bolus_thickness=$5,
+           ct_contrast=$6,ct_slice_thickness=$7,ct_scan_region=$8,ct_4d=$9,sgrt=$10,rpm=$11,mri=$12,
+           mri_sequence=$13,mri_contrast=$14,mri_slice_thickness=$15,pet_ct=$16,special_orders=$17,
+           notes_to_physics=$18,sim_date_requested=$19,status='pending' WHERE id=$20""",
+           body.positioning, body.fixation, body.shields, body.bolus, body.bolus_thickness,
+           body.ct_contrast, body.ct_slice_thickness, body.ct_scan_region, body.ct_4d, body.sgrt, body.rpm,
+           body.mri, body.mri_sequence, body.mri_contrast, body.mri_slice_thickness, body.pet_ct,
+           body.special_orders, body.notes_to_physics, body.sim_date_requested, existing["id"])
+        return {"id":existing["id"],"order_ref":existing["order_ref"],"updated":True}
     ref = gen_ref("SIM")
     r = await db.fetchrow(
         """INSERT INTO sim_orders(patient_id,doctor_id,positioning,fixation,shields,bolus,bolus_thickness,
@@ -200,7 +212,7 @@ async def create_sim(body: SimOrderCreate, db=Depends(get_db), tok=Depends(docto
         body.ct_contrast, body.ct_slice_thickness, body.ct_scan_region, body.ct_4d, body.sgrt, body.rpm,
         body.mri, body.mri_sequence, body.mri_contrast, body.mri_slice_thickness, body.pet_ct,
         body.special_orders, body.notes_to_physics, body.sim_date_requested, ref)
-    return {"id":r["id"],"order_ref":ref}
+    return {"id":r["id"],"order_ref":ref,"updated":False}
 
 @app.get("/api/sim-orders/{oid}")
 async def get_sim(oid: int, db=Depends(get_db), tok=Depends(decode_token)):
@@ -217,6 +229,18 @@ async def create_clinical(body: ClinicalOrderCreate, db=Depends(get_db), tok=Dep
     did = int(tok["sub"])
     p = await db.fetchrow("SELECT id FROM patients WHERE id=$1 AND doctor_id=$2", body.patient_id, did)
     if not p: raise HTTPException(403,"Patient not found")
+    # Replace if exists
+    existing = await db.fetchrow("SELECT id, order_ref FROM clinical_orders WHERE patient_id=$1 AND doctor_id=$2 ORDER BY created_at DESC LIMIT 1", body.patient_id, did)
+    if existing:
+        await db.execute("""UPDATE clinical_orders SET clinical_history=$1,total_dose_gy=$2,fractions=$3,
+           duration_weeks=$4,dose_per_fraction_gy=$5,technique=$6,treatment_site=$7,sgrt=$8,dibh=$9,
+           igrt=$10,intent=$11,sequence=$12,special_instructions=$13,notes_to_team=$14,
+           prescription_text=$15,status='pending' WHERE id=$16""",
+           body.clinical_history, body.total_dose_gy, body.fractions,
+           body.duration_weeks, body.dose_per_fraction_gy, body.technique, body.treatment_site,
+           body.sgrt, body.dibh, body.igrt, body.intent, body.sequence,
+           body.special_instructions, body.notes_to_team, body.prescription_text, existing["id"])
+        return {"id":existing["id"],"order_ref":existing["order_ref"],"updated":True}
     ref = gen_ref("CLN")
     r = await db.fetchrow(
         """INSERT INTO clinical_orders(patient_id,doctor_id,clinical_history,total_dose_gy,fractions,
@@ -227,7 +251,7 @@ async def create_clinical(body: ClinicalOrderCreate, db=Depends(get_db), tok=Dep
         body.duration_weeks, body.dose_per_fraction_gy, body.technique, body.treatment_site,
         body.sgrt, body.dibh, body.igrt, body.intent, body.sequence,
         body.special_instructions, body.notes_to_team, body.prescription_text, ref)
-    return {"id":r["id"],"order_ref":ref}
+    return {"id":r["id"],"order_ref":ref,"updated":False}
 
 @app.get("/api/clinical-orders/{oid}")
 async def get_clinical(oid: int, db=Depends(get_db), tok=Depends(decode_token)):
@@ -244,7 +268,14 @@ async def create_estimate(body: EstimateCreate, db=Depends(get_db), tok=Depends(
     did = int(tok["sub"])
     p = await db.fetchrow("SELECT id FROM patients WHERE id=$1 AND doctor_id=$2", body.patient_id, did)
     if not p: raise HTTPException(403,"Patient not found")
-    ref = gen_ref("EST")
+    # Replace if exists — delete old items and billing, reuse same ref
+    existing = await db.fetchrow("SELECT id, order_ref FROM cost_estimates WHERE patient_id=$1 AND doctor_id=$2 ORDER BY created_at DESC LIMIT 1", body.patient_id, did)
+    if existing:
+        await db.execute("DELETE FROM cost_estimate_items WHERE estimate_id=$1", existing["id"])
+        await db.execute("DELETE FROM payments WHERE billing_id IN (SELECT id FROM billing WHERE estimate_id=$1)", existing["id"])
+        await db.execute("DELETE FROM billing WHERE estimate_id=$1", existing["id"])
+        await db.execute("DELETE FROM cost_estimates WHERE id=$1", existing["id"])
+    ref = existing["order_ref"] if existing else gen_ref("EST")
     total = 0.0; has_tbd = False
     items_data = []
     for item in body.items:
@@ -431,8 +462,17 @@ async def update_estimate_status(eid: int, body: StatusUpdate, db=Depends(get_db
 @app.get("/api/my-orders")
 async def my_orders(db=Depends(get_db), tok=Depends(doctor_or_admin)):
     did = int(tok["sub"])
+    # Get patients where treatment has started
+    started_patients = set(r["patient_id"] for r in await db.fetch(
+        "SELECT patient_id FROM milestones WHERE treatment_started=true AND patient_id IN (SELECT id FROM patients WHERE doctor_id=$1)", did))
+    # Sim and clinical only shown if treatment NOT started
     sims = await db.fetch("SELECT s.id,'sim' as type,s.order_ref,s.status,s.created_at,s.patient_id,p.full_name as patient FROM sim_orders s JOIN patients p ON p.id=s.patient_id WHERE s.doctor_id=$1 ORDER BY s.created_at DESC", did)
     clns = await db.fetch("SELECT c.id,'clinical' as type,c.order_ref,c.status,c.created_at,c.patient_id,p.full_name as patient FROM clinical_orders c JOIN patients p ON p.id=c.patient_id WHERE c.doctor_id=$1 ORDER BY c.created_at DESC", did)
     ests = await db.fetch("SELECT e.id,'estimate' as type,e.order_ref,e.status,e.created_at,e.patient_id,p.full_name as patient FROM cost_estimates e JOIN patients p ON p.id=e.patient_id WHERE e.doctor_id=$1 ORDER BY e.created_at DESC", did)
-    combined = sorted([dict(r) for r in list(sims)+list(clns)+list(ests)], key=lambda x: x["created_at"], reverse=True)
+    filtered = (
+        [dict(r) for r in sims if r["patient_id"] not in started_patients] +
+        [dict(r) for r in clns if r["patient_id"] not in started_patients] +
+        [dict(r) for r in ests]
+    )
+    combined = sorted(filtered, key=lambda x: x["created_at"], reverse=True)
     return combined
