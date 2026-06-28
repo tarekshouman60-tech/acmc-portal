@@ -13,7 +13,7 @@ export default function AllOrders({ navigate }) {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
   const [orders, setOrders] = useState([])
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter] = useState('sim')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export default function AllOrders({ navigate }) {
     setOrders(os => os.map(o => o.id===id && o.type===type ? {...o, status:newStatus} : o))
   }
 
-  const filtered = filter==='all' ? orders : orders.filter(o => o.type===filter)
+  const filtered = orders.filter(o => o.type===filter)
 
   return (
     <div>
@@ -35,12 +35,12 @@ export default function AllOrders({ navigate }) {
       </div>
 
       <div style={{display:'flex',gap:8,marginBottom:14}}>
-        {['all','sim','clinical','estimate'].map(f=>(
+        {['sim','clinical','estimate'].map(f=>(
           <button key={f} onClick={()=>setFilter(f)}
             style={{padding:'6px 14px',borderRadius:20,border:'1px solid #dde3ec',
               background:filter===f?'#0b4f82':'#fff',color:filter===f?'#fff':'#4a5a70',
               cursor:'pointer',fontSize:12.5,fontWeight:500}}>
-            {f==='all'?'All':f==='sim'?'Simulation':f==='clinical'?'Clinical':'Cost Estimates'}
+            {f==='sim'?'Simulation':f==='clinical'?'Clinical':'Billing'}
           </button>
         ))}
       </div>

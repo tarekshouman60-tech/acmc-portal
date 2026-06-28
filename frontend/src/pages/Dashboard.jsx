@@ -14,9 +14,33 @@ function Stat({ label, value, color='#0b4f82' }) {
 export default function Dashboard({ navigate }) {
   const { user } = useAuth()
   const [data, setData] = useState(null)
+  const [planning, setPlanning] = useState([])
   const isAdmin = user?.role === 'admin'
 
-  useEffect(() => { api.dashboard().then(setData).catch(console.error) }, [])
+  useEffect(() => {
+    api.dashboard().then(setData).catch(console.error)
+    if (user?.role === 'admin') {
+      api.patients().then(patients => {
+        // For each patient fetch milestones via getPatient
+        Promise.all(patients.slice(0,20).map(p => api.getPatient(p.id))).then(details => {
+          const rows = details
+            .filter(d => d.milestones && (d.milestones.planning_done || d.milestones.treatment_started))
+            .map(d => ({
+              name: d.patient.full_name,
+              doctor: d.patient.doctor_name,
+              planning_date: d.milestones.planning_date,
+              planning_done: d.milestones.planning_done,
+              treatment_start: d.milestones.treatment_start_date,
+              treatment_started: d.milestones.treatment_started,
+              treatment_end: d.milestones.treatment_end_date,
+              treatment_completed: d.milestones.treatment_completed,
+              patientId: d.patient.id
+            }))
+          setPlanning(rows)
+        })
+      })
+    }
+  }, [])
 
   if (!data) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:200}}>
@@ -33,50 +57,90 @@ export default function Dashboard({ navigate }) {
         </p>
       </div>
 
+      {/* Stats */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:14,marginBottom:24}}>
         <Stat label="Patients" value={data.total_patients}/>
         <Stat label="Sim Orders" value={data.sim_orders} color="#4338ca"/>
         <Stat label="Clinical Orders" value={data.clinical_orders} color="#00a896"/>
         <Stat label="Cost Estimates" value={data.cost_estimates} color="#e67e22"/>
-        {isAdmin && <>
-          <Stat label="Total Billed" value={fmtEGP(data.total_billed_egp)} color="#1a7a4a"/>
-          <Stat label="Total Paid" value={fmtEGP(data.total_paid_egp)} color="#0b4f82"/>
-        </>}
       </div>
 
-      <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10}}>
-        <div style={{padding:'14px 20px',borderBottom:'1px solid #dde3ec',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-          <span style={{fontWeight:600,fontSize:14}}>Recent Patients</span>
-          <button onClick={()=>navigate('patients')} style={{fontSize:12.5,color:'#0b4f82',background:'none',border:'none',cursor:'pointer',fontWeight:500}}>
-            View all →
-          </button>
+      <div style={{display:'grid',gridTemplateColumns:isAdmin?'1fr 1fr':'1fr',gap:16}}>
+        {/* Recent patients */}
+        <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10}}>
+          <div style={{padding:'14px 20px',borderBottom:'1px solid #dde3ec',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <span style={{fontWeight:600,fontSize:14}}>Recent Patients</span>
+            <button onClick={()=>navigate('patients')} style={{fontSize:12.5,color:'#0b4f82',background:'none',border:'none',cursor:'pointer',fontWeight:500}}>View all →</button>
+          </div>
+          {data.recent_patients?.length === 0
+            ? <div style={{padding:32,textAlign:'center',color:'#8898aa',fontSize:13}}>No patients yet.</div>
+            : <table style={{width:'100%',borderCollapse:'collapse'}}>
+                <thead><tr>
+                  <th style={{padding:'9px 16px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec'}}>Patient</th>
+                  {isAdmin && <th style={{padding:'9px 16px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec'}}>Doctor</th>}
+                  <th style={{padding:'9px 16px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec'}}>Added</th>
+                  <th style={{padding:'9px 16px',borderBottom:'1px solid #dde3ec'}}></th>
+                </tr></thead>
+                <tbody>
+                  {data.recent_patients?.map((p,i) => (
+                    <tr key={i} onClick={()=>navigate('patient-detail',{patientId:p.id})} style={{cursor:'pointer'}}>
+                      <td style={{padding:'11px 16px',fontSize:13,borderBottom:'1px solid #f0f4f8'}}>
+                        <div style={{fontWeight:500}}>{p.full_name}</div>
+                        {p.diagnosis && <div style={{fontSize:11,color:'#8898aa',marginTop:1}}>{p.diagnosis}</div>}
+                      </td>
+                      {isAdmin && <td style={{padding:'11px 16px',fontSize:13,color:'#4a5a70',borderBottom:'1px solid #f0f4f8'}}>{p.doctor}</td>}
+                      <td style={{padding:'11px 16px',fontSize:12.5,color:'#8898aa',borderBottom:'1px solid #f0f4f8'}}>{fmtDate(p.created_at)}</td>
+                      <td style={{padding:'11px 16px',borderBottom:'1px solid #f0f4f8',textAlign:'right'}}>
+                        <span style={{fontSize:12,color:'#0b4f82',fontWeight:500}}>Open →</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+          }
         </div>
-        {data.recent_patients?.length === 0
-          ? <div style={{padding:32,textAlign:'center',color:'#8898aa',fontSize:13}}>No patients yet.</div>
-          : <table style={{width:'100%',borderCollapse:'collapse'}}>
-              <thead><tr>
-                <th style={{padding:'9px 16px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec'}}>Patient</th>
-                {isAdmin && <th style={{padding:'9px 16px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec'}}>Doctor</th>}
-                <th style={{padding:'9px 16px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec'}}>Added</th>
-                <th style={{padding:'9px 16px',borderBottom:'1px solid #dde3ec'}}></th>
-              </tr></thead>
-              <tbody>
-                {data.recent_patients?.map((p,i) => (
-                  <tr key={i} onClick={()=>navigate('patient-detail',{patientId:p.id})} style={{cursor:'pointer'}}>
-                    <td style={{padding:'11px 16px',fontSize:13,borderBottom:'1px solid #f0f4f8'}}>
-                      <div style={{fontWeight:500}}>{p.full_name}</div>
-                      {p.diagnosis && <div style={{fontSize:11,color:'#8898aa',marginTop:1}}>{p.diagnosis}</div>}
-                    </td>
-                    {isAdmin && <td style={{padding:'11px 16px',fontSize:13,color:'#4a5a70',borderBottom:'1px solid #f0f4f8'}}>{p.doctor}</td>}
-                    <td style={{padding:'11px 16px',fontSize:12.5,color:'#8898aa',borderBottom:'1px solid #f0f4f8'}}>{fmtDate(p.created_at)}</td>
-                    <td style={{padding:'11px 16px',borderBottom:'1px solid #f0f4f8',textAlign:'right'}}>
-                      <span style={{fontSize:12,color:'#0b4f82',fontWeight:500}}>Open →</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-        }
+
+        {/* Planning tracker — admin only */}
+        {isAdmin && (
+          <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10}}>
+            <div style={{padding:'14px 20px',borderBottom:'1px solid #dde3ec'}}>
+              <span style={{fontWeight:600,fontSize:14}}>Planning & Treatment Tracker</span>
+            </div>
+            {planning.length === 0
+              ? <div style={{padding:32,textAlign:'center',color:'#8898aa',fontSize:13}}>No patients in planning or treatment yet.</div>
+              : <table style={{width:'100%',borderCollapse:'collapse'}}>
+                  <thead><tr>
+                    {['Patient','Doctor','Planning','Treatment start','Completed'].map(h=>(
+                      <th key={h} style={{padding:'8px 14px',textAlign:'left',fontSize:10px,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec'}}>{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {planning.map((r,i)=>(
+                      <tr key={i} onClick={()=>navigate('patient-detail',{patientId:r.patientId})} style={{cursor:'pointer',borderBottom:'1px solid #f0f4f8'}}>
+                        <td style={{padding:'10px 14px',fontSize:13,fontWeight:500}}>{r.name}</td>
+                        <td style={{padding:'10px 14px',fontSize:12,color:'#4a5a70'}}>{r.doctor}</td>
+                        <td style={{padding:'10px 14px',fontSize:12}}>
+                          {r.planning_done
+                            ? <span style={{color:'#1a7a4a',fontWeight:500}}>✓ {fmtDate(r.planning_date)}</span>
+                            : <span style={{color:'#8898aa'}}>—</span>}
+                        </td>
+                        <td style={{padding:'10px 14px',fontSize:12}}>
+                          {r.treatment_started
+                            ? <span style={{color:'#0b4f82',fontWeight:500}}>✓ {fmtDate(r.treatment_start)}</span>
+                            : <span style={{color:'#8898aa'}}>—</span>}
+                        </td>
+                        <td style={{padding:'10px 14px',fontSize:12}}>
+                          {r.treatment_completed
+                            ? <span style={{color:'#1a7a4a',fontWeight:500}}>✓ {fmtDate(r.treatment_end)}</span>
+                            : <span style={{color:'#e67e22'}}>In progress</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+            }
+          </div>
+        )}
       </div>
     </div>
   )
