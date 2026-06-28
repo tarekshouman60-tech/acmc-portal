@@ -111,7 +111,7 @@ export default function Dashboard({ navigate }) {
               : <table style={{width:'100%',borderCollapse:'collapse'}}>
                   <thead><tr>
                     {['Patient','Doctor','Planning','Treatment start','Completed'].map(h=>(
-                      <th key={h} style={{padding:'8px 14px',textAlign:'left',fontSize:10px,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec'}}>{h}</th>
+                      <th key={h} style={{padding:'8px 14px',textAlign:'left',fontSize:'10px',fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec'}}>{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>
