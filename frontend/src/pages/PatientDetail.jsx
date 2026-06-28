@@ -17,6 +17,49 @@ function MilestoneStep({ label, done, date }) {
   )
 }
 
+function MilestoneTimeline({ milestones }) {
+  const steps = [
+    { label:'CT Simulation',      done: milestones.simulation_done,      date: milestones.simulation_date },
+    { label:'Treatment Planning', done: milestones.planning_done,        date: milestones.planning_date },
+    { label:'Treatment Started',  done: milestones.treatment_started,    date: milestones.treatment_start_date },
+    { label:'Treatment Completed',done: milestones.treatment_completed,  date: milestones.treatment_end_date },
+  ]
+  return (
+    <div>
+      {/* Dot track */}
+      <div style={{display:'flex',gap:0,position:'relative',marginBottom:20}}>
+        <div style={{position:'absolute',top:14,left:'12.5%',right:'12.5%',height:2,background:'#dde3ec',zIndex:0}}/>
+        {steps.map(s => (
+          <div key={s.label} style={{flex:1,textAlign:'center'}}>
+            <div style={{width:28,height:28,borderRadius:'50%',margin:'0 auto',position:'relative',zIndex:1,
+              background:s.done?'#1a7a4a':'#fff',border:s.done?'none':'2px solid #dde3ec',
+              display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,color:'#fff'}}>
+              {s.done?'✓':''}
+            </div>
+            <div style={{fontSize:11,fontWeight:600,color:s.done?'#1a7a4a':'#8898aa',marginTop:6}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+      {/* Clear date cards */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:10}}>
+        {steps.map(s => (
+          <div key={s.label} style={{
+            background: s.done ? '#e8f7ef' : '#f7f9fc',
+            border: `1px solid ${s.done ? '#b7e4cc' : '#dde3ec'}`,
+            borderRadius:8, padding:'10px 14px'
+          }}>
+            <div style={{fontSize:10.5,fontWeight:700,color:s.done?'#1a7a4a':'#8898aa',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>{s.label}</div>
+            {s.done
+              ? <div style={{fontSize:13,fontWeight:600,color:'#1a7a4a'}}>✓ {fmtDate(s.date)}</div>
+              : <div style={{fontSize:12.5,color:'#aaa',fontStyle:'italic'}}>Not yet done</div>
+            }
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 const MILESTONE_FIELDS = [
   {doneKey:'simulation_done',    dateKey:'simulation_date',      label:'CT Simulation'},
   {doneKey:'planning_done',      dateKey:'planning_date',        label:'Treatment Planning'},
@@ -129,13 +172,7 @@ export default function PatientDetail({ navigate, patientId }) {
         </div>
 
         {milestones
-          ? <div style={{display:'flex',gap:0,position:'relative'}}>
-              <div style={{position:'absolute',top:14,left:'12.5%',right:'12.5%',height:2,background:'#dde3ec',zIndex:0}}/>
-              <MilestoneStep label="Simulation"      done={milestones.simulation_done}      date={milestones.simulation_date}/>
-              <MilestoneStep label="Planning"        done={milestones.planning_done}        date={milestones.planning_date}/>
-              <MilestoneStep label="Treatment start" done={milestones.treatment_started}    date={milestones.treatment_start_date}/>
-              <MilestoneStep label="Completed"       done={milestones.treatment_completed}  date={milestones.treatment_end_date}/>
-            </div>
+          ? <MilestoneTimeline milestones={milestones}/>
           : <div style={{color:'#8898aa',fontSize:13}}>No milestones recorded yet.</div>
         }
 

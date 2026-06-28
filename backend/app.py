@@ -519,3 +519,38 @@ async def cleanup_duplicates(db=Depends(get_db), tok=Depends(admin_only)):
         await db.execute("DELETE FROM cost_estimate_items WHERE estimate_id=$1", eid)
         await db.execute("DELETE FROM cost_estimates WHERE id=$1", eid)
     return {"ok": True, "cleaned": len(dup_estimates)}
+
+# ── notification stubs (email + whatsapp — configure when center accounts ready) ──
+async def send_notification(db, patient_id: int, milestone: str):
+    """
+    Stub — wire up when center email (SMTP) and WhatsApp Business API are ready.
+    milestone: 'simulation_done' | 'planning_done' | 'treatment_started' | 'treatment_completed'
+    """
+    MILESTONE_LABELS = {
+        'simulation_done':      'CT Simulation completed',
+        'planning_done':        'Treatment Planning completed',
+        'treatment_started':    'Treatment has started',
+        'treatment_completed':  'Treatment completed',
+    }
+    label = MILESTONE_LABELS.get(milestone, milestone)
+    patient = await db.fetchrow(
+        "SELECT p.full_name, d.full_name as doctor_name, d.email as doctor_email, d.phone as doctor_phone "
+        "FROM patients p JOIN doctors d ON d.id=p.doctor_id WHERE p.id=$1", patient_id)
+    if not patient:
+        return
+    # TODO: Email — configure SMTP when center email is ready
+    # import smtplib; from email.mime.text import MIMEText
+    # msg = MIMEText(f"Dear Dr. {patient['doctor_name']},\n\nYour patient {patient['full_name']}: {label}.\n\nACMC Portal")
+    # with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s:
+    #     s.login(SMTP_USER, SMTP_PASS)
+    #     s.sendmail(SMTP_USER, patient['doctor_email'], msg.as_string())
+
+    # TODO: WhatsApp — configure Twilio when WhatsApp Business account is ready
+    # from twilio.rest import Client
+    # client = Client(TWILIO_SID, TWILIO_TOKEN)
+    # client.messages.create(
+    #     from_='whatsapp:+14155238886',
+    #     to=f"whatsapp:{patient['doctor_phone']}",
+    #     body=f"ACMC: Your patient {patient['full_name']} — {label}."
+    # )
+    pass

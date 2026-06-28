@@ -62,7 +62,7 @@ export default function Dashboard({ navigate }) {
         <Stat label="Patients" value={data.total_patients}/>
         <Stat label="Sim Orders" value={data.sim_orders} color="#4338ca"/>
         <Stat label="Clinical Orders" value={data.clinical_orders} color="#00a896"/>
-        <Stat label="Cost Estimates" value={data.cost_estimates} color="#e67e22"/>
+        <Stat label="Billing" value={data.cost_estimates} color="#e67e22"/>
       </div>
 
       <div style={{display:'grid',gridTemplateColumns:isAdmin?'1fr 1fr':'1fr',gap:16}}>

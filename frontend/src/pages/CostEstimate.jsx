@@ -21,7 +21,7 @@ export default function CostEstimate({ navigate, patientId }) {
   const [quantities, setQuantities] = useState({})
   const [openCats, setOpenCats] = useState(new Set())
   const [saving, setSaving] = useState(false)
-  const [customFees, setCustomFees] = useState({'QA-003':0,'QA-005':0})
+  const [customFees, setCustomFees] = useState({'QA-003':0,'QA-004':0,'QA-005':0})
   const [saved, setSaved] = useState(null)
   const [error, setError] = useState('')
 
@@ -47,7 +47,7 @@ export default function CostEstimate({ navigate, patientId }) {
       const svc = services.find(s => s.id === sid)
       if (!svc) return
       const qty = svc.per_fraction ? getQty(sid) : 1
-      if (['QA-003','QA-005'].includes(svc.code)) {
+      if (['QA-003','QA-004','QA-005'].includes(svc.code)) {
         const custom = parseFloat(customFees[svc.code]) || 0
         if (custom > 0) total += custom
         else hasTbd = true
@@ -67,7 +67,7 @@ export default function CostEstimate({ navigate, patientId }) {
         return {
           service_id: sid,
           quantity: svc?.per_fraction ? getQty(sid) : 1,
-          custom_price: ['QA-003','QA-005'].includes(svc?.code) ? (parseFloat(customFees[svc.code])||0) : null
+          custom_price: ['QA-003','QA-004','QA-005'].includes(svc?.code) ? (parseFloat(customFees[svc.code])||0) : null
         }
       })
       const res = await api.createEstimate({ patient_id: patientId, items })
@@ -81,7 +81,7 @@ export default function CostEstimate({ navigate, patientId }) {
       const svc = services.find(s => s.id === sid)
       const qty = svc?.per_fraction ? getQty(sid) : 1
       let sub = null
-      if (['QA-003','QA-005'].includes(svc?.code)) {
+      if (['QA-003','QA-004','QA-005'].includes(svc?.code)) {
         const cf = parseFloat(customFees[svc.code]) || 0
         sub = cf > 0 ? cf : null
       } else {
@@ -221,7 +221,7 @@ th:last-child,td:last-child{text-align:right}
                         )}
                         {!svc.per_fraction && <div/>}
                         <div style={{minWidth:120,textAlign:'right'}}>
-                          {['QA-003','QA-005'].includes(svc.code) && isSel ? (
+                          {['QA-003','QA-004','QA-005'].includes(svc.code) && isSel ? (
                             <div onClick={e=>e.stopPropagation()} style={{display:'flex',alignItems:'center',gap:4,justifyContent:'flex-end'}}>
                               <span style={{fontSize:11,color:'#4a5a70'}}>EGP</span>
                               <input type="number" min="0" placeholder="Your fee"
