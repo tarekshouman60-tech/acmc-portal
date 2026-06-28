@@ -39,6 +39,7 @@ export const api = {
   getEstimate: (id) => req('GET',`/estimates/${id}`),
 
   allOrders: () => req('GET','/orders'),
+  myOrders: () => req('GET','/my-orders'),
   addPayment: (data) => req('POST','/payments',data),
   changePassword: (current_password, new_password) => req('POST','/auth/change-password',{current_password,new_password}),
   updateSimStatus: (id, status) => req('PATCH',`/sim-orders/${id}/status`,{status}),

@@ -334,9 +334,9 @@ async def dashboard(db=Depends(get_db), tok=Depends(decode_token)):
 # ── all orders list (admin) ───────────────────────────────────────────────────
 @app.get("/api/orders")
 async def all_orders(db=Depends(get_db), tok=Depends(admin_only)):
-    sims = await db.fetch("SELECT s.id,'sim' as type,s.order_ref,s.status,s.created_at,p.full_name as patient,d.full_name as doctor FROM sim_orders s JOIN patients p ON p.id=s.patient_id JOIN doctors d ON d.id=s.doctor_id ORDER BY s.created_at DESC")
-    clns = await db.fetch("SELECT c.id,'clinical' as type,c.order_ref,c.status,c.created_at,p.full_name as patient,d.full_name as doctor FROM clinical_orders c JOIN patients p ON p.id=c.patient_id JOIN doctors d ON d.id=c.doctor_id ORDER BY c.created_at DESC")
-    ests = await db.fetch("SELECT e.id,'estimate' as type,e.order_ref,e.status,e.created_at,p.full_name as patient,d.full_name as doctor FROM cost_estimates e JOIN patients p ON p.id=e.patient_id JOIN doctors d ON d.id=e.doctor_id ORDER BY e.created_at DESC")
+    sims = await db.fetch("SELECT s.id,'sim' as type,s.order_ref,s.status,s.created_at,s.patient_id,p.full_name as patient,d.full_name as doctor FROM sim_orders s JOIN patients p ON p.id=s.patient_id JOIN doctors d ON d.id=s.doctor_id ORDER BY s.created_at DESC")
+    clns = await db.fetch("SELECT c.id,'clinical' as type,c.order_ref,c.status,c.created_at,c.patient_id,p.full_name as patient,d.full_name as doctor FROM clinical_orders c JOIN patients p ON p.id=c.patient_id JOIN doctors d ON d.id=c.doctor_id ORDER BY c.created_at DESC")
+    ests = await db.fetch("SELECT e.id,'estimate' as type,e.order_ref,e.status,e.created_at,e.patient_id,p.full_name as patient,d.full_name as doctor FROM cost_estimates e JOIN patients p ON p.id=e.patient_id JOIN doctors d ON d.id=e.doctor_id ORDER BY e.created_at DESC")
     combined = sorted([dict(r) for r in list(sims)+list(clns)+list(ests)], key=lambda x: x["created_at"], reverse=True)
     return combined
 
@@ -426,3 +426,13 @@ async def update_estimate_status(eid: int, body: StatusUpdate, db=Depends(get_db
     elif body.status == 'in_settlement':
         await db.execute("UPDATE billing SET status='partial' WHERE estimate_id=$1", eid)
     return {"ok": True}
+
+# ── my orders (doctor) ────────────────────────────────────────────────────────
+@app.get("/api/my-orders")
+async def my_orders(db=Depends(get_db), tok=Depends(doctor_or_admin)):
+    did = int(tok["sub"])
+    sims = await db.fetch("SELECT s.id,'sim' as type,s.order_ref,s.status,s.created_at,s.patient_id,p.full_name as patient FROM sim_orders s JOIN patients p ON p.id=s.patient_id WHERE s.doctor_id=$1 ORDER BY s.created_at DESC", did)
+    clns = await db.fetch("SELECT c.id,'clinical' as type,c.order_ref,c.status,c.created_at,c.patient_id,p.full_name as patient FROM clinical_orders c JOIN patients p ON p.id=c.patient_id WHERE c.doctor_id=$1 ORDER BY c.created_at DESC", did)
+    ests = await db.fetch("SELECT e.id,'estimate' as type,e.order_ref,e.status,e.created_at,e.patient_id,p.full_name as patient FROM cost_estimates e JOIN patients p ON p.id=e.patient_id WHERE e.doctor_id=$1 ORDER BY e.created_at DESC", did)
+    combined = sorted([dict(r) for r in list(sims)+list(clns)+list(ests)], key=lambda x: x["created_at"], reverse=True)
+    return combined

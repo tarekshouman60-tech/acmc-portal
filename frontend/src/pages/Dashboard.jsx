@@ -2,12 +2,11 @@ import React, { useEffect, useState } from 'react'
 import { api, fmtEGP, fmtDate } from '../api.js'
 import { useAuth } from '../App.jsx'
 
-function Stat({ label, value, sub, color='#0b4f82' }) {
+function Stat({ label, value, color='#0b4f82' }) {
   return (
     <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'18px 22px'}}>
       <div style={{fontSize:11,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em'}}>{label}</div>
       <div style={{fontSize:28,fontWeight:700,color,marginTop:6}}>{value}</div>
-      {sub && <div style={{fontSize:12,color:'#8898aa',marginTop:3}}>{sub}</div>}
     </div>
   )
 }
@@ -29,25 +28,12 @@ export default function Dashboard({ navigate }) {
     <div>
       <div style={{marginBottom:24}}>
         <h1 style={{fontSize:22,fontWeight:700}}>Welcome, {user?.full_name}</h1>
-        <p style={{color:'#4a5a70',fontSize:13,marginTop:4}}>{isAdmin ? 'ACMC Admin — full portal access' : user?.clinic_affiliation||'Referring Physician'}</p>
+        <p style={{color:'#4a5a70',fontSize:13,marginTop:4}}>
+          {isAdmin ? 'ACMC Admin — full portal access' : user?.clinic_affiliation||'Referring Physician'}
+        </p>
       </div>
 
-      {/* Doctor quick-start banner */}
-      {!isAdmin && (
-        <div style={{background:'#0b4f82',borderRadius:10,padding:'16px 22px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-          <div>
-            <div style={{color:'#fff',fontWeight:600,fontSize:14}}>Start a new order</div>
-            <div style={{color:'rgba(255,255,255,.65)',fontSize:12.5,marginTop:2}}>Open a patient record to submit a simulation order, clinical order, or cost estimate.</div>
-          </div>
-          <button onClick={()=>navigate('patients')}
-            style={{padding:'9px 18px',borderRadius:7,border:'none',background:'#fff',color:'#0b4f82',cursor:'pointer',fontSize:13,fontWeight:700,whiteSpace:'nowrap'}}>
-            Go to My Patients →
-          </button>
-        </div>
-      )}
-
-      {/* Stats */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:14,marginBottom:24}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:14,marginBottom:24}}>
         <Stat label="Patients" value={data.total_patients}/>
         <Stat label="Sim Orders" value={data.sim_orders} color="#4338ca"/>
         <Stat label="Clinical Orders" value={data.clinical_orders} color="#00a896"/>
@@ -58,7 +44,6 @@ export default function Dashboard({ navigate }) {
         </>}
       </div>
 
-      {/* Recent patients */}
       <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10}}>
         <div style={{padding:'14px 20px',borderBottom:'1px solid #dde3ec',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
           <span style={{fontWeight:600,fontSize:14}}>Recent Patients</span>
@@ -67,10 +52,7 @@ export default function Dashboard({ navigate }) {
           </button>
         </div>
         {data.recent_patients?.length === 0
-          ? <div style={{padding:32,textAlign:'center',color:'#8898aa',fontSize:13}}>
-              No patients yet.{' '}
-              {!isAdmin && <button onClick={()=>navigate('patients')} style={{color:'#0b4f82',background:'none',border:'none',cursor:'pointer',fontWeight:500}}>Add your first patient →</button>}
-            </div>
+          ? <div style={{padding:32,textAlign:'center',color:'#8898aa',fontSize:13}}>No patients yet.</div>
           : <table style={{width:'100%',borderCollapse:'collapse'}}>
               <thead><tr>
                 <th style={{padding:'9px 16px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec'}}>Patient</th>
