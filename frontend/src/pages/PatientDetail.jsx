@@ -224,7 +224,7 @@ export default function PatientDetail({ navigate, patientId }) {
                         {isAdmin
                           ? <StatusDropdown type={type} id={item.id} currentStatus={item.status}
                               onUpdated={s=>updateOrderStatus(type,item.id,s)}/>
-                          : <StatusBadge status={item.status}/>
+                          : <StatusBadge status={item.status} doctorView={true}/>
                         }
                       </td>
                     </tr>

@@ -77,7 +77,7 @@ export default function AllOrders({ navigate }) {
                           {isAdmin
                             ? <StatusDropdown type={o.type} id={o.id} currentStatus={o.status}
                                 onUpdated={s=>updateStatus(o.id,o.type,s)}/>
-                            : <StatusBadge status={o.status}/>
+                            : <StatusBadge status={o.status} doctorView={true}/>
                           }
                         </td>
                       </tr>

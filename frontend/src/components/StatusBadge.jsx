@@ -25,12 +25,19 @@ const LABELS = {
   cancelled:'Cancelled', unpaid:'Unpaid', partial:'Partial'
 }
 
-export function StatusBadge({ status }) {
+// Doctor-facing labels (pending = Submitted to avoid confusion)
+const DOCTOR_LABELS = {
+  ...LABELS,
+  pending: 'Submitted',
+}
+
+export function StatusBadge({ status, doctorView=false }) {
   const s = COLORS[status] || {bg:'#f0f4f8',color:'#8898aa'}
+  const labels = doctorView ? DOCTOR_LABELS : LABELS
   return (
     <span style={{display:'inline-block',background:s.bg,color:s.color,
       fontSize:11,fontWeight:600,padding:'2px 9px',borderRadius:20,whiteSpace:'nowrap'}}>
-      {LABELS[status] || status?.toUpperCase()}
+      {labels[status] || status?.toUpperCase()}
     </span>
   )
 }
