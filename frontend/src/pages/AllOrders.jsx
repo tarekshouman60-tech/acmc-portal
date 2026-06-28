@@ -74,10 +74,10 @@ export default function AllOrders({ navigate }) {
                         {isAdmin && <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70'}}>{o.doctor}</td>}
                         <td style={{padding:'10px 16px',fontSize:12,color:'#8898aa',whiteSpace:'nowrap'}}>{fmtDate(o.created_at)}</td>
                         <td style={{padding:'10px 16px'}} onClick={e=>e.stopPropagation()}>
-                          {isAdmin
+                          {isAdmin && o.type !== 'clinical'
                             ? <StatusDropdown type={o.type} id={o.id} currentStatus={o.status}
                                 onUpdated={s=>updateStatus(o.id,o.type,s)}/>
-                            : <StatusBadge status={o.status} doctorView={true}/>
+                            : <StatusBadge status={o.status} doctorView={!isAdmin}/>
                           }
                         </td>
                       </tr>

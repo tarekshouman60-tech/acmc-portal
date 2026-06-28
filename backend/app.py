@@ -245,8 +245,8 @@ async def create_clinical(body: ClinicalOrderCreate, db=Depends(get_db), tok=Dep
     r = await db.fetchrow(
         """INSERT INTO clinical_orders(patient_id,doctor_id,clinical_history,total_dose_gy,fractions,
            duration_weeks,dose_per_fraction_gy,technique,treatment_site,sgrt,dibh,igrt,intent,sequence,
-           special_instructions,notes_to_team,prescription_text,order_ref)
-           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id""",
+           special_instructions,notes_to_team,prescription_text,status,order_ref)
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'submitted',$17) RETURNING id""",
         body.patient_id, did, body.clinical_history, body.total_dose_gy, body.fractions,
         body.duration_weeks, body.dose_per_fraction_gy, body.technique, body.treatment_site,
         body.sgrt, body.dibh, body.igrt, body.intent, body.sequence,
@@ -437,13 +437,7 @@ async def update_sim_status(oid: int, body: StatusUpdate, db=Depends(get_db), to
     await db.execute("UPDATE sim_orders SET status=$1 WHERE id=$2", body.status, oid)
     return {"ok": True}
 
-@app.patch("/api/clinical-orders/{oid}/status")
-async def update_clinical_status(oid: int, body: StatusUpdate, db=Depends(get_db), tok=Depends(admin_only)):
-    valid = ['pending','in_progress','completed','cancelled']
-    if body.status not in valid:
-        raise HTTPException(400, f"Status must be one of: {valid}")
-    await db.execute("UPDATE clinical_orders SET status=$1 WHERE id=$2", body.status, oid)
-    return {"ok": True}
+# Clinical orders are doctor-only — no admin status update
 
 @app.patch("/api/estimates/{eid}/status")
 async def update_estimate_status(eid: int, body: StatusUpdate, db=Depends(get_db), tok=Depends(admin_only)):

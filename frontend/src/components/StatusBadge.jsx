@@ -2,10 +2,11 @@ import React, { useState } from 'react'
 import { api } from '../api.js'
 
 const SIM_STATUSES    = ['pending','scheduled','done','cancelled']
-const CLINICAL_STATUSES = ['pending','in_progress','completed','cancelled']
+const CLINICAL_STATUSES = ['submitted'] // doctor-only, read-only for admin
 const ESTIMATE_STATUSES = ['pending','in_settlement','paid','cancelled']
 
 const COLORS = {
+  submitted:     {bg:'#e8f0fb',color:'#0b4f82'},
   pending:       {bg:'#fef4e7',color:'#e67e22'},
   scheduled:     {bg:'#e8f0fb',color:'#0b4f82'},
   done:          {bg:'#e8f7ef',color:'#1a7a4a'},
@@ -19,7 +20,7 @@ const COLORS = {
 }
 
 const LABELS = {
-  pending:'Pending', scheduled:'Scheduled', done:'Done',
+  submitted:'Submitted', pending:'Pending', scheduled:'Scheduled', done:'Done',
   in_progress:'In Progress', completed:'Completed',
   in_settlement:'In Settlement', paid:'Paid',
   cancelled:'Cancelled', unpaid:'Unpaid', partial:'Partial'
@@ -28,7 +29,6 @@ const LABELS = {
 // Doctor-facing labels (pending = Submitted to avoid confusion)
 const DOCTOR_LABELS = {
   ...LABELS,
-  pending: 'Submitted',
 }
 
 export function StatusBadge({ status, doctorView=false }) {
