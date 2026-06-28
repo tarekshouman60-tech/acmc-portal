@@ -15,20 +15,38 @@ function Stat({ label, value, sub, color='#0b4f82' }) {
 export default function Dashboard({ navigate }) {
   const { user } = useAuth()
   const [data, setData] = useState(null)
+  const isAdmin = user?.role === 'admin'
 
   useEffect(() => { api.dashboard().then(setData).catch(console.error) }, [])
 
-  if (!data) return <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:200}}><div style={{width:32,height:32,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite'}}/></div>
-
-  const isAdmin = user?.role === 'admin'
+  if (!data) return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:200}}>
+      <div style={{width:32,height:32,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite'}}/>
+    </div>
+  )
 
   return (
     <div>
       <div style={{marginBottom:24}}>
         <h1 style={{fontSize:22,fontWeight:700}}>Welcome, {user?.full_name}</h1>
-        <p style={{color:'#4a5a70',fontSize:13,marginTop:4}}>{isAdmin ? 'ACMC Admin — full portal access' : user?.clinic_affiliation || 'Referring Physician'}</p>
+        <p style={{color:'#4a5a70',fontSize:13,marginTop:4}}>{isAdmin ? 'ACMC Admin — full portal access' : user?.clinic_affiliation||'Referring Physician'}</p>
       </div>
 
+      {/* Doctor quick-start banner */}
+      {!isAdmin && (
+        <div style={{background:'#0b4f82',borderRadius:10,padding:'16px 22px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div>
+            <div style={{color:'#fff',fontWeight:600,fontSize:14}}>Start a new order</div>
+            <div style={{color:'rgba(255,255,255,.65)',fontSize:12.5,marginTop:2}}>Open a patient record to submit a simulation order, clinical order, or cost estimate.</div>
+          </div>
+          <button onClick={()=>navigate('patients')}
+            style={{padding:'9px 18px',borderRadius:7,border:'none',background:'#fff',color:'#0b4f82',cursor:'pointer',fontSize:13,fontWeight:700,whiteSpace:'nowrap'}}>
+            Go to My Patients →
+          </button>
+        </div>
+      )}
+
+      {/* Stats */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:14,marginBottom:24}}>
         <Stat label="Patients" value={data.total_patients}/>
         <Stat label="Sim Orders" value={data.sim_orders} color="#4338ca"/>
@@ -40,25 +58,38 @@ export default function Dashboard({ navigate }) {
         </>}
       </div>
 
+      {/* Recent patients */}
       <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10}}>
         <div style={{padding:'14px 20px',borderBottom:'1px solid #dde3ec',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
           <span style={{fontWeight:600,fontSize:14}}>Recent Patients</span>
-          <button onClick={() => navigate('patients')} style={{fontSize:12.5,color:'#0b4f82',background:'none',border:'none',cursor:'pointer',fontWeight:500}}>View all →</button>
+          <button onClick={()=>navigate('patients')} style={{fontSize:12.5,color:'#0b4f82',background:'none',border:'none',cursor:'pointer',fontWeight:500}}>
+            View all →
+          </button>
         </div>
         {data.recent_patients?.length === 0
-          ? <div style={{padding:32,textAlign:'center',color:'#8898aa',fontSize:13}}>No patients yet. <button onClick={()=>navigate('patients')} style={{color:'#0b4f82',background:'none',border:'none',cursor:'pointer',fontWeight:500}}>Add your first patient →</button></div>
+          ? <div style={{padding:32,textAlign:'center',color:'#8898aa',fontSize:13}}>
+              No patients yet.{' '}
+              {!isAdmin && <button onClick={()=>navigate('patients')} style={{color:'#0b4f82',background:'none',border:'none',cursor:'pointer',fontWeight:500}}>Add your first patient →</button>}
+            </div>
           : <table style={{width:'100%',borderCollapse:'collapse'}}>
               <thead><tr>
                 <th style={{padding:'9px 16px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec'}}>Patient</th>
                 {isAdmin && <th style={{padding:'9px 16px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec'}}>Doctor</th>}
                 <th style={{padding:'9px 16px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec'}}>Added</th>
+                <th style={{padding:'9px 16px',borderBottom:'1px solid #dde3ec'}}></th>
               </tr></thead>
               <tbody>
                 {data.recent_patients?.map((p,i) => (
-                  <tr key={i} style={{cursor:'pointer'}} onClick={()=>navigate('patient-detail',{patientId:p.id})}>
-                    <td style={{padding:'11px 16px',fontSize:13,borderBottom:'1px solid #f0f4f8'}}>{p.full_name}{p.diagnosis && <div style={{fontSize:11,color:'#8898aa',marginTop:1}}>{p.diagnosis}</div>}</td>
+                  <tr key={i} onClick={()=>navigate('patient-detail',{patientId:p.id})} style={{cursor:'pointer'}}>
+                    <td style={{padding:'11px 16px',fontSize:13,borderBottom:'1px solid #f0f4f8'}}>
+                      <div style={{fontWeight:500}}>{p.full_name}</div>
+                      {p.diagnosis && <div style={{fontSize:11,color:'#8898aa',marginTop:1}}>{p.diagnosis}</div>}
+                    </td>
                     {isAdmin && <td style={{padding:'11px 16px',fontSize:13,color:'#4a5a70',borderBottom:'1px solid #f0f4f8'}}>{p.doctor}</td>}
                     <td style={{padding:'11px 16px',fontSize:12.5,color:'#8898aa',borderBottom:'1px solid #f0f4f8'}}>{fmtDate(p.created_at)}</td>
+                    <td style={{padding:'11px 16px',borderBottom:'1px solid #f0f4f8',textAlign:'right'}}>
+                      <span style={{fontSize:12,color:'#0b4f82',fontWeight:500}}>Open →</span>
+                    </td>
                   </tr>
                 ))}
               </tbody>

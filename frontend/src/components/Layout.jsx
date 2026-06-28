@@ -4,9 +4,6 @@ import { useAuth } from '../App.jsx'
 const DOCTOR_NAV = [
   { id:'dashboard', icon:'📊', label:'Dashboard' },
   { id:'patients',  icon:'👤', label:'My Patients' },
-  { id:'sim-order', icon:'📋', label:'Simulation Order' },
-  { id:'clinical-order', icon:'🩺', label:'Clinical Order' },
-  { id:'cost-estimate',  icon:'💰', label:'Cost Estimate' },
   { id:'my-orders', icon:'📁', label:'My Orders' },
 ]
 const ADMIN_NAV = [
