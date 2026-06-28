@@ -462,13 +462,27 @@ async def update_estimate_status(eid: int, body: StatusUpdate, db=Depends(get_db
 @app.get("/api/my-orders")
 async def my_orders(db=Depends(get_db), tok=Depends(doctor_or_admin)):
     did = int(tok["sub"])
-    # Get patients where treatment has started
+    # Patients where treatment has started — hide sim/clinical for those
     started_patients = set(r["patient_id"] for r in await db.fetch(
         "SELECT patient_id FROM milestones WHERE treatment_started=true AND patient_id IN (SELECT id FROM patients WHERE doctor_id=$1)", did))
-    # Sim and clinical only shown if treatment NOT started
-    sims = await db.fetch("SELECT s.id,'sim' as type,s.order_ref,s.status,s.created_at,s.patient_id,p.full_name as patient FROM sim_orders s JOIN patients p ON p.id=s.patient_id WHERE s.doctor_id=$1 ORDER BY s.created_at DESC", did)
-    clns = await db.fetch("SELECT c.id,'clinical' as type,c.order_ref,c.status,c.created_at,c.patient_id,p.full_name as patient FROM clinical_orders c JOIN patients p ON p.id=c.patient_id WHERE c.doctor_id=$1 ORDER BY c.created_at DESC", did)
-    ests = await db.fetch("SELECT e.id,'estimate' as type,e.order_ref,e.status,e.created_at,e.patient_id,p.full_name as patient FROM cost_estimates e JOIN patients p ON p.id=e.patient_id WHERE e.doctor_id=$1 ORDER BY e.created_at DESC", did)
+    # Latest sim per patient only
+    sims = await db.fetch("""
+        SELECT DISTINCT ON (s.patient_id) s.id,'sim' as type,s.order_ref,s.status,s.created_at,s.patient_id,p.full_name as patient
+        FROM sim_orders s JOIN patients p ON p.id=s.patient_id
+        WHERE s.doctor_id=$1 ORDER BY s.patient_id, s.created_at DESC
+    """, did)
+    # Latest clinical per patient only
+    clns = await db.fetch("""
+        SELECT DISTINCT ON (c.patient_id) c.id,'clinical' as type,c.order_ref,c.status,c.created_at,c.patient_id,p.full_name as patient
+        FROM clinical_orders c JOIN patients p ON p.id=c.patient_id
+        WHERE c.doctor_id=$1 ORDER BY c.patient_id, c.created_at DESC
+    """, did)
+    # Latest estimate per patient only
+    ests = await db.fetch("""
+        SELECT DISTINCT ON (e.patient_id) e.id,'estimate' as type,e.order_ref,e.status,e.created_at,e.patient_id,p.full_name as patient
+        FROM cost_estimates e JOIN patients p ON p.id=e.patient_id
+        WHERE e.doctor_id=$1 ORDER BY e.patient_id, e.created_at DESC
+    """, did)
     filtered = (
         [dict(r) for r in sims if r["patient_id"] not in started_patients] +
         [dict(r) for r in clns if r["patient_id"] not in started_patients] +
@@ -476,3 +490,32 @@ async def my_orders(db=Depends(get_db), tok=Depends(doctor_or_admin)):
     )
     combined = sorted(filtered, key=lambda x: x["created_at"], reverse=True)
     return combined
+
+# ── admin cleanup: remove duplicate orders keeping only latest per patient ────
+@app.post("/api/admin/cleanup-duplicates")
+async def cleanup_duplicates(db=Depends(get_db), tok=Depends(admin_only)):
+    # Keep only the latest sim order per patient
+    await db.execute("""
+        DELETE FROM sim_orders WHERE id NOT IN (
+            SELECT DISTINCT ON (patient_id) id FROM sim_orders ORDER BY patient_id, created_at DESC
+        )
+    """)
+    # Keep only the latest clinical order per patient
+    await db.execute("""
+        DELETE FROM clinical_orders WHERE id NOT IN (
+            SELECT DISTINCT ON (patient_id) id FROM clinical_orders ORDER BY patient_id, created_at DESC
+        )
+    """)
+    # Keep only the latest estimate per patient (cascade deletes items/billing/payments)
+    dup_estimates = await db.fetch("""
+        SELECT id FROM cost_estimates WHERE id NOT IN (
+            SELECT DISTINCT ON (patient_id) id FROM cost_estimates ORDER BY patient_id, created_at DESC
+        )
+    """)
+    for row in dup_estimates:
+        eid = row["id"]
+        await db.execute("DELETE FROM payments WHERE billing_id IN (SELECT id FROM billing WHERE estimate_id=$1)", eid)
+        await db.execute("DELETE FROM billing WHERE estimate_id=$1", eid)
+        await db.execute("DELETE FROM cost_estimate_items WHERE estimate_id=$1", eid)
+        await db.execute("DELETE FROM cost_estimates WHERE id=$1", eid)
+    return {"ok": True, "cleaned": len(dup_estimates)}
