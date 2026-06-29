@@ -235,7 +235,7 @@ async def create_clinical(body: ClinicalOrderCreate, db=Depends(get_db), tok=Dep
         await db.execute("""UPDATE clinical_orders SET clinical_history=$1,total_dose_gy=$2,fractions=$3,
            duration_weeks=$4,dose_per_fraction_gy=$5,technique=$6,treatment_site=$7,sgrt=$8,dibh=$9,
            igrt=$10,intent=$11,sequence=$12,special_instructions=$13,notes_to_team=$14,
-           prescription_text=$15,status='pending' WHERE id=$16""",
+           prescription_text=$15,status='submitted' WHERE id=$16""",
            body.clinical_history, body.total_dose_gy, body.fractions,
            body.duration_weeks, body.dose_per_fraction_gy, body.technique, body.treatment_site,
            body.sgrt, body.dibh, body.igrt, body.intent, body.sequence,
