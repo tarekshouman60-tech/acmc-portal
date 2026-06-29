@@ -162,3 +162,41 @@ CREATE TABLE payments (
   notes TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Doctor financial settings
+ALTER TABLE doctors ADD COLUMN IF NOT EXISTS referral_fee_pct NUMERIC(5,2) DEFAULT 0;
+
+-- Doctor earnings per patient
+CREATE TABLE IF NOT EXISTS doctor_earnings (
+  id SERIAL PRIMARY KEY,
+  doctor_id INTEGER REFERENCES doctors(id),
+  patient_id INTEGER REFERENCES patients(id),
+  estimate_id INTEGER REFERENCES cost_estimates(id),
+  total_billed_egp NUMERIC(12,2),
+  referral_pct NUMERIC(5,2),
+  referral_amount_egp NUMERIC(12,2),
+  doctor_fees_egp NUMERIC(12,2) DEFAULT 0,
+  total_due_egp NUMERIC(12,2),
+  transferred_egp NUMERIC(12,2) DEFAULT 0,
+  balance_egp NUMERIC(12,2),
+  status VARCHAR(20) DEFAULT 'pending',
+  month VARCHAR(7),
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(estimate_id)
+);
+
+-- Transfer records
+CREATE TABLE IF NOT EXISTS doctor_transfers (
+  id SERIAL PRIMARY KEY,
+  doctor_id INTEGER REFERENCES doctors(id),
+  earning_id INTEGER REFERENCES doctor_earnings(id),
+  amount_egp NUMERIC(12,2),
+  transfer_date DATE DEFAULT CURRENT_DATE,
+  method VARCHAR(50),
+  reference VARCHAR(100),
+  recorded_by INTEGER REFERENCES admins(id),
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);

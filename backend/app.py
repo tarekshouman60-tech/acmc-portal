@@ -548,3 +548,163 @@ async def send_notification(db, patient_id: int, milestone: str):
     #     body=f"ACMC: Your patient {patient['full_name']} — {label}."
     # )
     pass
+
+# ── doctor earnings ────────────────────────────────────────────────────────────
+
+class DoctorFeeUpdate(BaseModel):
+    referral_fee_pct: float
+
+class EarningCreate(BaseModel):
+    estimate_id: int
+    doctor_fees_egp: Optional[float] = 0
+
+class TransferCreate(BaseModel):
+    earning_id: int
+    amount_egp: float
+    transfer_date: Optional[date] = None
+    method: str
+    reference: Optional[str] = None
+    notes: Optional[str] = None
+
+@app.patch("/api/doctors/{did}/fee")
+async def set_doctor_fee(did: int, body: DoctorFeeUpdate, db=Depends(get_db), tok=Depends(admin_only)):
+    await db.execute("UPDATE doctors SET referral_fee_pct=$1 WHERE id=$2", body.referral_fee_pct, did)
+    return {"ok": True}
+
+@app.post("/api/earnings")
+async def create_earning(body: EarningCreate, db=Depends(get_db), tok=Depends(admin_only)):
+    est = await db.fetchrow(
+        "SELECT ce.*, d.referral_fee_pct FROM cost_estimates ce JOIN doctors d ON d.id=ce.doctor_id WHERE ce.id=$1",
+        body.estimate_id)
+    if not est: raise HTTPException(404, "Estimate not found")
+    total = float(est["total_egp"] or 0)
+    pct = float(est["referral_fee_pct"] or 0)
+    ref_amount = round(total * pct / 100, 2)
+    doc_fees = float(body.doctor_fees_egp or 0)
+    total_due = round(ref_amount + doc_fees, 2)
+    month = datetime.now().strftime("%Y-%m")
+    existing = await db.fetchrow("SELECT id FROM doctor_earnings WHERE estimate_id=$1", body.estimate_id)
+    if existing:
+        await db.execute("""UPDATE doctor_earnings SET referral_pct=$1,referral_amount_egp=$2,
+            doctor_fees_egp=$3,total_due_egp=$4,balance_egp=$4,total_billed_egp=$5,updated_at=NOW()
+            WHERE estimate_id=$6""",
+            pct, ref_amount, doc_fees, total_due, total, body.estimate_id)
+        return {"id": existing["id"], "total_due_egp": total_due}
+    r = await db.fetchrow("""INSERT INTO doctor_earnings
+        (doctor_id,patient_id,estimate_id,total_billed_egp,referral_pct,referral_amount_egp,
+         doctor_fees_egp,total_due_egp,balance_egp,month)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$8,$9) RETURNING id""",
+        est["doctor_id"], est["patient_id"], body.estimate_id, total, pct,
+        ref_amount, doc_fees, total_due, month)
+    return {"id": r["id"], "total_due_egp": total_due}
+
+@app.get("/api/earnings")
+async def list_earnings(db=Depends(get_db), tok=Depends(decode_token)):
+    if tok["role"] == "admin":
+        rows = await db.fetch("""
+            SELECT de.*,p.full_name as patient_name,d.full_name as doctor_name
+            FROM doctor_earnings de
+            JOIN patients p ON p.id=de.patient_id
+            JOIN doctors d ON d.id=de.doctor_id
+            ORDER BY de.created_at DESC""")
+    else:
+        rows = await db.fetch("""
+            SELECT de.*,p.full_name as patient_name
+            FROM doctor_earnings de
+            JOIN patients p ON p.id=de.patient_id
+            WHERE de.doctor_id=$1
+            ORDER BY de.created_at DESC""", int(tok["sub"]))
+    return [dict(r) for r in rows]
+
+@app.get("/api/earnings/summary")
+async def earnings_summary(db=Depends(get_db), tok=Depends(decode_token)):
+    if tok["role"] == "admin":
+        # Per doctor summary
+        rows = await db.fetch("""
+            SELECT d.id,d.full_name,d.referral_fee_pct,
+                COUNT(de.id) as patient_count,
+                COALESCE(SUM(de.total_due_egp),0) as total_due,
+                COALESCE(SUM(de.transferred_egp),0) as total_transferred,
+                COALESCE(SUM(de.balance_egp),0) as total_balance
+            FROM doctors d
+            LEFT JOIN doctor_earnings de ON de.doctor_id=d.id
+            WHERE d.is_active=true
+            GROUP BY d.id,d.full_name,d.referral_fee_pct
+            ORDER BY d.full_name""")
+        return [dict(r) for r in rows]
+    else:
+        did = int(tok["sub"])
+        total = await db.fetchrow("""
+            SELECT COALESCE(SUM(total_due_egp),0) as total_due,
+                   COALESCE(SUM(transferred_egp),0) as transferred,
+                   COALESCE(SUM(balance_egp),0) as balance,
+                   COUNT(*) as patient_count
+            FROM doctor_earnings WHERE doctor_id=$1""", did)
+        monthly = await db.fetch("""
+            SELECT month,
+                   COALESCE(SUM(total_due_egp),0) as due,
+                   COALESCE(SUM(transferred_egp),0) as transferred,
+                   COALESCE(SUM(balance_egp),0) as balance,
+                   COUNT(*) as patients
+            FROM doctor_earnings WHERE doctor_id=$1
+            GROUP BY month ORDER BY month DESC LIMIT 12""", did)
+        return {"summary": dict(total), "monthly": [dict(r) for r in monthly]}
+
+@app.post("/api/transfers")
+async def add_transfer(body: TransferCreate, db=Depends(get_db), tok=Depends(admin_only)):
+    earning = await db.fetchrow("SELECT * FROM doctor_earnings WHERE id=$1", body.earning_id)
+    if not earning: raise HTTPException(404)
+    await db.execute("""INSERT INTO doctor_transfers
+        (doctor_id,earning_id,amount_egp,transfer_date,method,reference,recorded_by,notes)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8)""",
+        earning["doctor_id"], body.earning_id, body.amount_egp,
+        body.transfer_date or date.today(), body.method, body.reference,
+        int(tok["sub"]), body.notes)
+    transferred = await db.fetchval(
+        "SELECT COALESCE(SUM(amount_egp),0) FROM doctor_transfers WHERE earning_id=$1", body.earning_id)
+    balance = round(float(earning["total_due_egp"]) - float(transferred), 2)
+    status = "transferred" if balance <= 0 else ("partial" if transferred > 0 else "pending")
+    await db.execute("""UPDATE doctor_earnings SET transferred_egp=$1,balance_egp=$2,
+        status=$3,updated_at=NOW() WHERE id=$4""", transferred, balance, status, body.earning_id)
+    return {"ok": True, "balance_egp": balance}
+
+# ── DB migration on startup (adds new tables if not exist) ────────────────────
+@app.on_event("startup")
+async def startup_migrate():
+    conn = await asyncpg.connect(os.getenv("DATABASE_URL","postgresql://acmc:acmc_pass@db:5432/acmc"))
+    try:
+        await conn.execute("""
+            ALTER TABLE doctors ADD COLUMN IF NOT EXISTS referral_fee_pct NUMERIC(5,2) DEFAULT 0;
+            CREATE TABLE IF NOT EXISTS doctor_earnings (
+                id SERIAL PRIMARY KEY,
+                doctor_id INTEGER REFERENCES doctors(id),
+                patient_id INTEGER REFERENCES patients(id),
+                estimate_id INTEGER REFERENCES cost_estimates(id),
+                total_billed_egp NUMERIC(12,2),
+                referral_pct NUMERIC(5,2),
+                referral_amount_egp NUMERIC(12,2),
+                doctor_fees_egp NUMERIC(12,2) DEFAULT 0,
+                total_due_egp NUMERIC(12,2),
+                transferred_egp NUMERIC(12,2) DEFAULT 0,
+                balance_egp NUMERIC(12,2),
+                status VARCHAR(20) DEFAULT 'pending',
+                month VARCHAR(7),
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+            CREATE TABLE IF NOT EXISTS doctor_transfers (
+                id SERIAL PRIMARY KEY,
+                doctor_id INTEGER REFERENCES doctors(id),
+                earning_id INTEGER REFERENCES doctor_earnings(id),
+                amount_egp NUMERIC(12,2),
+                transfer_date DATE DEFAULT CURRENT_DATE,
+                method VARCHAR(50),
+                reference VARCHAR(100),
+                recorded_by INTEGER REFERENCES admins(id),
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
+    finally:
+        await conn.close()

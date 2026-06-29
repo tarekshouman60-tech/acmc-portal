@@ -5,6 +5,7 @@ const DOCTOR_NAV = [
   { id:'dashboard', icon:'📊', label:'Dashboard' },
   { id:'patients',  icon:'👤', label:'My Patients' },
   { id:'my-orders', icon:'📁', label:'My Orders' },
+  { id:'earnings',  icon:'💵', label:'My Earnings' },
 ]
 const ADMIN_NAV = [
   { id:'dashboard',  icon:'📊', label:'Dashboard' },
@@ -14,6 +15,7 @@ const ADMIN_NAV = [
   { id:'billing',    icon:'💳', label:'Billing' },
   { id:'services',   icon:'💰', label:'Price Management' },
   { id:'doctors',    icon:'👨‍⚕️', label:'Doctor Accounts' },
+  { id:'earnings',   icon:'💵', label:'Doctor Earnings' },
 ]
 
 export default function Layout({ page, navigate, children }) {

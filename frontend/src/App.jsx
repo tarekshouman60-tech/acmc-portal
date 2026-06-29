@@ -13,6 +13,7 @@ import ClinicalOrder from './pages/ClinicalOrder.jsx'
 import CostEstimate from './pages/CostEstimate.jsx'
 import Milestones from './pages/Milestones.jsx'
 import Billing from './pages/Billing.jsx'
+import Earnings from './pages/Earnings.jsx'
 import ChangePassword from './pages/ChangePassword.jsx'
 
 export const AuthCtx = createContext(null)
@@ -49,6 +50,7 @@ export default function App() {
       case 'doctors':        return <Doctors/>
       case 'milestones':     return <Milestones navigate={navigate}/>
       case 'billing':          return <Billing navigate={navigate}/>
+      case 'earnings':         return <Earnings/>
       case 'change-password': return <ChangePassword/>
       default:               return <Dashboard navigate={navigate}/>
     }
