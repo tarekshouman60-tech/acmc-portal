@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
-import asyncpg, jwt, bcrypt, os, random, string
+import asyncpg, jwt, bcrypt, os, random, string, asyncio
 from datetime import datetime, date, timedelta
 
 app = FastAPI(title="ACMC Radiotherapy Portal")
@@ -311,12 +311,17 @@ async def get_estimate(eid: int, db=Depends(get_db), tok=Depends(decode_token)):
 # ── milestones (admin) ────────────────────────────────────────────────────────
 @app.patch("/api/patients/{pid}/milestones")
 async def update_milestones(pid: int, body: MilestoneUpdate, db=Depends(get_db), tok=Depends(admin_only)):
+    updates = body.dict(exclude_none=True)
     fields, vals, idx = [], [], 1
-    for f, v in body.dict(exclude_none=True).items():
+    for f, v in updates.items():
         fields.append(f"{f}=${idx}"); vals.append(v); idx+=1
     if not fields: return {"ok":True}
     vals += [int(tok["sub"]), pid]
     await db.execute(f"UPDATE milestones SET {','.join(fields)},updated_by=${idx},updated_at=NOW() WHERE patient_id=${idx+1}", *vals)
+    # Trigger notification if a "done" flag was newly set to true
+    for milestone_key in ['simulation_done','planning_done','treatment_started','treatment_completed']:
+        if updates.get(milestone_key) is True:
+            await send_notification(db, pid, milestone_key)
     return {"ok":True}
 
 # ── payments (admin) ──────────────────────────────────────────────────────────
@@ -514,30 +519,63 @@ async def cleanup_duplicates(db=Depends(get_db), tok=Depends(admin_only)):
         await db.execute("DELETE FROM cost_estimates WHERE id=$1", eid)
     return {"ok": True, "cleaned": len(dup_estimates)}
 
-# ── notification stubs (email + whatsapp — configure when center accounts ready) ──
+# ── notifications: email (live) + whatsapp (stub until center account ready) ──
+import smtplib
+from email.mime.text import MIMEText
+
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "465"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASS = os.getenv("SMTP_PASS", "")
+SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "ACMC Portal")
+
+MILESTONE_LABELS = {
+    'simulation_done':      'CT Simulation completed',
+    'planning_done':        'Treatment Planning completed',
+    'treatment_started':    'Treatment has started',
+    'treatment_completed':  'Treatment completed',
+}
+
+def _send_email_sync(to_email: str, subject: str, body: str):
+    if not SMTP_USER or not SMTP_PASS:
+        print(f"[notify] SMTP not configured — skipping email to {to_email}")
+        return False
+    msg = MIMEText(body)
+    msg['Subject'] = subject
+    msg['From'] = f"{SMTP_FROM_NAME} <{SMTP_USER}>"
+    msg['To'] = to_email
+    try:
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=10) as s:
+            s.login(SMTP_USER, SMTP_PASS)
+            s.sendmail(SMTP_USER, [to_email], msg.as_string())
+        return True
+    except Exception as e:
+        print(f"[notify] Email send failed: {e}")
+        return False
+
 async def send_notification(db, patient_id: int, milestone: str):
     """
-    Stub — wire up when center email (SMTP) and WhatsApp Business API are ready.
     milestone: 'simulation_done' | 'planning_done' | 'treatment_started' | 'treatment_completed'
     """
-    MILESTONE_LABELS = {
-        'simulation_done':      'CT Simulation completed',
-        'planning_done':        'Treatment Planning completed',
-        'treatment_started':    'Treatment has started',
-        'treatment_completed':  'Treatment completed',
-    }
     label = MILESTONE_LABELS.get(milestone, milestone)
     patient = await db.fetchrow(
         "SELECT p.full_name, d.full_name as doctor_name, d.email as doctor_email, d.phone as doctor_phone "
         "FROM patients p JOIN doctors d ON d.id=p.doctor_id WHERE p.id=$1", patient_id)
     if not patient:
         return
-    # TODO: Email — configure SMTP when center email is ready
-    # import smtplib; from email.mime.text import MIMEText
-    # msg = MIMEText(f"Dear Dr. {patient['doctor_name']},\n\nYour patient {patient['full_name']}: {label}.\n\nACMC Portal")
-    # with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s:
-    #     s.login(SMTP_USER, SMTP_PASS)
-    #     s.sendmail(SMTP_USER, patient['doctor_email'], msg.as_string())
+
+    subject = f"ACMC Update — {patient['full_name']}"
+    body = (
+        f"Dear Dr. {patient['doctor_name']},\n\n"
+        f"This is an automated update from the ACMC Referring Physician Portal.\n\n"
+        f"Patient: {patient['full_name']}\n"
+        f"Status update: {label}\n\n"
+        f"Log in to the portal for full details: https://acmc-portal.duckdns.org\n\n"
+        f"— ACMC Portal"
+    )
+    if patient['doctor_email']:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, _send_email_sync, patient['doctor_email'], subject, body)
 
     # TODO: WhatsApp — configure Twilio when WhatsApp Business account is ready
     # from twilio.rest import Client
@@ -547,7 +585,16 @@ async def send_notification(db, patient_id: int, milestone: str):
     #     to=f"whatsapp:{patient['doctor_phone']}",
     #     body=f"ACMC: Your patient {patient['full_name']} — {label}."
     # )
-    pass
+
+# ── manual test endpoint for notifications ─────────────────────────────────────
+class NotifyTestReq(BaseModel):
+    patient_id: int
+    milestone: str  # simulation_done | planning_done | treatment_started | treatment_completed
+
+@app.post("/api/notify/test")
+async def notify_test(body: NotifyTestReq, db=Depends(get_db), tok=Depends(admin_only)):
+    await send_notification(db, body.patient_id, body.milestone)
+    return {"ok": True, "message": "Notification attempt sent — check email inbox / server logs"}
 
 
 

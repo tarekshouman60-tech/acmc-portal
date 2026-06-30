@@ -23,6 +23,11 @@ services:
     environment:
       DATABASE_URL: postgresql://acmc:acmc_pass@db:5432/acmc
       JWT_SECRET: ${JWT_SECRET:-change_this_in_production}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-ACMC Portal}
     ports:
       - "8000:8000"
     depends_on:

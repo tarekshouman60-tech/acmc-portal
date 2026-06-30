@@ -7,6 +7,7 @@ export default function Milestones({ navigate }) {
   const [detail, setDetail] = useState(null)
   const [form, setForm] = useState({})
   const [saving, setSaving] = useState(false)
+  const [notifyMsg, setNotifyMsg] = useState('')
   const [search, setSearch] = useState('')
 
   useEffect(() => { api.patients().then(setPatients) }, [])
@@ -23,6 +24,16 @@ export default function Milestones({ navigate }) {
     await api.updateMilestones(selected, form)
     await load(selected)
     setSaving(false)
+  }
+
+  async function testNotify(pid) {
+    setNotifyMsg('Sending…')
+    try {
+      await api.notifyTest(pid, 'simulation_done')
+      setNotifyMsg('✓ Test email sent — check the doctor\'s inbox (and spam folder).')
+    } catch(e) {
+      setNotifyMsg('✗ Failed: ' + e.message)
+    }
   }
 
   const filtered = patients.filter(p=>p.full_name.toLowerCase().includes(search.toLowerCase()))
@@ -75,9 +86,13 @@ export default function Milestones({ navigate }) {
               <textarea value={form.notes||''} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} rows={3}
                 style={{...inp,width:'100%',resize:'vertical'}} placeholder="Optional notes about the patient's progress…"/>
             </div>
-            <div style={{display:'flex',justifyContent:'flex-end',marginTop:14}}>
+            <div style={{display:'flex',justifyContent:'space-between',marginTop:14,alignItems:'center'}}>
+              <button onClick={()=>testNotify(selected)} style={{padding:'7px 14px',borderRadius:7,border:'1px solid #dde3ec',background:'#fff',color:'#0b4f82',cursor:'pointer',fontSize:12.5,fontWeight:500}}>
+                📧 Test notification email
+              </button>
               <button onClick={save} disabled={saving} style={{padding:'9px 20px',borderRadius:7,border:'none',background:'#0b4f82',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>{saving?'Saving…':'Save Milestones'}</button>
             </div>
+            {notifyMsg && <div style={{marginTop:10,fontSize:12.5,color:'#1a7a4a',background:'#e8f7ef',padding:'8px 12px',borderRadius:6}}>{notifyMsg}</div>}
           </div>
         ) : (
           <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:40,textAlign:'center',color:'#8898aa',fontSize:13}}>

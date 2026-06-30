@@ -49,6 +49,7 @@ export const api = {
   estimatesList: () => req('GET','/estimates-list'),
   getSetting: (key) => req('GET',`/settings/${key}`),
   updateSetting: (key, value) => req('PATCH',`/settings/${key}`,{value}),
+  notifyTest: (patient_id, milestone) => req('POST','/notify/test',{patient_id,milestone}),
   changePassword: (current_password, new_password) => req('POST','/auth/change-password',{current_password,new_password}),
   updateSimStatus: (id, status) => req('PATCH',`/sim-orders/${id}/status`,{status}),
   updateClinicalStatus: (id, status) => req('PATCH',`/clinical-orders/${id}/status`,{status}),
