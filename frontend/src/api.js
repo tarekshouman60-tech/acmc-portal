@@ -46,6 +46,7 @@ export const api = {
   listEarnings: () => req('GET','/earnings'),
   earningsSummary: () => req('GET','/earnings/summary'),
   addTransfer: (data) => req('POST','/transfers',data),
+  estimatesList: () => req('GET','/estimates-list'),
   changePassword: (current_password, new_password) => req('POST','/auth/change-password',{current_password,new_password}),
   updateSimStatus: (id, status) => req('PATCH',`/sim-orders/${id}/status`,{status}),
   updateClinicalStatus: (id, status) => req('PATCH',`/clinical-orders/${id}/status`,{status}),

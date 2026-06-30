@@ -708,3 +708,16 @@ async def startup_migrate():
         """)
     finally:
         await conn.close()
+
+# ── all estimates list for earnings calculator (admin) ────────────────────────
+@app.get("/api/estimates-list")
+async def estimates_list(db=Depends(get_db), tok=Depends(admin_only)):
+    rows = await db.fetch("""
+        SELECT ce.id, ce.order_ref, ce.total_egp, ce.has_tbd, ce.doctor_id,
+               p.full_name as patient_name, d.full_name as doctor_name
+        FROM cost_estimates ce
+        JOIN patients p ON p.id=ce.patient_id
+        JOIN doctors d ON d.id=ce.doctor_id
+        ORDER BY ce.created_at DESC
+    """)
+    return [dict(r) for r in rows]

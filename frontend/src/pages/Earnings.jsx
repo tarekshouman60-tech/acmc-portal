@@ -29,10 +29,12 @@ function AdminEarnings() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [tab, setTab] = useState('overview')
+  const [allEstimates, setAllEstimates] = useState([])
 
   useEffect(() => {
     api.earningsSummary().then(setSummary)
     api.listEarnings().then(setEarnings)
+    api.estimatesList().then(setAllEstimates)
   }, [])
 
   useEffect(() => {
@@ -56,6 +58,7 @@ function AdminEarnings() {
     try {
       await api.createEarning({estimate_id:parseInt(earningForm.estimate_id), doctor_fees_egp:parseFloat(earningForm.doctor_fees_egp)||0})
       const fresh = await api.listEarnings(); setEarnings(fresh)
+      const freshSum = await api.earningsSummary(); setSummary(freshSum)
       setEarningForm({estimate_id:'',doctor_fees_egp:''})
     } catch(e){setError(e.message)} finally{setSaving(false)}
   }
@@ -189,9 +192,11 @@ function AdminEarnings() {
               <FL label="Cost estimate (patient)">
                 <select style={inp} value={earningForm.estimate_id} onChange={e=>setEarningForm(f=>({...f,estimate_id:e.target.value}))}>
                   <option value="">Select patient estimate</option>
-                  {earnings.length>0 ? null : null}
-                  {/* All estimates from all patients */}
-                  {summary.flatMap(d=>docEarnings).length===0 && <option disabled>Load from overview first</option>}
+                  {allEstimates.map(e=>(
+                    <option key={e.id} value={e.id}>
+                      {e.patient_name} — {e.doctor_name} — {e.total_egp ? fmtEGP(e.total_egp) : 'TBD'} ({e.order_ref})
+                    </option>
+                  ))}
                 </select>
               </FL>
             </div>
@@ -259,6 +264,7 @@ function DoctorEarnings() {
   useEffect(() => {
     api.earningsSummary().then(setSummary)
     api.listEarnings().then(setEarnings)
+    api.estimatesList().then(setAllEstimates)
   }, [])
 
   const months = [...new Set(earnings.map(e=>e.month))].sort().reverse()
