@@ -131,7 +131,7 @@ function AdminEarnings() {
                 : <table style={{width:'100%',borderCollapse:'collapse'}}>
                     <thead><tr style={{background:'#f7f9fc'}}>
                       {['Patient','Month','Billed','Fee %','Ref. Amount','Dr. Fees','Total Due','Transferred','Balance','Status'].map(h=>(
-                        <th key={h} style={{padding:'8px 12px',textAlign:'left',fontSize:10px,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.04em',borderBottom:'1px solid #dde3ec',whiteSpace:'nowrap'}}>{h}</th>
+                        <th key={h} style={{padding:'8px 12px',textAlign:'left',fontSize:'10px',fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.04em',borderBottom:'1px solid #dde3ec',whiteSpace:'nowrap'}}>{h}</th>
                       ))}
                     </tr></thead>
                     <tbody>
