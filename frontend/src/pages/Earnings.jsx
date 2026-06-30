@@ -30,12 +30,21 @@ function AdminEarnings() {
   const [error, setError] = useState('')
   const [tab, setTab] = useState('overview')
   const [allEstimates, setAllEstimates] = useState([])
+  const [bonusPct, setBonusPct] = useState('5')
+  const [savingBonus, setSavingBonus] = useState(false)
 
   useEffect(() => {
     api.earningsSummary().then(setSummary)
     api.listEarnings().then(setEarnings)
     api.estimatesList().then(setAllEstimates)
+    api.getSetting('workers_bonus_pct').then(s => setBonusPct(s.value || '5'))
   }, [])
+
+  async function saveBonusPct() {
+    setSavingBonus(true)
+    await api.updateSetting('workers_bonus_pct', bonusPct)
+    setSavingBonus(false)
+  }
 
   useEffect(() => {
     if (selDoctor) {
@@ -133,7 +142,7 @@ function AdminEarnings() {
                 ? <div style={{padding:24,color:'#8898aa',fontSize:13,textAlign:'center'}}>No earnings calculated yet for this doctor.</div>
                 : <table style={{width:'100%',borderCollapse:'collapse'}}>
                     <thead><tr style={{background:'#f7f9fc'}}>
-                      {['Patient','Month','Billed','Fee %','Ref. Amount','Dr. Fees','Total Due','Transferred','Balance','Status'].map(h=>(
+                      {['Patient','Month','Billed','Fee %','Ref. Amount','Dr. Fees','Bonus','Total Due','Transferred','Balance','Status'].map(h=>(
                         <th key={h} style={{padding:'8px 12px',textAlign:'left',fontSize:'10px',fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.04em',borderBottom:'1px solid #dde3ec',whiteSpace:'nowrap'}}>{h}</th>
                       ))}
                     </tr></thead>
@@ -146,6 +155,7 @@ function AdminEarnings() {
                           <td style={{padding:'9px 12px',fontSize:12}}>{e.referral_pct}%</td>
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.referral_amount_egp)}</td>
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.doctor_fees_egp)}</td>
+                          <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',color:'#c0392b'}}>-{fmtEGP(e.workers_bonus_egp)}</td>
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',fontWeight:600}}>{fmtEGP(e.total_due_egp)}</td>
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',color:'#1a7a4a'}}>{fmtEGP(e.transferred_egp)}</td>
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',color:parseFloat(e.balance_egp)>0?'#c0392b':'#1a7a4a',fontWeight:600}}>{fmtEGP(e.balance_egp)}</td>
@@ -162,6 +172,22 @@ function AdminEarnings() {
 
       {/* Calculate tab */}
       {tab==='calculate' && (
+        <div>
+          <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'18px 20px',marginBottom:16,maxWidth:420}}>
+            <div style={{fontWeight:600,fontSize:14,marginBottom:4}}>Workers Bonus Deduction</div>
+            <div style={{fontSize:12.5,color:'#8898aa',marginBottom:14}}>Automatically deducted from every doctor's referral amount.</div>
+            <div style={{display:'flex',gap:10,alignItems:'flex-end'}}>
+              <div style={{flex:1}}>
+                <FL label="Bonus % (deducted from referral amount)">
+                  <input style={inp} type="number" min="0" max="100" step="0.5" value={bonusPct} onChange={e=>setBonusPct(e.target.value)}/>
+                </FL>
+              </div>
+              <button onClick={saveBonusPct} disabled={savingBonus}
+                style={{padding:'9px 18px',borderRadius:7,border:'none',background:'#7c3aed',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600,whiteSpace:'nowrap'}}>
+                {savingBonus?'Saving…':'Save %'}
+              </button>
+            </div>
+          </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
           {/* Set fee per doctor */}
           <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'20px'}}>
@@ -210,6 +236,7 @@ function AdminEarnings() {
               {saving?'Calculating…':'Calculate & Save'}
             </button>
           </div>
+        </div>
         </div>
       )}
 
@@ -265,7 +292,14 @@ function DoctorEarnings() {
     api.earningsSummary().then(setSummary)
     api.listEarnings().then(setEarnings)
     api.estimatesList().then(setAllEstimates)
+    api.getSetting('workers_bonus_pct').then(s => setBonusPct(s.value || '5'))
   }, [])
+
+  async function saveBonusPct() {
+    setSavingBonus(true)
+    await api.updateSetting('workers_bonus_pct', bonusPct)
+    setSavingBonus(false)
+  }
 
   const months = [...new Set(earnings.map(e=>e.month))].sort().reverse()
   const filtered = month ? earnings.filter(e=>e.month===month) : earnings
@@ -311,7 +345,7 @@ function DoctorEarnings() {
           ? <div style={{padding:32,textAlign:'center',color:'#8898aa',fontSize:13}}>No earnings recorded yet. ACMC admin will calculate your fees after patient billing.</div>
           : <table style={{width:'100%',borderCollapse:'collapse'}}>
               <thead><tr style={{background:'#f7f9fc'}}>
-                {['Patient','Month','Total Billed','Your Fee %','Referral Amt','Your Fees','Total Due','Transferred','Balance','Status'].map(h=>(
+                {['Patient','Month','Total Billed','Your Fee %','Referral Amt','Your Fees','Bonus Deduction','Total Due','Transferred','Balance','Status'].map(h=>(
                   <th key={h} style={{padding:'9px 12px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.04em',borderBottom:'1px solid #dde3ec',whiteSpace:'nowrap'}}>{h}</th>
                 ))}
               </tr></thead>
@@ -324,6 +358,7 @@ function DoctorEarnings() {
                     <td style={{padding:'10px 12px',fontSize:12}}>{e.referral_pct}%</td>
                     <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.referral_amount_egp)}</td>
                     <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.doctor_fees_egp)}</td>
+                    <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace',color:'#c0392b'}}>-{fmtEGP(e.workers_bonus_egp)}</td>
                     <td style={{padding:'10px 12px',fontSize:13,fontFamily:'monospace',fontWeight:700}}>{fmtEGP(e.total_due_egp)}</td>
                     <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace',color:'#1a7a4a'}}>{fmtEGP(e.transferred_egp)}</td>
                     <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace',color:parseFloat(e.balance_egp)>0?'#c0392b':'#1a7a4a',fontWeight:600}}>{fmtEGP(e.balance_egp)}</td>

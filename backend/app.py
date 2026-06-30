@@ -549,6 +549,24 @@ async def send_notification(db, patient_id: int, milestone: str):
     # )
     pass
 
+
+
+# ── portal settings (workers bonus %) ──────────────────────────────────────────
+class SettingUpdate(BaseModel):
+    value: str
+
+@app.get("/api/settings/{key}")
+async def get_setting(key: str, db=Depends(get_db), tok=Depends(decode_token)):
+    row = await db.fetchrow("SELECT value FROM portal_settings WHERE key=$1", key)
+    return {"key": key, "value": row["value"] if row else None}
+
+@app.patch("/api/settings/{key}")
+async def update_setting(key: str, body: SettingUpdate, db=Depends(get_db), tok=Depends(admin_only)):
+    await db.execute(
+        "INSERT INTO portal_settings(key,value) VALUES($1,$2) ON CONFLICT(key) DO UPDATE SET value=$2",
+        key, body.value)
+    return {"ok": True}
+
 # ── doctor earnings ────────────────────────────────────────────────────────────
 
 class DoctorFeeUpdate(BaseModel):
@@ -581,22 +599,25 @@ async def create_earning(body: EarningCreate, db=Depends(get_db), tok=Depends(ad
     pct = float(est["referral_fee_pct"] or 0)
     ref_amount = round(total * pct / 100, 2)
     doc_fees = float(body.doctor_fees_egp or 0)
-    total_due = round(ref_amount + doc_fees, 2)
+    bonus_setting = await db.fetchrow("SELECT value FROM portal_settings WHERE key='workers_bonus_pct'")
+    bonus_pct = float(bonus_setting["value"]) if bonus_setting else 5.0
+    workers_bonus = round(ref_amount * bonus_pct / 100, 2)
+    total_due = round(ref_amount + doc_fees - workers_bonus, 2)
     month = datetime.now().strftime("%Y-%m")
     existing = await db.fetchrow("SELECT id FROM doctor_earnings WHERE estimate_id=$1", body.estimate_id)
     if existing:
         await db.execute("""UPDATE doctor_earnings SET referral_pct=$1,referral_amount_egp=$2,
-            doctor_fees_egp=$3,total_due_egp=$4,balance_egp=$4,total_billed_egp=$5,updated_at=NOW()
-            WHERE estimate_id=$6""",
-            pct, ref_amount, doc_fees, total_due, total, body.estimate_id)
-        return {"id": existing["id"], "total_due_egp": total_due}
+            doctor_fees_egp=$3,workers_bonus_pct=$4,workers_bonus_egp=$5,total_due_egp=$6,balance_egp=$6,
+            total_billed_egp=$7,updated_at=NOW() WHERE estimate_id=$8""",
+            pct, ref_amount, doc_fees, bonus_pct, workers_bonus, total_due, total, body.estimate_id)
+        return {"id": existing["id"], "total_due_egp": total_due, "workers_bonus_egp": workers_bonus}
     r = await db.fetchrow("""INSERT INTO doctor_earnings
         (doctor_id,patient_id,estimate_id,total_billed_egp,referral_pct,referral_amount_egp,
-         doctor_fees_egp,total_due_egp,balance_egp,month)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$8,$9) RETURNING id""",
+         doctor_fees_egp,workers_bonus_pct,workers_bonus_egp,total_due_egp,balance_egp,month)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$10,$11) RETURNING id""",
         est["doctor_id"], est["patient_id"], body.estimate_id, total, pct,
-        ref_amount, doc_fees, total_due, month)
-    return {"id": r["id"], "total_due_egp": total_due}
+        ref_amount, doc_fees, bonus_pct, workers_bonus, total_due, month)
+    return {"id": r["id"], "total_due_egp": total_due, "workers_bonus_egp": workers_bonus}
 
 @app.get("/api/earnings")
 async def list_earnings(db=Depends(get_db), tok=Depends(decode_token)):
@@ -675,6 +696,12 @@ async def startup_migrate():
     try:
         await conn.execute("""
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS referral_fee_pct NUMERIC(5,2) DEFAULT 0;
+            CREATE TABLE IF NOT EXISTS portal_settings (
+                key VARCHAR(50) PRIMARY KEY,
+                value VARCHAR(100)
+            );
+            INSERT INTO portal_settings (key, value) VALUES ('workers_bonus_pct','5')
+            ON CONFLICT (key) DO NOTHING;
             CREATE TABLE IF NOT EXISTS doctor_earnings (
                 id SERIAL PRIMARY KEY,
                 doctor_id INTEGER REFERENCES doctors(id),
@@ -684,6 +711,8 @@ async def startup_migrate():
                 referral_pct NUMERIC(5,2),
                 referral_amount_egp NUMERIC(12,2),
                 doctor_fees_egp NUMERIC(12,2) DEFAULT 0,
+                workers_bonus_pct NUMERIC(5,2) DEFAULT 0,
+                workers_bonus_egp NUMERIC(12,2) DEFAULT 0,
                 total_due_egp NUMERIC(12,2),
                 transferred_egp NUMERIC(12,2) DEFAULT 0,
                 balance_egp NUMERIC(12,2),
@@ -693,6 +722,8 @@ async def startup_migrate():
                 created_at TIMESTAMP DEFAULT NOW(),
                 updated_at TIMESTAMP DEFAULT NOW()
             );
+            ALTER TABLE doctor_earnings ADD COLUMN IF NOT EXISTS workers_bonus_pct NUMERIC(5,2) DEFAULT 0;
+            ALTER TABLE doctor_earnings ADD COLUMN IF NOT EXISTS workers_bonus_egp NUMERIC(12,2) DEFAULT 0;
             CREATE TABLE IF NOT EXISTS doctor_transfers (
                 id SERIAL PRIMARY KEY,
                 doctor_id INTEGER REFERENCES doctors(id),
