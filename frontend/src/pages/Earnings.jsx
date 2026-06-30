@@ -142,7 +142,7 @@ function AdminEarnings() {
                 ? <div style={{padding:24,color:'#8898aa',fontSize:13,textAlign:'center'}}>No earnings calculated yet for this doctor.</div>
                 : <table style={{width:'100%',borderCollapse:'collapse'}}>
                     <thead><tr style={{background:'#f7f9fc'}}>
-                      {['Patient','Month','Billed','Fee %','Ref. Amount','Dr. Fees','Bonus','Total Due','Transferred','Balance','Status'].map(h=>(
+                      {['Patient','Month','Billed','Fee %','Ref. Amount','Bonus','Dr. Fees','Total Due','Transferred','Balance','Status'].map(h=>(
                         <th key={h} style={{padding:'8px 12px',textAlign:'left',fontSize:'10px',fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.04em',borderBottom:'1px solid #dde3ec',whiteSpace:'nowrap'}}>{h}</th>
                       ))}
                     </tr></thead>
@@ -154,8 +154,8 @@ function AdminEarnings() {
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.total_billed_egp)}</td>
                           <td style={{padding:'9px 12px',fontSize:12}}>{e.referral_pct}%</td>
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.referral_amount_egp)}</td>
-                          <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.doctor_fees_egp)}</td>
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',color:'#c0392b'}}>-{fmtEGP(e.workers_bonus_egp)}</td>
+                          <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.doctor_fees_egp)}</td>
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',fontWeight:600}}>{fmtEGP(e.total_due_egp)}</td>
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',color:'#1a7a4a'}}>{fmtEGP(e.transferred_egp)}</td>
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',color:parseFloat(e.balance_egp)>0?'#c0392b':'#1a7a4a',fontWeight:600}}>{fmtEGP(e.balance_egp)}</td>
@@ -345,7 +345,7 @@ function DoctorEarnings() {
           ? <div style={{padding:32,textAlign:'center',color:'#8898aa',fontSize:13}}>No earnings recorded yet. ACMC admin will calculate your fees after patient billing.</div>
           : <table style={{width:'100%',borderCollapse:'collapse'}}>
               <thead><tr style={{background:'#f7f9fc'}}>
-                {['Patient','Month','Total Billed','Your Fee %','Referral Amt','Your Fees','Bonus Deduction','Total Due','Transferred','Balance','Status'].map(h=>(
+                {['Patient','Month','Total Billed','Your Fee %','Referral Amt','Bonus Deduction','Your Fees','Total Due','Transferred','Balance','Status'].map(h=>(
                   <th key={h} style={{padding:'9px 12px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.04em',borderBottom:'1px solid #dde3ec',whiteSpace:'nowrap'}}>{h}</th>
                 ))}
               </tr></thead>
@@ -357,8 +357,8 @@ function DoctorEarnings() {
                     <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.total_billed_egp)}</td>
                     <td style={{padding:'10px 12px',fontSize:12}}>{e.referral_pct}%</td>
                     <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.referral_amount_egp)}</td>
-                    <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.doctor_fees_egp)}</td>
                     <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace',color:'#c0392b'}}>-{fmtEGP(e.workers_bonus_egp)}</td>
+                    <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.doctor_fees_egp)}</td>
                     <td style={{padding:'10px 12px',fontSize:13,fontFamily:'monospace',fontWeight:700}}>{fmtEGP(e.total_due_egp)}</td>
                     <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace',color:'#1a7a4a'}}>{fmtEGP(e.transferred_egp)}</td>
                     <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace',color:parseFloat(e.balance_egp)>0?'#c0392b':'#1a7a4a',fontWeight:600}}>{fmtEGP(e.balance_egp)}</td>
