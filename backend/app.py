@@ -540,14 +540,19 @@ def _send_email_sync(to_email: str, subject: str, body: str):
     if not SMTP_USER or not SMTP_PASS:
         print(f"[notify] SMTP not configured — skipping email to {to_email}")
         return False
-    msg = MIMEText(body)
+    msg = MIMEText(body, 'plain', 'utf-8')
     msg['Subject'] = subject
     msg['From'] = f"{SMTP_FROM_NAME} <{SMTP_USER}>"
     msg['To'] = to_email
     try:
-        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=10) as s:
+        # Try STARTTLS on port 587 first (DigitalOcean blocks 465)
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as s:
+            s.ehlo()
+            s.starttls()
+            s.ehlo()
             s.login(SMTP_USER, SMTP_PASS)
             s.sendmail(SMTP_USER, [to_email], msg.as_string())
+        print(f"[notify] Email sent to {to_email}")
         return True
     except Exception as e:
         print(f"[notify] Email send failed: {e}")
@@ -592,7 +597,11 @@ async def send_notification(db, patient_id: int, milestone: str):
                 f"Status: *{label}*\n\n"
                 f"Login: https://acmc-portal.duckdns.org"
             )
-            phone = doctor_phone if doctor_phone.startswith("+") else f"+{doctor_phone}"
+            # Normalize Egyptian number: strip leading 0, ensure +20 prefix
+        phone = doctor_phone.strip()
+        if phone.startswith("00"): phone = "+" + phone[2:]
+        elif phone.startswith("0") and not phone.startswith("+"): phone = "+20" + phone[1:]
+        elif not phone.startswith("+"): phone = "+" + phone
             tc = TwilioClient(twilio_sid, twilio_token)
             tc.messages.create(
                 from_=twilio_from,
