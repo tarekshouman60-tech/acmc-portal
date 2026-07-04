@@ -618,8 +618,14 @@ class NotifyTestReq(BaseModel):
 
 @app.post("/api/notify/test")
 async def notify_test(body: NotifyTestReq, db=Depends(get_db), tok=Depends(admin_only)):
+    patient = await db.fetchrow(
+        "SELECT p.full_name, d.full_name as doctor_name, d.email as doctor_email, d.phone as doctor_phone "
+        "FROM patients p JOIN doctors d ON d.id=p.doctor_id WHERE p.id=$1", body.patient_id)
     await send_notification(db, body.patient_id, body.milestone)
-    return {"ok": True, "message": "Notification attempt sent — check email inbox / server logs"}
+    return {"ok": True,
+            "sending_to_email": patient["doctor_email"] if patient else "unknown",
+            "sending_to_phone": patient["doctor_phone"] if patient else "unknown",
+            "message": "Notification sent — check server logs for details"}
 
 
 
