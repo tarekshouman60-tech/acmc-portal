@@ -577,14 +577,30 @@ async def send_notification(db, patient_id: int, milestone: str):
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, _send_email_sync, patient['doctor_email'], subject, body)
 
-    # TODO: WhatsApp — configure Twilio when WhatsApp Business account is ready
-    # from twilio.rest import Client
-    # client = Client(TWILIO_SID, TWILIO_TOKEN)
-    # client.messages.create(
-    #     from_='whatsapp:+14155238886',
-    #     to=f"whatsapp:{patient['doctor_phone']}",
-    #     body=f"ACMC: Your patient {patient['full_name']} — {label}."
-    # )
+    # WhatsApp via Twilio
+    twilio_sid = os.getenv("TWILIO_SID", "")
+    twilio_token = os.getenv("TWILIO_TOKEN", "")
+    twilio_from = os.getenv("TWILIO_WHATSAPP_FROM", "whatsapp:+14155238886")
+    doctor_phone = patient.get("doctor_phone", "")
+    if twilio_sid and twilio_token and doctor_phone:
+        try:
+            from twilio.rest import Client as TwilioClient
+            wa_body = (
+                f"*ACMC Portal Update*\n\n"
+                f"Dear Dr. {patient['doctor_name']},\n"
+                f"Patient: *{patient['full_name']}*\n"
+                f"Status: *{label}*\n\n"
+                f"Login: https://acmc-portal.duckdns.org"
+            )
+            phone = doctor_phone if doctor_phone.startswith("+") else f"+{doctor_phone}"
+            tc = TwilioClient(twilio_sid, twilio_token)
+            tc.messages.create(
+                from_=twilio_from,
+                to=f"whatsapp:{phone}",
+                body=wa_body
+            )
+        except Exception as e:
+            print(f"[notify] WhatsApp send failed: {e}")
 
 # ── manual test endpoint for notifications ─────────────────────────────────────
 class NotifyTestReq(BaseModel):
