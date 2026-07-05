@@ -598,10 +598,10 @@ async def send_notification(db, patient_id: int, milestone: str):
                 f"Login: https://acmc-portal.duckdns.org"
             )
             # Normalize Egyptian number: strip leading 0, ensure +20 prefix
-        phone = doctor_phone.strip()
-        if phone.startswith("00"): phone = "+" + phone[2:]
-        elif phone.startswith("0") and not phone.startswith("+"): phone = "+20" + phone[1:]
-        elif not phone.startswith("+"): phone = "+" + phone
+            phone = doctor_phone.strip()
+            if phone.startswith("00"): phone = "+" + phone[2:]
+            elif phone.startswith("0") and not phone.startswith("+"): phone = "+20" + phone[1:]
+            elif not phone.startswith("+"): phone = "+" + phone
             tc = TwilioClient(twilio_sid, twilio_token)
             tc.messages.create(
                 from_=twilio_from,
