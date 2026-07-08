@@ -18,27 +18,9 @@ export default function Dashboard({ navigate }) {
   const isAdmin = user?.role === 'admin'
 
   useEffect(() => {
-    api.dashboard().then(setData).catch(console.error)
+    api.dashboard().then(setData).catch(e => console.error(e))
     if (user?.role === 'admin') {
-      api.patients().then(patients => {
-        // For each patient fetch milestones via getPatient
-        Promise.all(patients.slice(0,20).map(p => api.getPatient(p.id))).then(details => {
-          const rows = details
-            .filter(d => d.milestones && (d.milestones.planning_done || d.milestones.treatment_started))
-            .map(d => ({
-              name: d.patient.full_name,
-              doctor: d.patient.doctor_name,
-              planning_date: d.milestones.planning_date,
-              planning_done: d.milestones.planning_done,
-              treatment_start: d.milestones.treatment_start_date,
-              treatment_started: d.milestones.treatment_started,
-              treatment_end: d.milestones.treatment_end_date,
-              treatment_completed: d.milestones.treatment_completed,
-              patientId: d.patient.id
-            }))
-          setPlanning(rows)
-        })
-      })
+      api.planningTracker().then(setPlanning).catch(console.error)
     }
   }, [])
 
@@ -83,7 +65,7 @@ export default function Dashboard({ navigate }) {
                 </tr></thead>
                 <tbody>
                   {data.recent_patients?.map((p,i) => (
-                    <tr key={i} onClick={()=>navigate('patient-detail',{patientId:p.id})} style={{cursor:'pointer'}}>
+                    <tr key={i} onClick={()=>p.id&&navigate('patient-detail',{patientId:p.id})} style={{cursor:p.id?'pointer':'default'}}>
                       <td style={{padding:'11px 16px',fontSize:13,borderBottom:'1px solid #f0f4f8'}}>
                         <div style={{fontWeight:500}}>{p.full_name}</div>
                         {p.diagnosis && <div style={{fontSize:11,color:'#8898aa',marginTop:1}}>{p.diagnosis}</div>}

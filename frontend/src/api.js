@@ -2,14 +2,24 @@ const BASE = '/api'
 function token() { return localStorage.getItem('acmc_token') }
 
 async function req(method, path, body) {
-  const res = await fetch(BASE + path, {
-    method,
-    headers: { 'Content-Type':'application/json', ...(token()?{Authorization:`Bearer ${token()}`}:{}) },
-    ...(body ? {body:JSON.stringify(body)} : {})
-  })
-  if (res.status===401) { localStorage.clear(); window.location.href='/'; return }
-  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.detail||'Request failed') }
-  return res.json()
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30000) // 30s timeout
+  try {
+    const res = await fetch(BASE + path, {
+      method,
+      headers: { 'Content-Type':'application/json', ...(token()?{Authorization:`Bearer ${token()}`}:{}) },
+      ...(body ? {body:JSON.stringify(body)} : {}),
+      signal: controller.signal
+    })
+    clearTimeout(timeout)
+    if (res.status===401) { localStorage.clear(); window.location.href='/'; return }
+    if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.detail||`Request failed (${res.status})`) }
+    return res.json()
+  } catch(e) {
+    clearTimeout(timeout)
+    if (e.name === 'AbortError') throw new Error('Request timed out — please try again')
+    throw e
+  }
 }
 
 export const api = {
@@ -50,6 +60,7 @@ export const api = {
   getSetting: (key) => req('GET',`/settings/${key}`),
   updateSetting: (key, value) => req('PATCH',`/settings/${key}`,{value}),
   notifyTest: (patient_id, milestone) => req('POST','/notify/test',{patient_id,milestone}),
+  planningTracker: () => req('GET','/planning-tracker'),
   changePassword: (current_password, new_password) => req('POST','/auth/change-password',{current_password,new_password}),
   updateSimStatus: (id, status) => req('PATCH',`/sim-orders/${id}/status`,{status}),
   updateClinicalStatus: (id, status) => req('PATCH',`/clinical-orders/${id}/status`,{status}),

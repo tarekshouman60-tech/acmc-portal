@@ -66,8 +66,7 @@ export default function CostEstimate({ navigate, patientId }) {
         const svc = services.find(s => s.id === sid)
         return {
           service_id: sid,
-          quantity: svc?.per_fraction ? getQty(sid) : 1,
-          custom_price: ['QA-003','QA-004','QA-005'].includes(svc?.code) ? (parseFloat(customFees[svc.code])||0) : null
+          quantity: svc?.per_fraction ? getQty(sid) : 1
         }
       })
       const res = await api.createEstimate({ patient_id: patientId, items })

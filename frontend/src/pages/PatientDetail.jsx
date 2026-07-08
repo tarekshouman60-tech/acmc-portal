@@ -212,7 +212,7 @@ export default function PatientDetail({ navigate, patientId }) {
                 </tr></thead>
                 <tbody>
                   {items.map(item=>(
-                    <tr key={item.id} style={{borderBottom:'1px solid #f0f4f8'}}>
+                    <tr key={item.id} style={{borderBottom:'1px solid #f0f4f8',cursor:'default'}}>
                       <td style={{padding:'10px 16px',fontSize:12.5,fontFamily:'monospace'}}>{item.order_ref}</td>
                       {type==='sim' && <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70'}}>{fmtDate(item.sim_date_requested)}</td>}
                       {type==='clinical' && <>

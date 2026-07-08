@@ -41,9 +41,9 @@ export default function App() {
       case 'dashboard':      return <Dashboard navigate={navigate}/>
       case 'patients':       return <Patients navigate={navigate}/>
       case 'patient-detail': return <PatientDetail navigate={navigate} patientId={params.patientId}/>
-      case 'sim-order':      return <SimOrder navigate={navigate} patientId={params.patientId}/>
-      case 'clinical-order': return <ClinicalOrder navigate={navigate} patientId={params.patientId}/>
-      case 'cost-estimate':  return <CostEstimate navigate={navigate} patientId={params.patientId}/>
+      case 'sim-order':      return <SimOrder key={params.patientId} navigate={navigate} patientId={params.patientId}/>
+      case 'clinical-order': return <ClinicalOrder key={params.patientId} navigate={navigate} patientId={params.patientId}/>
+      case 'cost-estimate':  return <CostEstimate key={params.patientId} navigate={navigate} patientId={params.patientId}/>
       case 'my-orders':      return <AllOrders navigate={navigate} doctorOnly/>
       case 'all-orders':     return <AllOrders navigate={navigate}/>
       case 'services':       return <Services/>
@@ -58,7 +58,6 @@ export default function App() {
 
   return (
     <AuthCtx.Provider value={{user, logout:()=>{localStorage.clear();setUser(null)}}}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <Layout page={page} navigate={navigate}>{renderPage()}</Layout>
     </AuthCtx.Provider>
   )

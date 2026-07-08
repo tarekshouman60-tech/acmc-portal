@@ -15,10 +15,12 @@ export default function AllOrders({ navigate }) {
   const [orders, setOrders] = useState([])
   const [filter, setFilter] = useState('sim')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     const fn = isAdmin ? api.allOrders : api.myOrders
-    fn().then(data => { setOrders(data); setLoading(false) }).catch(() => setLoading(false))
+    fn().then(data => { setOrders(data); setLoading(false) })
+      .catch(e => { setError(e.message); setLoading(false) })
   }, [])
 
   function updateStatus(id, type, newStatus) {
@@ -46,7 +48,7 @@ export default function AllOrders({ navigate }) {
       </div>
 
       <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,overflow:'hidden'}}>
-        {loading
+        {error ? <div style={{padding:24,color:'#c0392b',fontSize:13}}>{error}</div> : loading
           ? <div style={{padding:40,textAlign:'center'}}><div style={{width:28,height:28,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
           : filtered.length === 0
             ? <div style={{padding:40,textAlign:'center',color:'#8898aa',fontSize:13}}>

@@ -7,7 +7,7 @@ import asyncpg, jwt, bcrypt, os, random, string, asyncio
 from datetime import datetime, date, timedelta
 
 app = FastAPI(title="ACMC Radiotherapy Portal")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"], max_age=600)
 
 DB_URL = os.getenv("DATABASE_URL", "postgresql://acmc:acmc_pass@db:5432/acmc")
 SECRET  = os.getenv("JWT_SECRET", "change_this_in_production")
@@ -246,7 +246,7 @@ async def create_clinical(body: ClinicalOrderCreate, db=Depends(get_db), tok=Dep
         """INSERT INTO clinical_orders(patient_id,doctor_id,clinical_history,total_dose_gy,fractions,
            duration_weeks,dose_per_fraction_gy,technique,treatment_site,sgrt,dibh,igrt,intent,sequence,
            special_instructions,notes_to_team,prescription_text,status,order_ref)
-           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'submitted',$17) RETURNING id""",
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'submitted',$18) RETURNING id""",
         body.patient_id, did, body.clinical_history, body.total_dose_gy, body.fractions,
         body.duration_weeks, body.dose_per_fraction_gy, body.technique, body.treatment_site,
         body.sgrt, body.dibh, body.igrt, body.intent, body.sequence,
@@ -434,29 +434,6 @@ async def update_estimate_status(eid: int, body: StatusUpdate, db=Depends(get_db
 class StatusUpdate(BaseModel):
     status: str
 
-@app.patch("/api/sim-orders/{oid}/status")
-async def update_sim_status(oid: int, body: StatusUpdate, db=Depends(get_db), tok=Depends(admin_only)):
-    valid = ['pending','scheduled','done','cancelled']
-    if body.status not in valid:
-        raise HTTPException(400, f"Status must be one of: {valid}")
-    await db.execute("UPDATE sim_orders SET status=$1 WHERE id=$2", body.status, oid)
-    return {"ok": True}
-
-# Clinical orders are doctor-only — no admin status update
-
-@app.patch("/api/estimates/{eid}/status")
-async def update_estimate_status(eid: int, body: StatusUpdate, db=Depends(get_db), tok=Depends(admin_only)):
-    valid = ['pending','in_settlement','paid','cancelled']
-    if body.status not in valid:
-        raise HTTPException(400, f"Status must be one of: {valid}")
-    await db.execute("UPDATE cost_estimates SET status=$1 WHERE id=$2", body.status, eid)
-    # sync billing status too
-    if body.status == 'paid':
-        await db.execute("UPDATE billing SET status='paid' WHERE estimate_id=$1", eid)
-    elif body.status == 'in_settlement':
-        await db.execute("UPDATE billing SET status='partial' WHERE estimate_id=$1", eid)
-    return {"ok": True}
-
 # ── my orders (doctor) ────────────────────────────────────────────────────────
 @app.get("/api/my-orders")
 async def my_orders(db=Depends(get_db), tok=Depends(doctor_or_admin)):
@@ -590,24 +567,30 @@ async def send_notification(db, patient_id: int, milestone: str):
     if twilio_sid and twilio_token and doctor_phone:
         try:
             from twilio.rest import Client as TwilioClient
+            # Normalize Egyptian number
+            phone = doctor_phone.strip()
+            if phone.startswith("00"):
+                phone = "+" + phone[2:]
+            elif phone.startswith("0"):
+                phone = "+20" + phone[1:]
+            elif not phone.startswith("+"):
+                phone = "+" + phone
             wa_body = (
-                f"*ACMC Portal Update*\n\n"
-                f"Dear Dr. {patient['doctor_name']},\n"
-                f"Patient: *{patient['full_name']}*\n"
-                f"Status: *{label}*\n\n"
+                f"*ACMC Portal Update*
+
+"
+                f"Dear Dr. {patient['doctor_name']},
+"
+                f"Patient: *{patient['full_name']}*
+"
+                f"Status: *{label}*
+
+"
                 f"Login: https://acmc-portal.duckdns.org"
             )
-            # Normalize Egyptian number: strip leading 0, ensure +20 prefix
-            phone = doctor_phone.strip()
-            if phone.startswith("00"): phone = "+" + phone[2:]
-            elif phone.startswith("0") and not phone.startswith("+"): phone = "+20" + phone[1:]
-            elif not phone.startswith("+"): phone = "+" + phone
             tc = TwilioClient(twilio_sid, twilio_token)
-            tc.messages.create(
-                from_=twilio_from,
-                to=f"whatsapp:{phone}",
-                body=wa_body
-            )
+            tc.messages.create(from_=twilio_from, to=f"whatsapp:{phone}", body=wa_body)
+            print(f"[notify] WhatsApp sent to {phone}")
         except Exception as e:
             print(f"[notify] WhatsApp send failed: {e}")
 
@@ -770,10 +753,21 @@ async def add_transfer(body: TransferCreate, db=Depends(get_db), tok=Depends(adm
 # ── DB migration on startup (adds new tables if not exist) ────────────────────
 @app.on_event("startup")
 async def startup_migrate():
-    conn = await asyncpg.connect(os.getenv("DATABASE_URL","postgresql://acmc:acmc_pass@db:5432/acmc"))
+    conn = await asyncpg.connect(DB_URL)
     try:
         await conn.execute("""
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS referral_fee_pct NUMERIC(5,2) DEFAULT 0;
+            CREATE INDEX IF NOT EXISTS idx_patients_doctor ON patients(doctor_id);
+            CREATE INDEX IF NOT EXISTS idx_sim_orders_patient ON sim_orders(patient_id);
+            CREATE INDEX IF NOT EXISTS idx_sim_orders_doctor ON sim_orders(doctor_id);
+            CREATE INDEX IF NOT EXISTS idx_clinical_orders_patient ON clinical_orders(patient_id);
+            CREATE INDEX IF NOT EXISTS idx_clinical_orders_doctor ON clinical_orders(doctor_id);
+            CREATE INDEX IF NOT EXISTS idx_cost_estimates_patient ON cost_estimates(patient_id);
+            CREATE INDEX IF NOT EXISTS idx_cost_estimates_doctor ON cost_estimates(doctor_id);
+            CREATE INDEX IF NOT EXISTS idx_milestones_patient ON milestones(patient_id);
+            CREATE INDEX IF NOT EXISTS idx_billing_patient ON billing(patient_id);
+            CREATE INDEX IF NOT EXISTS idx_payments_billing ON payments(billing_id);
+            CREATE INDEX IF NOT EXISTS idx_doctor_earnings_doctor ON doctor_earnings(doctor_id);
             CREATE TABLE IF NOT EXISTS portal_settings (
                 key VARCHAR(50) PRIMARY KEY,
                 value VARCHAR(100)
@@ -828,5 +822,25 @@ async def estimates_list(db=Depends(get_db), tok=Depends(admin_only)):
         JOIN patients p ON p.id=ce.patient_id
         JOIN doctors d ON d.id=ce.doctor_id
         ORDER BY ce.created_at DESC
+    """)
+    return [dict(r) for r in rows]
+
+# ── performance indexes (created on startup if not exist) ─────────────────────
+# These are added inside the startup_migrate function above
+
+# ── planning tracker (admin dashboard — single query, no N+1) ─────────────────
+@app.get("/api/planning-tracker")
+async def planning_tracker(db=Depends(get_db), tok=Depends(admin_only)):
+    rows = await db.fetch("""
+        SELECT p.id as patient_id, p.full_name as name, d.full_name as doctor,
+               m.planning_done, m.planning_date,
+               m.treatment_started, m.treatment_start_date,
+               m.treatment_completed, m.treatment_end_date
+        FROM milestones m
+        JOIN patients p ON p.id=m.patient_id
+        JOIN doctors d ON d.id=p.doctor_id
+        WHERE m.planning_done=true OR m.treatment_started=true
+        ORDER BY m.updated_at DESC
+        LIMIT 50
     """)
     return [dict(r) for r in rows]

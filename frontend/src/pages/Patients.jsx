@@ -9,13 +9,15 @@ const FL = ({label,children}) => <div><label style={{display:'block',fontSize:11
 export default function Patients({ navigate }) {
   const { user } = useAuth()
   const [patients, setPatients] = useState([])
+  const [loadingPatients, setLoadingPatients] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [search, setSearch] = useState('')
   const [form, setForm] = useState({full_name:'',date_of_birth:'',gender:'',national_id:'',phone:'',diagnosis:'',icd10_code:''})
   const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => { api.patients().then(setPatients).catch(console.error) }, [])
+  useEffect(() => { api.patients().then(setPatients).catch(e => console.error(e)) }, [])
 
   async function save() {
     if (!form.full_name.trim()) { setError('Patient name is required'); return }
@@ -29,7 +31,7 @@ export default function Patients({ navigate }) {
     } catch(e) { setError(e.message) } finally { setSaving(false) }
   }
 
-  const filtered = patients.filter(p => p.full_name.toLowerCase().includes(search.toLowerCase()) || (p.diagnosis||'').toLowerCase().includes(search.toLowerCase()))
+  const filtered = patients.filter(p => [p.full_name, p.diagnosis, p.phone, p.icd10_code, p.national_id].some(v => (v||'').toLowerCase().includes(search.toLowerCase())))
 
   return (
     <div>
@@ -74,7 +76,7 @@ export default function Patients({ navigate }) {
 
       {/* List */}
       <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,overflow:'hidden'}}>
-        {filtered.length === 0
+        {loadingPatients ? <div style={{padding:32,textAlign:'center'}}><div style={{width:28,height:28,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div> : filtered.length === 0
           ? <div style={{padding:40,textAlign:'center',color:'#8898aa',fontSize:13}}>
               {patients.length===0 ? 'No patients yet. Create your first patient above.' : 'No patients match your search.'}
             </div>
