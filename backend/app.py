@@ -576,16 +576,10 @@ async def send_notification(db, patient_id: int, milestone: str):
             elif not phone.startswith("+"):
                 phone = "+" + phone
             wa_body = (
-                f"*ACMC Portal Update*
-
-"
-                f"Dear Dr. {patient['doctor_name']},
-"
-                f"Patient: *{patient['full_name']}*
-"
-                f"Status: *{label}*
-
-"
+                f"*ACMC Portal Update*\n\n"
+                f"Dear Dr. {patient['doctor_name']},\n"
+                f"Patient: *{patient['full_name']}*\n"
+                f"Status: *{label}*\n\n"
                 f"Login: https://acmc-portal.duckdns.org"
             )
             tc = TwilioClient(twilio_sid, twilio_token)

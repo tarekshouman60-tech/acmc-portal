@@ -237,6 +237,7 @@ function AdminEarnings() {
             </button>
           </div>
         </div>
+        </div>
       )}
 
       {/* Transfer tab */}
@@ -295,7 +296,7 @@ function DoctorEarnings() {
   const months = [...new Set(earnings.map(e=>e.month))].sort().reverse()
   const filtered = month ? earnings.filter(e=>e.month===month) : earnings
 
-  if (!summary) return <div style={{padding:40,textAlign:'center'}}><div style={{width:28,height:28,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div></div>
+  if (!summary) return <div style={{padding:40,textAlign:'center'}}><div style={{width:28,height:28,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
 
   return (
     <div>
