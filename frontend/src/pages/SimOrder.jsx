@@ -5,7 +5,7 @@ import { useAuth } from '../App.jsx'
 const POSITIONING = ['Supine','Prone','Abdominal compression','Hand side','Hand on abdomen','Hand on chest','Hands above head']
 const FIXATION = ['SRS mask','Head closed','Head open','Head & neck closed','Head & neck open','Pelvis','Peripheral limb','Vac-Lok adult','Vac-Lok pediatric']
 const SHIELDS = ['Eye shield','Testicle shield','Lead cut-out for EB']
-const SPECIAL = ['Fasting','Rectal emptying','Full bladder','Empty bladder','Rectal tube','Fiducials','Wire on scar']
+const SPECIAL = ['Fasting','Rectal emptying','Full bladder','Empty bladder','600cc water','Rectal tube','Fiducials','Wire on scar']
 
 const inp = {width:'100%',border:'1px solid #dde3ec',borderRadius:6,padding:'8px 11px',fontSize:13,fontFamily:'inherit',outline:'none'}
 const FL = ({label,children}) => <div><label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>{label}</label>{children}</div>
@@ -94,7 +94,34 @@ export default function SimOrder({ navigate, patientId }) {
   const [notes, setNotes] = useState('')
 
   useEffect(() => {
-    if (patientId) api.getPatient(patientId).then(d => setPatient(d.patient))
+    if (!patientId) return
+    api.getPatient(patientId).then(d => {
+      setPatient(d.patient)
+      const existing = d.sim_orders?.[0]
+      if (existing) {
+        api.getSimOrder(existing.id).then(s => {
+          setSimDate(s.sim_date_requested ? String(s.sim_date_requested).slice(0,10) : '')
+          setPos(s.positioning || null)
+          setFix(s.fixation || null)
+          setShields(s.shields || [])
+          setBolus(s.bolus || null)
+          setBolusThick(s.bolus_thickness || '')
+          setContrast(s.ct_contrast || null)
+          setSliceThick(s.ct_slice_thickness || '')
+          setScanRegion(s.ct_scan_region || '')
+          setFourDct(s.ct_4d || null)
+          setSgrt(s.sgrt || null)
+          setRpm(s.rpm || null)
+          setMri(s.mri || null)
+          setMriSeq(s.mri_sequence || '')
+          setMriContrast(s.mri_contrast || '')
+          setMriSlice(s.mri_slice_thickness || '')
+          setPet(s.pet_ct || null)
+          setSpecial(s.special_orders || [])
+          setNotes(s.notes_to_physics || '')
+        })
+      }
+    })
   }, [patientId])
 
   function tog(id) { setOpen(o=>({...o,[id]:!o[id]})) }

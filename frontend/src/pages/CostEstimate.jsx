@@ -27,7 +27,27 @@ export default function CostEstimate({ navigate, patientId }) {
 
   useEffect(() => {
     api.services().then(setServices)
-    if (patientId) api.getPatient(patientId).then(d => setPatient(d.patient))
+    if (!patientId) return
+    api.getPatient(patientId).then(d => {
+      setPatient(d.patient)
+      const existing = d.cost_estimates?.[0]
+      if (existing) {
+        api.getEstimate(existing.id).then(({items}) => {
+          setSelected(new Set(items.map(i => i.service_id)))
+          setQuantities(q => {
+            const n = {...q}
+            items.forEach(i => { n[i.service_id] = i.quantity })
+            return n
+          })
+          setCustomFees(f => {
+            const n = {...f}
+            items.forEach(i => { if (['QA-003','QA-004','QA-005'].includes(i.code)) n[i.code] = i.unit_price_egp || 0 })
+            return n
+          })
+          setOpenCats(c => new Set([...c, ...items.map(i => i.category)]))
+        })
+      }
+    })
   }, [patientId])
 
   function toggleCat(id) {

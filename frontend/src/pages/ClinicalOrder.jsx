@@ -51,7 +51,31 @@ export default function ClinicalOrder({ navigate, patientId }) {
   const [notes, setNotes] = useState('')
 
   useEffect(() => {
-    if (patientId) api.getPatient(patientId).then(d => setPatient(d.patient))
+    if (!patientId) return
+    api.getPatient(patientId).then(d => {
+      setPatient(d.patient)
+      const existing = d.clinical_orders?.[0]
+      if (existing) {
+        api.getClinicalOrder(existing.id).then(c => {
+          setHx(c.clinical_history || '')
+          setDose(c.total_dose_gy != null ? String(c.total_dose_gy) : '')
+          setFx(c.fractions != null ? String(c.fractions) : '')
+          setWeeks(c.duration_weeks != null ? String(c.duration_weeks) : '')
+          setDpf(c.dose_per_fraction_gy != null ? String(c.dose_per_fraction_gy) : '')
+          setTech(c.technique || '')
+          setSite(c.treatment_site || '')
+          setSgrt(c.sgrt || null)
+          setDibh(c.dibh || null)
+          setIgrt(c.igrt || null)
+          setIntent(c.intent || null)
+          setSequence(c.sequence || null)
+          setSpecial(c.special_instructions || '')
+          setNotes(c.notes_to_team || '')
+        })
+      } else if (d.patient?.diagnosis) {
+        setHx(d.patient.diagnosis)
+      }
+    })
   }, [patientId])
 
   function buildRx() {

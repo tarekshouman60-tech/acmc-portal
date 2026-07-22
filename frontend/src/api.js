@@ -13,7 +13,12 @@ async function req(method, path, body) {
     })
     clearTimeout(timeout)
     if (res.status===401) { localStorage.clear(); window.location.href='/'; return }
-    if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.detail||`Request failed (${res.status})`) }
+    if (!res.ok) {
+      const e = await res.json().catch(()=>({}))
+      let msg = e.detail || `Request failed (${res.status})`
+      if (Array.isArray(msg)) msg = msg.map(d => d.msg || JSON.stringify(d)).join('; ')
+      throw new Error(msg)
+    }
     return res.json()
   } catch(e) {
     clearTimeout(timeout)
