@@ -221,7 +221,7 @@ export default function PatientDetail({ navigate, patientId }) {
                       </>}
                       {type==='estimate' && <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70'}}>{item.total_egp?fmtEGP(item.total_egp)+(item.has_tbd?' + TBD':''):'TBD'}</td>}
                       <td style={{padding:'10px 16px'}}>
-                        {isAdmin && adminEdit
+                        {isAdmin
                           ? <StatusDropdown type={type} id={item.id} currentStatus={item.status}
                               onUpdated={s=>updateOrderStatus(type,item.id,s)}/>
                           : <StatusBadge status={item.status} doctorView={!isAdmin}/>

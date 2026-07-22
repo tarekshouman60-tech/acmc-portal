@@ -354,7 +354,7 @@ async def dashboard(db=Depends(get_db), tok=Depends(decode_token)):
         ests = await db.fetchval("SELECT COUNT(*) FROM cost_estimates")
         billed = await db.fetchval("SELECT COALESCE(SUM(total_amount_egp),0) FROM billing")
         paid   = await db.fetchval("SELECT COALESCE(SUM(amount_paid_egp),0) FROM billing")
-        recent = await db.fetch("SELECT p.full_name,d.full_name as doctor,p.created_at FROM patients p JOIN doctors d ON d.id=p.doctor_id ORDER BY p.created_at DESC LIMIT 5")
+        recent = await db.fetch("SELECT p.id,p.full_name,d.full_name as doctor,p.created_at FROM patients p JOIN doctors d ON d.id=p.doctor_id ORDER BY p.created_at DESC LIMIT 5")
         return {"total_patients":pts,"sim_orders":sims,"clinical_orders":clns,"cost_estimates":ests,
                 "total_billed_egp":float(billed),"total_paid_egp":float(paid),"recent_patients":[dict(r) for r in recent]}
     else:
