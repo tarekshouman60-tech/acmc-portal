@@ -22,10 +22,16 @@ if ! docker compose version &> /dev/null 2>&1; then
   apt-get install -y docker-compose-plugin
 fi
 
-# 3. Clone repo with token
+# 3. Clone repo
+# Set GITHUB_TOKEN in the environment before running this script if the repo is private,
+# e.g. `GITHUB_TOKEN=ghp_xxx ./deploy_direct.sh`. Never hardcode tokens in this file.
 echo "→ Cloning repository..."
 rm -rf $APP_DIR
-git clone https://tarekshouman60-tech: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@github.com/tarekshouman60-tech/acmc-portal.git $APP_DIR
+if [ -n "$GITHUB_TOKEN" ]; then
+  git clone "https://tarekshouman60-tech:${GITHUB_TOKEN}@github.com/tarekshouman60-tech/acmc-portal.git" $APP_DIR
+else
+  git clone https://github.com/tarekshouman60-tech/acmc-portal.git $APP_DIR
+fi
 
 cd $APP_DIR
 
