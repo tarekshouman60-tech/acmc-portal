@@ -17,7 +17,7 @@ export default function Patients({ navigate }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => { api.patients().then(setPatients).catch(e => console.error(e)) }, [])
+  useEffect(() => { api.patients().then(setPatients).catch(e => console.error(e)).finally(() => setLoadingPatients(false)) }, [])
 
   async function save() {
     if (!form.full_name.trim()) { setError('Patient name is required'); return }
