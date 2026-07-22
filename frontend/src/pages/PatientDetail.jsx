@@ -196,10 +196,10 @@ export default function PatientDetail({ navigate, patientId }) {
 
       {/* Orders tables */}
       {[
-        {title:'Simulation Orders',         items:sim_orders,     type:'sim',      cols:['Ref','Sim Date','Status']},
-        {title:'Clinical Treatment Orders', items:clinical_orders, type:'clinical', cols:['Ref','Technique','Dose','Status']},
-        {title:'Cost Estimates',            items:cost_estimates,  type:'estimate', cols:['Ref','Total (EGP)','Status']},
-      ].map(({title,items,type,cols})=>(
+        {title:'Simulation Orders',         items:sim_orders,     type:'sim',      route:'sim-order',      cols:['Ref','Sim Date','Status','']},
+        {title:'Clinical Treatment Orders', items:clinical_orders, type:'clinical', route:'clinical-order', cols:['Ref','Technique','Dose','Status','']},
+        {title:'Cost Estimates',            items:cost_estimates,  type:'estimate', route:'cost-estimate',  cols:['Ref','Total (EGP)','Status','']},
+      ].map(({title,items,type,route,cols})=>(
         <div key={type} style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,marginBottom:12,overflow:'hidden'}}>
           <div style={{padding:'13px 20px',borderBottom:'1px solid #dde3ec',fontWeight:600,fontSize:13.5}}>
             {title} <span style={{color:'#8898aa',fontWeight:400,fontSize:12}}>({items.length})</span>
@@ -208,11 +208,11 @@ export default function PatientDetail({ navigate, patientId }) {
             ? <div style={{padding:'18px 20px',color:'#8898aa',fontSize:13}}>No {title.toLowerCase()} yet.</div>
             : <table style={{width:'100%',borderCollapse:'collapse'}}>
                 <thead><tr>
-                  {cols.map(c=><th key={c} style={{padding:'8px 16px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec',background:'#fafbfc'}}>{c}</th>)}
+                  {cols.map((c,i)=><th key={c||i} style={{padding:'8px 16px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec',background:'#fafbfc'}}>{c}</th>)}
                 </tr></thead>
                 <tbody>
                   {items.map(item=>(
-                    <tr key={item.id} style={{borderBottom:'1px solid #f0f4f8',cursor:'default'}}>
+                    <tr key={item.id} onClick={()=>navigate(route,{patientId})} style={{borderBottom:'1px solid #f0f4f8',cursor:'pointer'}}>
                       <td style={{padding:'10px 16px',fontSize:12.5,fontFamily:'monospace'}}>{item.order_ref}</td>
                       {type==='sim' && <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70'}}>{fmtDate(item.sim_date_requested)}</td>}
                       {type==='clinical' && <>
@@ -220,12 +220,15 @@ export default function PatientDetail({ navigate, patientId }) {
                         <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70'}}>{item.total_dose_gy?item.total_dose_gy+'Gy/'+item.fractions+'F':'—'}</td>
                       </>}
                       {type==='estimate' && <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70'}}>{item.total_egp?fmtEGP(item.total_egp)+(item.has_tbd?' + TBD':''):'TBD'}</td>}
-                      <td style={{padding:'10px 16px'}}>
+                      <td style={{padding:'10px 16px'}} onClick={e=>e.stopPropagation()}>
                         {isAdmin
                           ? <StatusDropdown type={type} id={item.id} currentStatus={item.status}
                               onUpdated={s=>updateOrderStatus(type,item.id,s)}/>
                           : <StatusBadge status={item.status} doctorView={!isAdmin}/>
                         }
+                      </td>
+                      <td style={{padding:'10px 16px',textAlign:'right'}}>
+                        <span style={{fontSize:12,color:'#0b4f82',fontWeight:500,whiteSpace:'nowrap'}}>View →</span>
                       </td>
                     </tr>
                   ))}
