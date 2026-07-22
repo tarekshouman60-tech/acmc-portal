@@ -15,12 +15,16 @@ const ADMIN_NAV = [
   { id:'billing',    icon:'💳', label:'Billing' },
   { id:'services',   icon:'💰', label:'Price Management' },
   { id:'doctors',    icon:'👨‍⚕️', label:'Doctor Accounts' },
+  { id:'rtt-accounts', icon:'🧑‍⚕️', label:'RTT Accounts' },
   { id:'earnings',   icon:'💵', label:'Doctor Earnings' },
+]
+const RTT_NAV = [
+  { id:'rtt-schedule', icon:'🗓️', label:'Simulation Schedule' },
 ]
 
 export default function Layout({ page, navigate, children }) {
   const { user, logout } = useAuth()
-  const nav = user?.role === 'admin' ? ADMIN_NAV : DOCTOR_NAV
+  const nav = user?.role === 'admin' ? ADMIN_NAV : user?.role === 'rtt' ? RTT_NAV : DOCTOR_NAV
 
   return (
     <div style={{display:'flex',minHeight:'100vh'}}>

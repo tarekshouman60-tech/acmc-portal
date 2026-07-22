@@ -15,6 +15,8 @@ import Milestones from './pages/Milestones.jsx'
 import Billing from './pages/Billing.jsx'
 import Earnings from './pages/Earnings.jsx'
 import ChangePassword from './pages/ChangePassword.jsx'
+import RttSchedule from './pages/RttSchedule.jsx'
+import RttAccounts from './pages/RttAccounts.jsx'
 
 export const AuthCtx = createContext(null)
 export const useAuth = () => useContext(AuthCtx)
@@ -31,14 +33,18 @@ export default function App() {
     else setLoading(false)
   }, [])
 
+  useEffect(() => {
+    if (user?.role === 'rtt' && page === 'dashboard') setPage('rtt-schedule')
+  }, [user])
+
   function navigate(p, pr={}) { setPage(p); setParams(pr) }
 
   if (loading) return <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh'}}><div style={{width:32,height:32,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite'}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>
-  if (!user) return <Login onLogin={u=>setUser(u)}/>
+  if (!user) return <Login onLogin={u=>{setUser(u);setPage('dashboard');setParams({})}}/>
 
   function renderPage() {
     switch(page) {
-      case 'dashboard':      return <Dashboard navigate={navigate}/>
+      case 'dashboard':      return user.role === 'rtt' ? <RttSchedule/> : <Dashboard navigate={navigate}/>
       case 'patients':       return <Patients navigate={navigate}/>
       case 'patient-detail': return <PatientDetail navigate={navigate} patientId={params.patientId}/>
       case 'sim-order':      return <SimOrder key={params.patientId} navigate={navigate} patientId={params.patientId}/>
@@ -52,12 +58,14 @@ export default function App() {
       case 'billing':          return <Billing navigate={navigate}/>
       case 'earnings':         return <Earnings/>
       case 'change-password': return <ChangePassword/>
+      case 'rtt-schedule':    return <RttSchedule/>
+      case 'rtt-accounts':    return <RttAccounts/>
       default:               return <Dashboard navigate={navigate}/>
     }
   }
 
   return (
-    <AuthCtx.Provider value={{user, logout:()=>{localStorage.clear();setUser(null)}}}>
+    <AuthCtx.Provider value={{user, logout:()=>{localStorage.clear();setUser(null);setPage('dashboard');setParams({})}}}>
       <Layout page={page} navigate={navigate}>{renderPage()}</Layout>
     </AuthCtx.Provider>
   )

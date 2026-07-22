@@ -37,6 +37,12 @@ def admin_only(tok=Depends(decode_token)):
     if tok["role"] != "admin": raise HTTPException(403)
     return tok
 
+def rtt_or_admin(tok=Depends(decode_token)):
+    if tok["role"] not in ("rtt","admin"): raise HTTPException(403)
+    return tok
+
+ROLE_TABLE = {"admin":"admins","doctor":"doctors","rtt":"rtts"}
+
 # ── models ────────────────────────────────────────────────────────────────────
 class LoginReq(BaseModel):
     email: str; password: str
@@ -44,6 +50,14 @@ class LoginReq(BaseModel):
 class DoctorCreate(BaseModel):
     full_name: str; email: EmailStr; phone: Optional[str]=None
     specialty: Optional[str]=None; clinic_affiliation: Optional[str]=None; password: str
+
+class RttCreate(BaseModel):
+    full_name: str; email: EmailStr; password: str
+
+class RttSimUpdate(BaseModel):
+    scheduled_at: Optional[datetime]=None
+    status: Optional[str]=None
+    completion_notes: Optional[str]=None
 
 class PatientCreate(BaseModel):
     full_name: str; date_of_birth: Optional[date]=None; gender: Optional[str]=None
@@ -100,12 +114,17 @@ async def login(req: LoginReq, db=Depends(get_db)):
     row = await db.fetchrow("SELECT id,password_hash FROM doctors WHERE email=$1 AND is_active=true", req.email)
     if row and bcrypt.checkpw(req.password.encode(), row["password_hash"].encode()):
         return {"token": make_token(row["id"],"doctor"), "role":"doctor"}
+    row = await db.fetchrow("SELECT id,password_hash FROM rtts WHERE email=$1 AND is_active=true", req.email)
+    if row and bcrypt.checkpw(req.password.encode(), row["password_hash"].encode()):
+        return {"token": make_token(row["id"],"rtt"), "role":"rtt"}
     raise HTTPException(401, "Invalid credentials")
 
 @app.get("/api/auth/me")
 async def me(tok=Depends(decode_token), db=Depends(get_db)):
     if tok["role"]=="admin":
         r = await db.fetchrow("SELECT id,full_name,email FROM admins WHERE id=$1", int(tok["sub"]))
+    elif tok["role"]=="rtt":
+        r = await db.fetchrow("SELECT id,full_name,email FROM rtts WHERE id=$1", int(tok["sub"]))
     else:
         r = await db.fetchrow("SELECT id,full_name,email,specialty,clinic_affiliation,phone FROM doctors WHERE id=$1", int(tok["sub"]))
     return dict(r)|{"role":tok["role"]}
@@ -138,6 +157,25 @@ async def create_doctor(body: DoctorCreate, db=Depends(get_db), tok=Depends(admi
 @app.patch("/api/doctors/{did}/toggle")
 async def toggle_doctor(did: int, db=Depends(get_db), tok=Depends(admin_only)):
     await db.execute("UPDATE doctors SET is_active=NOT is_active WHERE id=$1", did)
+    return {"ok":True}
+
+# ── RTT accounts (admin) ─────────────────────────────────────────────────────
+@app.get("/api/rtts")
+async def list_rtts(db=Depends(get_db), tok=Depends(admin_only)):
+    rows = await db.fetch("SELECT id,full_name,email,is_active,created_at FROM rtts ORDER BY full_name")
+    return [dict(r) for r in rows]
+
+@app.post("/api/rtts")
+async def create_rtt(body: RttCreate, db=Depends(get_db), tok=Depends(admin_only)):
+    pw = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
+    r = await db.fetchrow(
+        "INSERT INTO rtts(full_name,email,password_hash) VALUES($1,$2,$3) RETURNING id",
+        body.full_name, body.email, pw)
+    return {"id":r["id"]}
+
+@app.patch("/api/rtts/{rid}/toggle")
+async def toggle_rtt(rid: int, db=Depends(get_db), tok=Depends(admin_only)):
+    await db.execute("UPDATE rtts SET is_active=NOT is_active WHERE id=$1", rid)
     return {"ok":True}
 
 # ── patients ──────────────────────────────────────────────────────────────────
@@ -216,12 +254,50 @@ async def create_sim(body: SimOrderCreate, db=Depends(get_db), tok=Depends(docto
 
 @app.get("/api/sim-orders/{oid}")
 async def get_sim(oid: int, db=Depends(get_db), tok=Depends(decode_token)):
-    if tok["role"]=="admin":
+    if tok["role"] in ("admin","rtt"):
         r = await db.fetchrow("SELECT s.*,p.full_name as patient_name,d.full_name as doctor_name,d.clinic_affiliation FROM sim_orders s JOIN patients p ON p.id=s.patient_id JOIN doctors d ON d.id=s.doctor_id WHERE s.id=$1", oid)
     else:
         r = await db.fetchrow("SELECT s.*,p.full_name as patient_name FROM sim_orders s JOIN patients p ON p.id=s.patient_id WHERE s.id=$1 AND s.doctor_id=$2", oid, int(tok["sub"]))
     if not r: raise HTTPException(404)
     return dict(r)
+
+# ── sim orders — RTT scheduling view (all patients) ───────────────────────────
+@app.get("/api/rtt/sim-orders")
+async def list_all_sim_orders_rtt(db=Depends(get_db), tok=Depends(rtt_or_admin)):
+    rows = await db.fetch("""
+        SELECT s.*, p.full_name as patient_name, p.diagnosis, p.phone as patient_phone,
+               d.full_name as doctor_name
+        FROM sim_orders s
+        JOIN patients p ON p.id=s.patient_id
+        JOIN doctors d ON d.id=s.doctor_id
+        ORDER BY s.scheduled_at NULLS LAST, s.sim_date_requested NULLS LAST, s.created_at DESC
+    """)
+    return [dict(r) for r in rows]
+
+@app.patch("/api/rtt/sim-orders/{oid}")
+async def rtt_update_sim(oid: int, body: RttSimUpdate, db=Depends(get_db), tok=Depends(rtt_or_admin)):
+    row = await db.fetchrow("SELECT id FROM sim_orders WHERE id=$1", oid)
+    if not row: raise HTTPException(404)
+    sets, vals = [], []
+    if body.scheduled_at is not None:
+        scheduled_naive = body.scheduled_at.replace(tzinfo=None) if body.scheduled_at.tzinfo else body.scheduled_at
+        sets.append(f"scheduled_at=${len(vals)+1}"); vals.append(scheduled_naive)
+    if body.status is not None:
+        valid = ['pending','scheduled','done','cancelled']
+        if body.status not in valid:
+            raise HTTPException(400, f"Invalid status. Must be one of: {valid}")
+        sets.append(f"status=${len(vals)+1}"); vals.append(body.status)
+        if body.status == 'done':
+            sets.append("completed_at=NOW()")
+    if body.completion_notes is not None:
+        sets.append(f"completion_notes=${len(vals)+1}"); vals.append(body.completion_notes)
+    if tok["role"] == "rtt":
+        sets.append(f"rtt_id=${len(vals)+1}"); vals.append(int(tok["sub"]))
+    if not sets:
+        return {"ok": True}
+    vals.append(oid)
+    await db.execute(f"UPDATE sim_orders SET {', '.join(sets)} WHERE id=${len(vals)}", *vals)
+    return {"ok": True}
 
 # ── clinical orders ───────────────────────────────────────────────────────────
 @app.post("/api/clinical-orders")
@@ -385,19 +461,14 @@ class ChangePasswordReq(BaseModel):
 async def change_password(body: ChangePasswordReq, db=Depends(get_db), tok=Depends(decode_token)):
     if len(body.new_password) < 8:
         raise HTTPException(400, "Password must be at least 8 characters")
-    if tok["role"] == "admin":
-        row = await db.fetchrow("SELECT id, password_hash FROM admins WHERE id=$1", int(tok["sub"]))
-    else:
-        row = await db.fetchrow("SELECT id, password_hash FROM doctors WHERE id=$1", int(tok["sub"]))
+    table = ROLE_TABLE[tok["role"]]
+    row = await db.fetchrow(f"SELECT id, password_hash FROM {table} WHERE id=$1", int(tok["sub"]))
     if not row:
         raise HTTPException(404, "User not found")
     if not bcrypt.checkpw(body.current_password.encode(), row["password_hash"].encode()):
         raise HTTPException(400, "Current password is incorrect")
     new_hash = bcrypt.hashpw(body.new_password.encode(), bcrypt.gensalt()).decode()
-    if tok["role"] == "admin":
-        await db.execute("UPDATE admins SET password_hash=$1 WHERE id=$2", new_hash, int(tok["sub"]))
-    else:
-        await db.execute("UPDATE doctors SET password_hash=$1 WHERE id=$2", new_hash, int(tok["sub"]))
+    await db.execute(f"UPDATE {table} SET password_hash=$1 WHERE id=$2", new_hash, int(tok["sub"]))
     return {"ok": True}
 
 # ── update order status (admin) ───────────────────────────────────────────────

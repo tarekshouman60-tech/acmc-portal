@@ -39,6 +39,12 @@ export const api = {
   createDoctor: (data) => req('POST','/doctors',data),
   toggleDoctor: (id) => req('PATCH',`/doctors/${id}/toggle`),
 
+  rtts: () => req('GET','/rtts'),
+  createRtt: (data) => req('POST','/rtts',data),
+  toggleRtt: (id) => req('PATCH',`/rtts/${id}/toggle`),
+  rttSimOrders: () => req('GET','/rtt/sim-orders'),
+  updateRttSimOrder: (id, data) => req('PATCH',`/rtt/sim-orders/${id}`,data),
+
   patients: () => req('GET','/patients'),
   createPatient: (data) => req('POST','/patients',data),
   getPatient: (id) => req('GET',`/patients/${id}`),
@@ -83,4 +89,14 @@ export function fmtDate(d) {
 export function fmtDateInput(d) {
   if (!d) return ''
   return new Date(d).toISOString().split('T')[0]
+}
+export function fmtDateTime(d) {
+  if (!d) return '—'
+  return new Date(d).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})
+}
+export function fmtDateTimeInput(d) {
+  if (!d) return ''
+  const dt = new Date(d)
+  const pad = n => String(n).padStart(2,'0')
+  return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`
 }
