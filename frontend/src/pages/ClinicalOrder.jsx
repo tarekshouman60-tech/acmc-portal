@@ -49,6 +49,7 @@ export default function ClinicalOrder({ navigate, patientId }) {
   const [sequence, setSequence] = useState(null)
   const [special, setSpecial] = useState('')
   const [notes, setNotes] = useState('')
+  const [planning, setPlanning] = useState(null)
 
   useEffect(() => {
     if (!patientId) return
@@ -71,6 +72,13 @@ export default function ClinicalOrder({ navigate, patientId }) {
           setSequence(c.sequence || null)
           setSpecial(c.special_instructions || '')
           setNotes(c.notes_to_team || '')
+          setPlanning({
+            status: c.planning_status || 'pending',
+            scheduledAt: c.planning_scheduled_at,
+            completedAt: c.planning_completed_at,
+            notes: c.planning_notes,
+            replanCount: c.replan_count || 0,
+          })
         })
       } else if (d.patient?.diagnosis) {
         setHx(d.patient.diagnosis)
@@ -213,6 +221,42 @@ export default function ClinicalOrder({ navigate, patientId }) {
 
       {error && <div style={{background:'#fdecea',color:'#c0392b',border:'1px solid #f5c6c2',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>{error}</div>}
       {saved && <div style={{background:'#e8f7ef',color:'#1a7a4a',border:'1px solid #b7e4cc',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>✓ {saved.updated ? 'Updated' : 'Saved'} as <strong>{saved.order_ref}</strong></div>}
+
+      {/* Physicist planning feedback */}
+      {planning && (
+        <div style={{...card,background:'#fafbfc'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+            <div style={{fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em'}}>Medical Physicist — Planning Status</div>
+            {planning.replanCount>0 && <span style={{background:'#fdecea',color:'#c0392b',fontSize:11,fontWeight:600,padding:'2px 9px',borderRadius:20}}>Replanned {planning.replanCount}×</span>}
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:13,marginBottom:planning.notes?13:0}}>
+            <div>
+              <div style={{fontSize:10,color:'#8898aa',marginBottom:3,textTransform:'uppercase',letterSpacing:'.03em'}}>Status</div>
+              <span style={{background:{pending:'#fef4e7',in_progress:'#eef2ff',completed:'#e8f7ef',cancelled:'#f0f4f8'}[planning.status],
+                color:{pending:'#e67e22',in_progress:'#4338ca',completed:'#1a7a4a',cancelled:'#8898aa'}[planning.status],
+                fontSize:12,fontWeight:600,padding:'3px 10px',borderRadius:20}}>
+                {{pending:'Pending',in_progress:'In Progress',completed:'Completed',cancelled:'Cancelled'}[planning.status]}
+              </span>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:'#8898aa',marginBottom:3,textTransform:'uppercase',letterSpacing:'.03em'}}>Reserved planning time</div>
+              <div style={{fontSize:13,fontWeight:500}}>{planning.scheduledAt ? new Date(planning.scheduledAt).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'Not yet scheduled'}</div>
+            </div>
+            {planning.completedAt && (
+              <div>
+                <div style={{fontSize:10,color:'#8898aa',marginBottom:3,textTransform:'uppercase',letterSpacing:'.03em'}}>Completed</div>
+                <div style={{fontSize:13,fontWeight:500}}>{new Date(planning.completedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+              </div>
+            )}
+          </div>
+          {planning.notes && (
+            <div style={{background:'#f0f4f8',borderLeft:'3px solid #0b4f82',borderRadius:'0 6px 6px 0',padding:'10px 14px'}}>
+              <div style={{fontSize:10,color:'#8898aa',marginBottom:3,textTransform:'uppercase',letterSpacing:'.03em'}}>Physicist notes</div>
+              <div style={{fontSize:13}}>{planning.notes}</div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Patient basic */}
       <div style={card}>

@@ -92,6 +92,7 @@ export default function SimOrder({ navigate, patientId }) {
   const [pet, setPet] = useState(null)
   const [special, setSpecial] = useState([])
   const [notes, setNotes] = useState('')
+  const [rttFeedback, setRttFeedback] = useState(null)
 
   useEffect(() => {
     if (!patientId) return
@@ -119,6 +120,12 @@ export default function SimOrder({ navigate, patientId }) {
           setPet(s.pet_ct || null)
           setSpecial(s.special_orders || [])
           setNotes(s.notes_to_physics || '')
+          setRttFeedback({
+            status: s.status || 'pending',
+            scheduledAt: s.scheduled_at,
+            completedAt: s.completed_at,
+            notes: s.completion_notes,
+          })
         })
       }
     })
@@ -239,6 +246,39 @@ export default function SimOrder({ navigate, patientId }) {
 
       {error && <div style={{background:'#fdecea',color:'#c0392b',border:'1px solid #f5c6c2',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>{error}</div>}
       {saved && <div style={{background:'#e8f7ef',color:'#1a7a4a',border:'1px solid #b7e4cc',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>✓ {saved.updated ? 'Updated' : 'Saved'} as <strong>{saved.order_ref}</strong></div>}
+
+      {/* RTT scheduling feedback */}
+      {rttFeedback && (
+        <div style={{...card,background:'#fafbfc'}}>
+          <div style={{fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:10}}>RTT — Simulation Status</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:13,marginBottom:rttFeedback.notes?13:0}}>
+            <div>
+              <div style={{fontSize:10,color:'#8898aa',marginBottom:3,textTransform:'uppercase',letterSpacing:'.03em'}}>Status</div>
+              <span style={{background:{pending:'#fef4e7',scheduled:'#eef2ff',done:'#e8f7ef',cancelled:'#f0f4f8'}[rttFeedback.status],
+                color:{pending:'#e67e22',scheduled:'#4338ca',done:'#1a7a4a',cancelled:'#8898aa'}[rttFeedback.status],
+                fontSize:12,fontWeight:600,padding:'3px 10px',borderRadius:20}}>
+                {{pending:'Pending',scheduled:'Scheduled',done:'Done',cancelled:'Cancelled'}[rttFeedback.status]}
+              </span>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:'#8898aa',marginBottom:3,textTransform:'uppercase',letterSpacing:'.03em'}}>Reserved sim time</div>
+              <div style={{fontSize:13,fontWeight:500}}>{rttFeedback.scheduledAt ? new Date(rttFeedback.scheduledAt).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'Not yet scheduled'}</div>
+            </div>
+            {rttFeedback.completedAt && (
+              <div>
+                <div style={{fontSize:10,color:'#8898aa',marginBottom:3,textTransform:'uppercase',letterSpacing:'.03em'}}>Completed</div>
+                <div style={{fontSize:13,fontWeight:500}}>{new Date(rttFeedback.completedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+              </div>
+            )}
+          </div>
+          {rttFeedback.notes && (
+            <div style={{background:'#f0f4f8',borderLeft:'3px solid #0b4f82',borderRadius:'0 6px 6px 0',padding:'10px 14px'}}>
+              <div style={{fontSize:10,color:'#8898aa',marginBottom:3,textTransform:'uppercase',letterSpacing:'.03em'}}>RTT notes</div>
+              <div style={{fontSize:13}}>{rttFeedback.notes}</div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Patient header */}
       <div style={card}>
