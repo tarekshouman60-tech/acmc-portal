@@ -216,3 +216,23 @@ ALTER TABLE sim_orders ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP;
 ALTER TABLE sim_orders ADD COLUMN IF NOT EXISTS completion_notes TEXT;
 ALTER TABLE sim_orders ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;
 ALTER TABLE sim_orders ADD COLUMN IF NOT EXISTS rtt_id INTEGER REFERENCES rtts(id);
+
+-- Medical Physicist (treatment planning) accounts
+CREATE TABLE IF NOT EXISTS physicists (
+  id SERIAL PRIMARY KEY,
+  full_name VARCHAR(200) NOT NULL,
+  email VARCHAR(150) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Treatment planning scheduling, documentation & replanning
+-- (planning_status is separate from clinical_orders.status, which is the
+-- doctor's fixed "submitted" flag and is not a general workflow status)
+ALTER TABLE clinical_orders ADD COLUMN IF NOT EXISTS planning_scheduled_at TIMESTAMP;
+ALTER TABLE clinical_orders ADD COLUMN IF NOT EXISTS planning_status VARCHAR(30) DEFAULT 'pending';
+ALTER TABLE clinical_orders ADD COLUMN IF NOT EXISTS planning_notes TEXT;
+ALTER TABLE clinical_orders ADD COLUMN IF NOT EXISTS planning_completed_at TIMESTAMP;
+ALTER TABLE clinical_orders ADD COLUMN IF NOT EXISTS physicist_id INTEGER REFERENCES physicists(id);
+ALTER TABLE clinical_orders ADD COLUMN IF NOT EXISTS replan_count INTEGER DEFAULT 0;

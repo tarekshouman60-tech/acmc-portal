@@ -41,7 +41,11 @@ def rtt_or_admin(tok=Depends(decode_token)):
     if tok["role"] not in ("rtt","admin"): raise HTTPException(403)
     return tok
 
-ROLE_TABLE = {"admin":"admins","doctor":"doctors","rtt":"rtts"}
+def physicist_or_admin(tok=Depends(decode_token)):
+    if tok["role"] not in ("physicist","admin"): raise HTTPException(403)
+    return tok
+
+ROLE_TABLE = {"admin":"admins","doctor":"doctors","rtt":"rtts","physicist":"physicists"}
 
 # ── models ────────────────────────────────────────────────────────────────────
 class LoginReq(BaseModel):
@@ -58,6 +62,15 @@ class RttSimUpdate(BaseModel):
     scheduled_at: Optional[datetime]=None
     status: Optional[str]=None
     completion_notes: Optional[str]=None
+
+class PhysicistCreate(BaseModel):
+    full_name: str; email: EmailStr; password: str
+
+class PhysicistPlanningUpdate(BaseModel):
+    planning_scheduled_at: Optional[datetime]=None
+    status: Optional[str]=None
+    planning_notes: Optional[str]=None
+    replan: Optional[bool]=False
 
 class PatientCreate(BaseModel):
     full_name: str; date_of_birth: Optional[date]=None; gender: Optional[str]=None
@@ -117,6 +130,9 @@ async def login(req: LoginReq, db=Depends(get_db)):
     row = await db.fetchrow("SELECT id,password_hash FROM rtts WHERE email=$1 AND is_active=true", req.email)
     if row and bcrypt.checkpw(req.password.encode(), row["password_hash"].encode()):
         return {"token": make_token(row["id"],"rtt"), "role":"rtt"}
+    row = await db.fetchrow("SELECT id,password_hash FROM physicists WHERE email=$1 AND is_active=true", req.email)
+    if row and bcrypt.checkpw(req.password.encode(), row["password_hash"].encode()):
+        return {"token": make_token(row["id"],"physicist"), "role":"physicist"}
     raise HTTPException(401, "Invalid credentials")
 
 @app.get("/api/auth/me")
@@ -125,6 +141,8 @@ async def me(tok=Depends(decode_token), db=Depends(get_db)):
         r = await db.fetchrow("SELECT id,full_name,email FROM admins WHERE id=$1", int(tok["sub"]))
     elif tok["role"]=="rtt":
         r = await db.fetchrow("SELECT id,full_name,email FROM rtts WHERE id=$1", int(tok["sub"]))
+    elif tok["role"]=="physicist":
+        r = await db.fetchrow("SELECT id,full_name,email FROM physicists WHERE id=$1", int(tok["sub"]))
     else:
         r = await db.fetchrow("SELECT id,full_name,email,specialty,clinic_affiliation,phone FROM doctors WHERE id=$1", int(tok["sub"]))
     return dict(r)|{"role":tok["role"]}
@@ -176,6 +194,25 @@ async def create_rtt(body: RttCreate, db=Depends(get_db), tok=Depends(admin_only
 @app.patch("/api/rtts/{rid}/toggle")
 async def toggle_rtt(rid: int, db=Depends(get_db), tok=Depends(admin_only)):
     await db.execute("UPDATE rtts SET is_active=NOT is_active WHERE id=$1", rid)
+    return {"ok":True}
+
+# ── Medical Physicist accounts (admin) ───────────────────────────────────────
+@app.get("/api/physicists")
+async def list_physicists(db=Depends(get_db), tok=Depends(admin_only)):
+    rows = await db.fetch("SELECT id,full_name,email,is_active,created_at FROM physicists ORDER BY full_name")
+    return [dict(r) for r in rows]
+
+@app.post("/api/physicists")
+async def create_physicist(body: PhysicistCreate, db=Depends(get_db), tok=Depends(admin_only)):
+    pw = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
+    r = await db.fetchrow(
+        "INSERT INTO physicists(full_name,email,password_hash) VALUES($1,$2,$3) RETURNING id",
+        body.full_name, body.email, pw)
+    return {"id":r["id"]}
+
+@app.patch("/api/physicists/{pid}/toggle")
+async def toggle_physicist(pid: int, db=Depends(get_db), tok=Depends(admin_only)):
+    await db.execute("UPDATE physicists SET is_active=NOT is_active WHERE id=$1", pid)
     return {"ok":True}
 
 # ── patients ──────────────────────────────────────────────────────────────────
@@ -331,12 +368,53 @@ async def create_clinical(body: ClinicalOrderCreate, db=Depends(get_db), tok=Dep
 
 @app.get("/api/clinical-orders/{oid}")
 async def get_clinical(oid: int, db=Depends(get_db), tok=Depends(decode_token)):
-    if tok["role"]=="admin":
+    if tok["role"] in ("admin","physicist"):
         r = await db.fetchrow("SELECT c.*,p.full_name as patient_name,p.date_of_birth,p.gender,d.full_name as doctor_name,d.clinic_affiliation FROM clinical_orders c JOIN patients p ON p.id=c.patient_id JOIN doctors d ON d.id=c.doctor_id WHERE c.id=$1", oid)
     else:
         r = await db.fetchrow("SELECT c.*,p.full_name as patient_name,p.date_of_birth,p.gender FROM clinical_orders c JOIN patients p ON p.id=c.patient_id WHERE c.id=$1 AND c.doctor_id=$2", oid, int(tok["sub"]))
     if not r: raise HTTPException(404)
     return dict(r)
+
+# ── clinical orders — Medical Physicist planning view (all patients) ──────────
+@app.get("/api/physicist/clinical-orders")
+async def list_all_clinical_orders_physicist(db=Depends(get_db), tok=Depends(physicist_or_admin)):
+    rows = await db.fetch("""
+        SELECT c.*, p.full_name as patient_name, p.diagnosis, p.phone as patient_phone,
+               d.full_name as doctor_name
+        FROM clinical_orders c
+        JOIN patients p ON p.id=c.patient_id
+        JOIN doctors d ON d.id=c.doctor_id
+        ORDER BY c.planning_scheduled_at NULLS LAST, c.created_at DESC
+    """)
+    return [dict(r) for r in rows]
+
+@app.patch("/api/physicist/clinical-orders/{oid}")
+async def physicist_update_clinical(oid: int, body: PhysicistPlanningUpdate, db=Depends(get_db), tok=Depends(physicist_or_admin)):
+    row = await db.fetchrow("SELECT id FROM clinical_orders WHERE id=$1", oid)
+    if not row: raise HTTPException(404)
+    sets, vals = [], []
+    if body.replan:
+        sets.append("planning_status='in_progress'")
+        sets.append("replan_count=COALESCE(replan_count,0)+1")
+        sets.append("planning_completed_at=NULL")
+    elif body.status is not None:
+        valid = ['pending','in_progress','completed','cancelled']
+        if body.status not in valid:
+            raise HTTPException(400, f"Invalid status. Must be one of: {valid}")
+        sets.append(f"planning_status=${len(vals)+1}"); vals.append(body.status)
+        if body.status == 'completed':
+            sets.append("planning_completed_at=NOW()")
+    if body.planning_scheduled_at is not None:
+        sets.append(f"planning_scheduled_at=${len(vals)+1}"); vals.append(body.planning_scheduled_at)
+    if body.planning_notes is not None:
+        sets.append(f"planning_notes=${len(vals)+1}"); vals.append(body.planning_notes)
+    if tok["role"] == "physicist":
+        sets.append(f"physicist_id=${len(vals)+1}"); vals.append(int(tok["sub"]))
+    if not sets:
+        return {"ok": True}
+    vals.append(oid)
+    await db.execute(f"UPDATE clinical_orders SET {', '.join(sets)} WHERE id=${len(vals)}", *vals)
+    return {"ok": True}
 
 # ── cost estimates ────────────────────────────────────────────────────────────
 @app.post("/api/estimates")

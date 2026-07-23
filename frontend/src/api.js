@@ -45,6 +45,12 @@ export const api = {
   rttSimOrders: () => req('GET','/rtt/sim-orders'),
   updateRttSimOrder: (id, data) => req('PATCH',`/rtt/sim-orders/${id}`,data),
 
+  physicists: () => req('GET','/physicists'),
+  createPhysicist: (data) => req('POST','/physicists',data),
+  togglePhysicist: (id) => req('PATCH',`/physicists/${id}/toggle`),
+  physicistClinicalOrders: () => req('GET','/physicist/clinical-orders'),
+  updatePhysicistClinicalOrder: (id, data) => req('PATCH',`/physicist/clinical-orders/${id}`,data),
+
   patients: () => req('GET','/patients'),
   createPatient: (data) => req('POST','/patients',data),
   getPatient: (id) => req('GET',`/patients/${id}`),
