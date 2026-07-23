@@ -241,8 +241,8 @@ async def get_patient(pid: int, db=Depends(get_db), tok=Depends(decode_token)):
     else:
         p = await db.fetchrow("SELECT * FROM patients WHERE id=$1 AND doctor_id=$2", pid, int(tok["sub"]))
     if not p: raise HTTPException(404)
-    sims = await db.fetch("SELECT id,order_ref,status,sim_date_requested,created_at FROM sim_orders WHERE patient_id=$1 ORDER BY created_at DESC", pid)
-    clins = await db.fetch("SELECT id,order_ref,status,technique,total_dose_gy,fractions,created_at FROM clinical_orders WHERE patient_id=$1 ORDER BY created_at DESC", pid)
+    sims = await db.fetch("SELECT id,order_ref,status,sim_date_requested,scheduled_at,completion_notes,created_at FROM sim_orders WHERE patient_id=$1 ORDER BY created_at DESC", pid)
+    clins = await db.fetch("SELECT id,order_ref,status,technique,total_dose_gy,fractions,planning_status,planning_scheduled_at,planning_notes,replan_count,created_at FROM clinical_orders WHERE patient_id=$1 ORDER BY created_at DESC", pid)
     ests = await db.fetch("SELECT id,order_ref,status,total_egp,has_tbd,created_at FROM cost_estimates WHERE patient_id=$1 ORDER BY created_at DESC", pid)
     miles = await db.fetchrow("SELECT * FROM milestones WHERE patient_id=$1", pid)
     billing = await db.fetchrow("SELECT b.*,ce.order_ref as estimate_ref FROM billing b JOIN cost_estimates ce ON ce.id=b.estimate_id WHERE b.patient_id=$1 ORDER BY b.created_at DESC LIMIT 1", pid)

@@ -1,7 +1,18 @@
 import React, { useEffect, useState } from 'react'
-import { api, fmtEGP, fmtDate } from '../api.js'
+import { api, fmtEGP, fmtDate, fmtDateTime } from '../api.js'
 import { useAuth } from '../App.jsx'
 import { StatusBadge, StatusDropdown } from '../components/StatusBadge.jsx'
+
+const PLANNING_META = {
+  pending:     {bg:'#fef4e7',color:'#e67e22',label:'Pending'},
+  in_progress: {bg:'#eef2ff',color:'#4338ca',label:'In Progress'},
+  completed:   {bg:'#e8f7ef',color:'#1a7a4a',label:'Completed'},
+  cancelled:   {bg:'#f0f4f8',color:'#8898aa',label:'Cancelled'},
+}
+function PlanningBadge({status}) {
+  const s = PLANNING_META[status] || PLANNING_META.pending
+  return <span style={{background:s.bg,color:s.color,fontSize:11,fontWeight:600,padding:'2px 9px',borderRadius:20,whiteSpace:'nowrap'}}>{s.label}</span>
+}
 
 function MilestoneStep({ label, done, date }) {
   return (
@@ -196,8 +207,8 @@ export default function PatientDetail({ navigate, patientId }) {
 
       {/* Orders tables */}
       {[
-        {title:'Simulation Orders',         items:sim_orders,     type:'sim',      route:'sim-order',      cols:['Ref','Sim Date','Status','']},
-        {title:'Clinical Treatment Orders', items:clinical_orders, type:'clinical', route:'clinical-order', cols:['Ref','Technique','Dose','Status','']},
+        {title:'Simulation Orders',         items:sim_orders,     type:'sim',      route:'sim-order',      cols:['Ref','Sim Date','Reserved','Status','RTT Notes','']},
+        {title:'Clinical Treatment Orders', items:clinical_orders, type:'clinical', route:'clinical-order', cols:['Ref','Technique','Dose','Status','Planning','Reserved','Physicist Notes','']},
         {title:'Cost Estimates',            items:cost_estimates,  type:'estimate', route:'cost-estimate',  cols:['Ref','Total (EGP)','Status','']},
       ].map(({title,items,type,route,cols})=>(
         <div key={type} style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,marginBottom:12,overflow:'hidden'}}>
@@ -208,13 +219,16 @@ export default function PatientDetail({ navigate, patientId }) {
             ? <div style={{padding:'18px 20px',color:'#8898aa',fontSize:13}}>No {title.toLowerCase()} yet.</div>
             : <table style={{width:'100%',borderCollapse:'collapse'}}>
                 <thead><tr>
-                  {cols.map((c,i)=><th key={c||i} style={{padding:'8px 16px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec',background:'#fafbfc'}}>{c}</th>)}
+                  {cols.map((c,i)=><th key={c||i} style={{padding:'8px 16px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec',background:'#fafbfc',whiteSpace:'nowrap'}}>{c}</th>)}
                 </tr></thead>
                 <tbody>
                   {items.map(item=>(
                     <tr key={item.id} onClick={()=>navigate(route,{patientId})} style={{borderBottom:'1px solid #f0f4f8',cursor:'pointer'}}>
                       <td style={{padding:'10px 16px',fontSize:12.5,fontFamily:'monospace'}}>{item.order_ref}</td>
-                      {type==='sim' && <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70'}}>{fmtDate(item.sim_date_requested)}</td>}
+                      {type==='sim' && <>
+                        <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70'}}>{fmtDate(item.sim_date_requested)}</td>
+                        <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70',whiteSpace:'nowrap'}}>{item.scheduled_at?fmtDateTime(item.scheduled_at):'—'}</td>
+                      </>}
                       {type==='clinical' && <>
                         <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70'}}>{item.technique||'—'}</td>
                         <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70'}}>{item.total_dose_gy?item.total_dose_gy+'Gy/'+item.fractions+'F':'—'}</td>
@@ -227,6 +241,17 @@ export default function PatientDetail({ navigate, patientId }) {
                           : <StatusBadge status={item.status} doctorView={!isAdmin}/>
                         }
                       </td>
+                      {type==='clinical' && <>
+                        <td style={{padding:'10px 16px'}}>
+                          <PlanningBadge status={item.planning_status}/>
+                          {item.replan_count>0 && <span style={{marginLeft:6,fontSize:10.5,color:'#c0392b',fontWeight:600}}>↻{item.replan_count}</span>}
+                        </td>
+                        <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70',whiteSpace:'nowrap'}}>{item.planning_scheduled_at?fmtDateTime(item.planning_scheduled_at):'—'}</td>
+                        <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={item.planning_notes||''}>{item.planning_notes||'—'}</td>
+                      </>}
+                      {type==='sim' && (
+                        <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={item.completion_notes||''}>{item.completion_notes||'—'}</td>
+                      )}
                       <td style={{padding:'10px 16px',textAlign:'right'}}>
                         <span style={{fontSize:12,color:'#0b4f82',fontWeight:500,whiteSpace:'nowrap'}}>View →</span>
                       </td>
