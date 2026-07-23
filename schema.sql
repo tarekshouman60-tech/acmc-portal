@@ -227,6 +227,22 @@ CREATE TABLE IF NOT EXISTS physicists (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Media attachments (photos / short videos) uploaded by RTT or Medical
+-- Physicist alongside their documentation notes
+CREATE TABLE IF NOT EXISTS order_attachments (
+  id SERIAL PRIMARY KEY,
+  order_type VARCHAR(20) NOT NULL, -- 'sim' or 'clinical'
+  order_id INTEGER NOT NULL,
+  uploaded_by_role VARCHAR(20),
+  uploaded_by_id INTEGER,
+  file_path VARCHAR(500) NOT NULL,
+  file_type VARCHAR(20) NOT NULL, -- 'image' or 'video'
+  original_filename VARCHAR(255),
+  size_bytes INTEGER,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_order_attachments_lookup ON order_attachments(order_type, order_id);
+
 -- Treatment planning scheduling, documentation & replanning
 -- (planning_status is separate from clinical_orders.status, which is the
 -- doctor's fixed "submitted" flag and is not a general workflow status)

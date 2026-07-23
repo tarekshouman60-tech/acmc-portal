@@ -1,9 +1,10 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
-import asyncpg, jwt, bcrypt, os, random, string, asyncio
+import asyncpg, jwt, bcrypt, os, random, string, asyncio, uuid, pathlib
 from datetime import datetime, date, timedelta
 
 app = FastAPI(title="ACMC Radiotherapy Portal")
@@ -12,6 +13,15 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 DB_URL = os.getenv("DATABASE_URL", "postgresql://acmc:acmc_pass@db:5432/acmc")
 SECRET  = os.getenv("JWT_SECRET", "change_this_in_production")
 bearer  = HTTPBearer()
+
+UPLOAD_DIR = pathlib.Path(os.getenv("UPLOAD_DIR", "uploads"))
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+ATTACHMENT_KINDS = {
+    "image": {".jpg", ".jpeg"},
+    "video": {".mp4", ".mov", ".webm"},
+    "audio": {".mp3", ".m4a", ".wav", ".ogg", ".webm"},
+}
+ATTACHMENT_MAX_BYTES = {"image": 8*1024*1024, "video": 30*1024*1024, "audio": 15*1024*1024}
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 def gen_ref(prefix):
@@ -414,6 +424,78 @@ async def physicist_update_clinical(oid: int, body: PhysicistPlanningUpdate, db=
         return {"ok": True}
     vals.append(oid)
     await db.execute(f"UPDATE clinical_orders SET {', '.join(sets)} WHERE id=${len(vals)}", *vals)
+    return {"ok": True}
+
+# ── order attachments (photos / short videos / voice notes) ───────────────────
+async def _check_order_access(order_type: str, order_id: int, tok: dict, db) -> dict:
+    if order_type not in ("sim", "clinical"):
+        raise HTTPException(400, "order_type must be 'sim' or 'clinical'")
+    table = "sim_orders" if order_type == "sim" else "clinical_orders"
+    row = await db.fetchrow(f"SELECT id, doctor_id FROM {table} WHERE id=$1", order_id)
+    if not row:
+        raise HTTPException(404, "Order not found")
+    role = tok["role"]
+    if role == "admin":
+        return row
+    if role == "doctor" and row["doctor_id"] == int(tok["sub"]):
+        return row
+    if role == "rtt" and order_type == "sim":
+        return row
+    if role == "physicist" and order_type == "clinical":
+        return row
+    raise HTTPException(403, "Not authorized for this order")
+
+@app.post("/api/attachments")
+async def upload_attachment(
+    order_type: str = Form(...), order_id: int = Form(...), kind: str = Form(...),
+    file: UploadFile = File(...), db=Depends(get_db), tok=Depends(decode_token)):
+    if kind not in ATTACHMENT_KINDS:
+        raise HTTPException(400, f"kind must be one of {list(ATTACHMENT_KINDS)}")
+    if tok["role"] not in ("admin", "rtt", "physicist"):
+        raise HTTPException(403, "Only RTT, Medical Physicist or admin can upload attachments")
+    await _check_order_access(order_type, order_id, tok, db)
+    ext = pathlib.Path(file.filename or "").suffix.lower()
+    if ext not in ATTACHMENT_KINDS[kind]:
+        raise HTTPException(400, f"Unsupported file extension for {kind}: {ext or '(none)'}")
+    data = await file.read()
+    if len(data) > ATTACHMENT_MAX_BYTES[kind]:
+        raise HTTPException(400, f"File too large — max {ATTACHMENT_MAX_BYTES[kind]//(1024*1024)}MB for {kind}")
+    subdir = UPLOAD_DIR / order_type / str(order_id)
+    subdir.mkdir(parents=True, exist_ok=True)
+    fname = f"{uuid.uuid4().hex}{ext}"
+    (subdir / fname).write_bytes(data)
+    r = await db.fetchrow(
+        """INSERT INTO order_attachments(order_type,order_id,uploaded_by_role,uploaded_by_id,file_path,file_type,original_filename,size_bytes)
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,created_at""",
+        order_type, order_id, tok["role"], int(tok["sub"]), f"{order_type}/{order_id}/{fname}", kind, file.filename, len(data))
+    return {"id": r["id"], "file_type": kind, "original_filename": file.filename, "created_at": r["created_at"]}
+
+@app.get("/api/attachments")
+async def list_attachments(order_type: str, order_id: int, db=Depends(get_db), tok=Depends(decode_token)):
+    await _check_order_access(order_type, order_id, tok, db)
+    rows = await db.fetch(
+        "SELECT id,file_type,original_filename,size_bytes,uploaded_by_role,created_at FROM order_attachments WHERE order_type=$1 AND order_id=$2 ORDER BY created_at",
+        order_type, order_id)
+    return [dict(r) for r in rows]
+
+@app.get("/api/attachments/{aid}/file")
+async def get_attachment_file(aid: int, db=Depends(get_db), tok=Depends(decode_token)):
+    row = await db.fetchrow("SELECT * FROM order_attachments WHERE id=$1", aid)
+    if not row: raise HTTPException(404)
+    await _check_order_access(row["order_type"], row["order_id"], tok, db)
+    path = UPLOAD_DIR / row["file_path"]
+    if not path.exists(): raise HTTPException(404, "File missing on disk")
+    return FileResponse(path, filename=row["original_filename"] or path.name)
+
+@app.delete("/api/attachments/{aid}")
+async def delete_attachment(aid: int, db=Depends(get_db), tok=Depends(decode_token)):
+    row = await db.fetchrow("SELECT * FROM order_attachments WHERE id=$1", aid)
+    if not row: raise HTTPException(404)
+    if tok["role"] != "admin" and not (row["uploaded_by_role"] == tok["role"] and row["uploaded_by_id"] == int(tok["sub"])):
+        raise HTTPException(403, "Only the uploader or admin can delete this attachment")
+    path = UPLOAD_DIR / row["file_path"]
+    path.unlink(missing_ok=True)
+    await db.execute("DELETE FROM order_attachments WHERE id=$1", aid)
     return {"ok": True}
 
 # ── cost estimates ────────────────────────────────────────────────────────────

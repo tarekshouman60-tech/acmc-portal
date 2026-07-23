@@ -29,6 +29,9 @@ services:
       TWILIO_SID: ${TWILIO_SID:-}
       TWILIO_TOKEN: ${TWILIO_TOKEN:-}
       TWILIO_WHATSAPP_FROM: ${TWILIO_WHATSAPP_FROM:-whatsapp:+14155238886}
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - uploads_data:/app/uploads
     ports:
       - "8000:8000"
     depends_on:
@@ -46,3 +49,4 @@ services:
 
 volumes:
   pg_data:
+  uploads_data:

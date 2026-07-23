@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { api, fmtDate, fmtDateTime, fmtDateTimeInput } from '../api.js'
 import { useAuth } from '../App.jsx'
+import { AttachmentUploader, AttachmentGallery } from '../components/Attachments.jsx'
 
 const inp = {width:'100%',border:'1px solid #dde3ec',borderRadius:6,padding:'8px 11px',fontSize:13,fontFamily:'inherit',outline:'none'}
 const FL = ({label,children}) => <div><label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>{label}</label>{children}</div>
@@ -69,6 +70,7 @@ function ManageRow({ o, onSaved, onClose }) {
   const [notes, setNotes] = useState(o.completion_notes || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [attachRefresh, setAttachRefresh] = useState(0)
 
   async function save() {
     setSaving(true); setError('')
@@ -104,6 +106,10 @@ function ManageRow({ o, onSaved, onClose }) {
         <textarea style={{...inp,resize:'vertical',minHeight:70}} value={notes} onChange={e=>setNotes(e.target.value)}
           placeholder="e.g. CT sim completed supine, head & neck mask fitted, no complications. Images sent to planning."/>
       </FL>
+      <div style={{marginTop:13}}>
+        <AttachmentUploader orderType="sim" orderId={o.id} onUploaded={()=>setAttachRefresh(n=>n+1)}/>
+        <AttachmentGallery orderType="sim" orderId={o.id} refreshKey={attachRefresh}/>
+      </div>
       <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:13}}>
         <button onClick={onClose} style={{padding:'8px 16px',borderRadius:6,border:'1px solid #dde3ec',background:'transparent',cursor:'pointer',fontSize:13}}>Close</button>
         <button onClick={save} disabled={saving} style={{padding:'8px 18px',borderRadius:6,border:'none',background:'#0b4f82',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>

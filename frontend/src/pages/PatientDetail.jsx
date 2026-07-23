@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { api, fmtEGP, fmtDate, fmtDateTime } from '../api.js'
 import { useAuth } from '../App.jsx'
 import { StatusBadge, StatusDropdown } from '../components/StatusBadge.jsx'
+import NotesModal from '../components/NotesModal.jsx'
 
 const PLANNING_META = {
   pending:     {bg:'#fef4e7',color:'#e67e22',label:'Pending'},
@@ -124,6 +125,7 @@ export default function PatientDetail({ navigate, patientId }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editMilestones, setEditMilestones] = useState(false)
+  const [notesModal, setNotesModal] = useState(null)
   const isAdmin = user?.role === 'admin'
 
   useEffect(() => {
@@ -247,10 +249,16 @@ export default function PatientDetail({ navigate, patientId }) {
                           {item.replan_count>0 && <span style={{marginLeft:6,fontSize:10.5,color:'#c0392b',fontWeight:600}}>↻{item.replan_count}</span>}
                         </td>
                         <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70',whiteSpace:'nowrap'}}>{item.planning_scheduled_at?fmtDateTime(item.planning_scheduled_at):'—'}</td>
-                        <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={item.planning_notes||''}>{item.planning_notes||'—'}</td>
+                        <td style={{padding:'10px 16px',fontSize:12.5,color:item.planning_notes?'#0b4f82':'#4a5a70',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',cursor:'pointer',textDecoration:item.planning_notes?'underline':'none'}}
+                          onClick={e=>{e.stopPropagation(); setNotesModal({title:'Physicist Notes',subtitle:item.order_ref,notes:item.planning_notes,orderType:'clinical',orderId:item.id})}}>
+                          {item.planning_notes||'—'}
+                        </td>
                       </>}
                       {type==='sim' && (
-                        <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={item.completion_notes||''}>{item.completion_notes||'—'}</td>
+                        <td style={{padding:'10px 16px',fontSize:12.5,color:item.completion_notes?'#0b4f82':'#4a5a70',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',cursor:'pointer',textDecoration:item.completion_notes?'underline':'none'}}
+                          onClick={e=>{e.stopPropagation(); setNotesModal({title:'RTT Notes',subtitle:item.order_ref,notes:item.completion_notes,orderType:'sim',orderId:item.id})}}>
+                          {item.completion_notes||'—'}
+                        </td>
                       )}
                       <td style={{padding:'10px 16px',textAlign:'right'}}>
                         <span style={{fontSize:12,color:'#0b4f82',fontWeight:500,whiteSpace:'nowrap'}}>View →</span>
@@ -288,6 +296,11 @@ export default function PatientDetail({ navigate, patientId }) {
             </div>
           )}
         </div>
+      )}
+
+      {notesModal && (
+        <NotesModal title={notesModal.title} subtitle={notesModal.subtitle} notes={notesModal.notes}
+          orderType={notesModal.orderType} orderId={notesModal.orderId} onClose={()=>setNotesModal(null)}/>
       )}
     </div>
   )

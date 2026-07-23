@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { api } from '../api.js'
 import { useAuth } from '../App.jsx'
+import { AttachmentGallery } from '../components/Attachments.jsx'
 
 const POSITIONING = ['Supine','Prone','Abdominal compression','Hand side','Hand on abdomen','Hand on chest','Hands above head']
 const FIXATION = ['SRS mask','Head closed','Head open','Head & neck closed','Head & neck open','Pelvis','Peripheral limb','Vac-Lok adult','Vac-Lok pediatric']
@@ -121,6 +122,7 @@ export default function SimOrder({ navigate, patientId }) {
           setSpecial(s.special_orders || [])
           setNotes(s.notes_to_physics || '')
           setRttFeedback({
+            id: s.id,
             status: s.status || 'pending',
             scheduledAt: s.scheduled_at,
             completedAt: s.completed_at,
@@ -277,6 +279,7 @@ export default function SimOrder({ navigate, patientId }) {
               <div style={{fontSize:13}}>{rttFeedback.notes}</div>
             </div>
           )}
+          <AttachmentGallery orderType="sim" orderId={rttFeedback.id} allowDelete={false}/>
         </div>
       )}
 

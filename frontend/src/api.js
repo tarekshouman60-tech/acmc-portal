@@ -27,6 +27,36 @@ async function req(method, path, body) {
   }
 }
 
+async function uploadFile(orderType, orderId, kind, fileOrBlob, filename) {
+  const fd = new FormData()
+  fd.append('order_type', orderType)
+  fd.append('order_id', orderId)
+  fd.append('kind', kind)
+  fd.append('file', fileOrBlob, filename || fileOrBlob.name || `${kind}-${Date.now()}`)
+  const res = await fetch(BASE + '/attachments', {
+    method: 'POST',
+    headers: { ...(token()?{Authorization:`Bearer ${token()}`}:{}) },
+    body: fd,
+  })
+  if (res.status===401) { localStorage.clear(); window.location.href='/'; return }
+  if (!res.ok) {
+    const e = await res.json().catch(()=>({}))
+    let msg = e.detail || `Upload failed (${res.status})`
+    if (Array.isArray(msg)) msg = msg.map(d => d.msg || JSON.stringify(d)).join('; ')
+    throw new Error(msg)
+  }
+  return res.json()
+}
+
+async function fetchAttachmentBlobUrl(id) {
+  const res = await fetch(BASE + `/attachments/${id}/file`, {
+    headers: { ...(token()?{Authorization:`Bearer ${token()}`}:{}) },
+  })
+  if (!res.ok) throw new Error(`Failed to load attachment (${res.status})`)
+  const blob = await res.blob()
+  return URL.createObjectURL(blob)
+}
+
 export const api = {
   login: (email,password) => req('POST','/auth/login',{email,password}),
   me: () => req('GET','/auth/me'),
@@ -50,6 +80,11 @@ export const api = {
   togglePhysicist: (id) => req('PATCH',`/physicists/${id}/toggle`),
   physicistClinicalOrders: () => req('GET','/physicist/clinical-orders'),
   updatePhysicistClinicalOrder: (id, data) => req('PATCH',`/physicist/clinical-orders/${id}`,data),
+
+  uploadAttachment: (orderType, orderId, kind, fileOrBlob, filename) => uploadFile(orderType, orderId, kind, fileOrBlob, filename),
+  listAttachments: (orderType, orderId) => req('GET', `/attachments?order_type=${orderType}&order_id=${orderId}`),
+  attachmentBlobUrl: (id) => fetchAttachmentBlobUrl(id),
+  deleteAttachment: (id) => req('DELETE', `/attachments/${id}`),
 
   patients: () => req('GET','/patients'),
   createPatient: (data) => req('POST','/patients',data),
