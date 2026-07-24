@@ -115,7 +115,7 @@ class ClinicalOrderCreate(BaseModel):
     prescription_text: Optional[str]=None
 
 class EstimateItem(BaseModel):
-    service_id: int; quantity: int=1
+    service_id: int; quantity: int=1; unit_price: Optional[float]=None
 
 class EstimateCreate(BaseModel):
     patient_id: int; items: List[EstimateItem]
@@ -590,18 +590,40 @@ async def create_estimate(body: EstimateCreate, db=Depends(get_db), tok=Depends(
         await db.execute("DELETE FROM billing WHERE estimate_id=$1", existing["id"])
         await db.execute("DELETE FROM cost_estimates WHERE id=$1", existing["id"])
     ref = existing["order_ref"] if existing else gen_ref("EST")
+    # Look up categories/codes up front so we know whether an all-inclusive SBRT/SRS
+    # package was selected — if so, only the package itself and the doctor's own
+    # consultation fees (custom-fee codes) count toward the total; every other
+    # selected service is already bundled into the package price.
+    CUSTOM_FEE_CODES = ("QA-003","QA-004","QA-005")
+    svc_rows = {}
+    for item in body.items:
+        svc = await db.fetchrow("SELECT price_egp,per_fraction,category,code FROM services WHERE id=$1", item.service_id)
+        if not svc: raise HTTPException(404,f"Service {item.service_id} not found")
+        svc_rows[item.service_id] = svc
+    has_package = any(s["category"] == "SBRT/SRS Package" for s in svc_rows.values())
+
     total = 0.0; has_tbd = False
     items_data = []
     for item in body.items:
-        svc = await db.fetchrow("SELECT price_egp,per_fraction FROM services WHERE id=$1", item.service_id)
-        if not svc: raise HTTPException(404,f"Service {item.service_id} not found")
+        svc = svc_rows[item.service_id]
         qty = item.quantity if svc["per_fraction"] else 1
-        if svc["price_egp"] is not None:
+        excluded = has_package and svc["category"] != "SBRT/SRS Package" and svc["code"] not in CUSTOM_FEE_CODES
+        if svc["code"] in CUSTOM_FEE_CODES:
+            if item.unit_price is not None and item.unit_price > 0:
+                sub = float(item.unit_price)
+                unit_price_egp = item.unit_price
+                if not excluded: total += sub
+            else:
+                sub = None; unit_price_egp = svc["price_egp"]
+                if not excluded: has_tbd = True
+        elif svc["price_egp"] is not None:
             sub = float(svc["price_egp"]) * qty
-            total += sub
+            unit_price_egp = svc["price_egp"]
+            if not excluded: total += sub
         else:
-            sub = None; has_tbd = True
-        items_data.append((item.service_id, qty, svc["price_egp"], sub))
+            sub = None; unit_price_egp = svc["price_egp"]
+            if not excluded: has_tbd = True
+        items_data.append((item.service_id, qty, unit_price_egp, sub))
     est = await db.fetchrow(
         "INSERT INTO cost_estimates(patient_id,doctor_id,total_egp,has_tbd,order_ref) VALUES($1,$2,$3,$4,$5) RETURNING id",
         body.patient_id, did, total, has_tbd, ref)

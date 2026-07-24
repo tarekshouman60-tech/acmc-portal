@@ -56,7 +56,7 @@ function RequestDetail({ o }) {
       ))}
       {o.notes_to_physics && (
         <div style={{gridColumn:'1/-1',background:'#f0f4f8',borderLeft:'3px solid #0b4f82',borderRadius:'0 6px 6px 0',padding:'9px 13px'}}>
-          <div style={{fontSize:10,color:'#8898aa',marginBottom:2,textTransform:'uppercase',letterSpacing:'.03em'}}>Notes to physics team</div>
+          <div style={{fontSize:10,color:'#8898aa',marginBottom:2,textTransform:'uppercase',letterSpacing:'.03em'}}>Notes to RTT</div>
           <div style={{fontSize:12.5}}>{o.notes_to_physics}</div>
         </div>
       )}

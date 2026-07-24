@@ -61,11 +61,28 @@ export default function CostEstimate({ navigate, patientId }) {
   function getQty(id) { return quantities[id] || 1 }
   function setQty(id, v) { setQuantities(q => ({...q,[id]:parseInt(v)||1})) }
 
+  function hasPackage() {
+    return Array.from(selected).some(sid => services.find(s => s.id === sid)?.category === 'SBRT/SRS Package')
+  }
+
+  // When an SBRT/SRS package is selected, it's all-inclusive: only the package price
+  // itself and the doctor's own consultation fees (QA-003/004/005) still count — every
+  // other selected service (simulation, immobilization, planning, delivery, etc.) is
+  // already bundled into the package price and must not be added again.
+  function isExcludedByPackage(svc) {
+    if (!svc || !hasPackage()) return false
+    if (svc.category === 'SBRT/SRS Package') return false
+    if (['QA-003','QA-004','QA-005'].includes(svc.code)) return false
+    return true
+  }
+
   function calcTotal() {
     let total = 0, hasTbd = false
+    const pkg = hasPackage()
     selected.forEach(sid => {
       const svc = services.find(s => s.id === sid)
       if (!svc) return
+      if (pkg && isExcludedByPackage(svc)) return
       const qty = svc.per_fraction ? getQty(sid) : 1
       if (['QA-003','QA-004','QA-005'].includes(svc.code)) {
         const custom = parseFloat(customFees[svc.code]) || 0
@@ -84,10 +101,15 @@ export default function CostEstimate({ navigate, patientId }) {
     try {
       const items = Array.from(selected).map(sid => {
         const svc = services.find(s => s.id === sid)
-        return {
+        const item = {
           service_id: sid,
           quantity: svc?.per_fraction ? getQty(sid) : 1
         }
+        if (svc && ['QA-003','QA-004','QA-005'].includes(svc.code)) {
+          const custom = parseFloat(customFees[svc.code])
+          if (custom > 0) item.unit_price = custom
+        }
+        return item
       })
       const res = await api.createEstimate({ patient_id: patientId, items })
       setSaved(res)
@@ -99,6 +121,7 @@ export default function CostEstimate({ navigate, patientId }) {
     const items = Array.from(selected).map(sid => {
       const svc = services.find(s => s.id === sid)
       const qty = svc?.per_fraction ? getQty(sid) : 1
+      const excluded = isExcludedByPackage(svc)
       let sub = null
       if (['QA-003','QA-004','QA-005'].includes(svc?.code)) {
         const cf = parseFloat(customFees[svc.code]) || 0
@@ -106,16 +129,16 @@ export default function CostEstimate({ navigate, patientId }) {
       } else {
         sub = svc?.price_egp != null ? svc.price_egp * qty : null
       }
-      return { code: svc?.code, name: svc?.name, unit: svc?.per_fraction ? qty+' fraction'+(qty>1?'s':'') : svc?.unit||'—', sub }
+      return { code: svc?.code, name: svc?.name, unit: svc?.per_fraction ? qty+' fraction'+(qty>1?'s':'') : svc?.unit||'—', sub, excluded }
     })
     const orderNum = saved?.order_ref || 'EST-PREVIEW'
     const orderDate = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})
     const rows = items.map(i=>`
-    <tr>
+    <tr${i.excluded?' style="opacity:.55"':''}>
       <td style="padding:10px 14px;font-size:12px;color:#8898aa;font-family:monospace;border-bottom:1px solid #f0f4f8">${i.code}</td>
       <td style="padding:10px 14px;font-size:13px;border-bottom:1px solid #f0f4f8">${i.name}</td>
       <td style="padding:10px 14px;font-size:12.5px;color:#4a5a70;border-bottom:1px solid #f0f4f8;text-align:center">${i.unit}</td>
-      <td style="padding:10px 14px;font-size:13px;font-weight:500;border-bottom:1px solid #f0f4f8;text-align:right">${i.sub!=null?fmtEGP(i.sub):'<span style="color:#aaa;font-style:italic;font-weight:400">TBD</span>'}</td>
+      <td style="padding:10px 14px;font-size:13px;font-weight:500;border-bottom:1px solid #f0f4f8;text-align:right">${i.excluded?'<span style="color:#0b4f82;font-style:italic;font-weight:400">Included in package</span>':(i.sub!=null?fmtEGP(i.sub):'<span style="color:#aaa;font-style:italic;font-weight:400">TBD</span>')}</td>
     </tr>`).join('')
     const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${orderNum}</title>
 <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:13px;color:#1a2636}
@@ -188,6 +211,7 @@ th:last-child,td:last-child{text-align:right}
 
       {error && <div style={{background:'#fdecea',color:'#c0392b',border:'1px solid #f5c6c2',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>{error}</div>}
       {saved && <div style={{background:'#e8f7ef',color:'#1a7a4a',border:'1px solid #b7e4cc',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>✓ {saved.updated ? 'Updated' : 'Saved'} as <strong>{saved.order_ref}</strong></div>}
+      {hasPackage() && <div style={{background:'#fdecea',color:'#791f1f',border:'1px solid #f5c6c2',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>📦 SBRT/SRS Package selected — this is all-inclusive. Other selected services are bundled into the package price and excluded from the total; only the package price plus your own consultation fees are charged.</div>}
 
       {/* Services */}
       <div style={card}>
@@ -214,11 +238,13 @@ th:last-child,td:last-child{text-align:right}
                     const isSel = selected.has(svc.id)
                     const qty = getQty(svc.id)
                     const sub = svc.price_egp != null ? svc.price_egp * (svc.per_fraction ? qty : 1) : null
+                    const excluded = isSel && isExcludedByPackage(svc)
                     return (
                       <div key={svc.id} onClick={() => toggleSvc(svc.id)}
                         style={{display:'grid',gridTemplateColumns:'1fr auto auto auto',alignItems:'center',gap:12,
                           padding:'9px 14px',borderBottom:i<svcs.length-1?'1px solid #f0f4f8':'none',
-                          background:isSel?'#f0f6ff':'#fff',cursor:'pointer',transition:'background .1s'}}>
+                          background:isSel?(excluded?'#f7f9fc':'#f0f6ff'):'#fff',cursor:'pointer',transition:'background .1s',
+                          opacity:excluded?.6:1}}>
                         <div style={{display:'flex',alignItems:'center',gap:9}}>
                           <div style={{width:16,height:16,borderRadius:4,border:isSel?'none':'1.5px solid #c0c9d6',
                             background:isSel?'#0b4f82':'#fff',display:'flex',alignItems:'center',justifyContent:'center',
@@ -240,7 +266,9 @@ th:last-child,td:last-child{text-align:right}
                         )}
                         {!svc.per_fraction && <div/>}
                         <div style={{minWidth:120,textAlign:'right'}}>
-                          {['QA-003','QA-004','QA-005'].includes(svc.code) && isSel ? (
+                          {excluded ? (
+                            <span style={{fontSize:11.5,fontStyle:'italic',color:'#0b4f82',fontWeight:500}}>Included in package</span>
+                          ) : ['QA-003','QA-004','QA-005'].includes(svc.code) && isSel ? (
                             <div onClick={e=>e.stopPropagation()} style={{display:'flex',alignItems:'center',gap:4,justifyContent:'flex-end'}}>
                               <span style={{fontSize:11,color:'#4a5a70'}}>EGP</span>
                               <input type="number" min="0" placeholder="Your fee"
