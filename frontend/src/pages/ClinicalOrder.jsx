@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { api } from '../api.js'
 import { useAuth } from '../App.jsx'
 import { AttachmentGallery } from '../components/Attachments.jsx'
+import MessageThread from '../components/MessageThread.jsx'
 
 const inp = {width:'100%',border:'1px solid #dde3ec',borderRadius:6,padding:'8px 11px',fontSize:13,fontFamily:'inherit',outline:'none',transition:'border-color .12s'}
 const FL = ({label,children}) => <div><label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>{label}</label>{children}</div>
@@ -312,6 +313,8 @@ export default function ClinicalOrder({ navigate, patientId }) {
           <AttachmentGallery orderType="clinical" orderId={planning.id} allowDelete={false}/>
         </div>
       )}
+
+      {planning && <MessageThread orderType="clinical" orderId={planning.id} title="Discussion with Medical Physicist"/>}
 
       {/* Patient basic */}
       <div style={card}>

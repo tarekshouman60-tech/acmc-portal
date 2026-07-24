@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { api, fmtDate, fmtDateTime, fmtDateTimeInput } from '../api.js'
 import { useAuth } from '../App.jsx'
 import { AttachmentUploader, AttachmentGallery } from '../components/Attachments.jsx'
+import MessageThread from '../components/MessageThread.jsx'
 
 const inp = {width:'100%',border:'1px solid #dde3ec',borderRadius:6,padding:'8px 11px',fontSize:13,fontFamily:'inherit',outline:'none'}
 const FL = ({label,children}) => <div><label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>{label}</label>{children}</div>
@@ -126,6 +127,7 @@ function ManageRow({ o, onSaved, onClose }) {
         <AttachmentUploader orderType="clinical" orderId={o.id} onUploaded={()=>setAttachRefresh(n=>n+1)}/>
         <AttachmentGallery orderType="clinical" orderId={o.id} refreshKey={attachRefresh}/>
       </div>
+      <MessageThread orderType="clinical" orderId={o.id} title="Discussion with Oncologist"/>
       <div style={{display:'flex',gap:8,justifyContent:'space-between',marginTop:13}}>
         <button onClick={replan} disabled={replanning} style={{padding:'8px 16px',borderRadius:6,border:'1px solid #f5c6c2',background:'#fdecea',color:'#c0392b',cursor:'pointer',fontSize:13,fontWeight:600}}>
           {replanning?'Starting…':'🔁 Replan'}
@@ -197,9 +199,11 @@ export default function PhysicistPlanning() {
   const [mineOnly, setMineOnly] = useState(false)
   const [view, setView] = useState('list')
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date()))
+  const [flaggedOrders, setFlaggedOrders] = useState(new Set())
 
   function load() {
     api.physicistClinicalOrders().then(d=>{setOrders(d); setLoading(false)}).catch(e=>{setError(e.message); setLoading(false)})
+    api.unreadMessageCount().then(d=>setFlaggedOrders(new Set((d.by_order||[]).map(r=>r.order_id)))).catch(()=>{})
   }
   useEffect(load, [])
 
@@ -256,7 +260,7 @@ export default function PhysicistPlanning() {
             <WeekCalendar orders={filtered} weekStart={weekStart} setWeekStart={setWeekStart} selectedId={expanded} onSelect={id=>setExpanded(expanded===id?null:id)}/>
             {selected && (
               <div style={{marginTop:14}}>
-                <ManageRow o={selected} onClose={()=>setExpanded(null)} onSaved={()=>{setExpanded(null); load()}}/>
+                <ManageRow o={selected} onClose={()=>{setExpanded(null); load()}} onSaved={()=>{setExpanded(null); load()}}/>
               </div>
             )}
           </>
@@ -275,7 +279,10 @@ export default function PhysicistPlanning() {
                       <React.Fragment key={o.id}>
                         <tr onClick={()=>setExpanded(expanded===o.id?null:o.id)} style={{borderBottom:'1px solid #f0f4f8',cursor:'pointer',background:expanded===o.id?'#f0f6ff':'#fff'}}>
                           <td style={{padding:'11px 16px',fontSize:12,fontFamily:'monospace',color:'#4a5a70'}}>{o.order_ref}</td>
-                          <td style={{padding:'11px 16px',fontSize:13,fontWeight:500}}>{o.patient_name}</td>
+                          <td style={{padding:'11px 16px',fontSize:13,fontWeight:500}}>
+                            {flaggedOrders.has(o.id) && <span title="Unread urgent message" style={{marginRight:5}}>🚩</span>}
+                            {o.patient_name}
+                          </td>
                           <td style={{padding:'11px 16px',fontSize:12.5,color:'#4a5a70'}}>{o.doctor_name}</td>
                           <td style={{padding:'11px 16px',fontSize:12.5,color:'#4a5a70'}}>{o.technique||'—'}{o.total_dose_gy?` · ${o.total_dose_gy}Gy/${o.fractions}F`:''}</td>
                           <td style={{padding:'11px 16px',fontSize:12.5,color:'#4a5a70'}}>{o.planning_scheduled_at ? fmtDateTime(o.planning_scheduled_at) : '—'}</td>
@@ -289,7 +296,7 @@ export default function PhysicistPlanning() {
                         </tr>
                         {expanded===o.id && (
                           <tr><td colSpan={7} style={{padding:0}}>
-                            <ManageRow o={o} onClose={()=>setExpanded(null)} onSaved={()=>{setExpanded(null); load()}}/>
+                            <ManageRow o={o} onClose={()=>{setExpanded(null); load()}} onSaved={()=>{setExpanded(null); load()}}/>
                           </td></tr>
                         )}
                       </React.Fragment>

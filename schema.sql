@@ -252,3 +252,24 @@ ALTER TABLE clinical_orders ADD COLUMN IF NOT EXISTS planning_notes TEXT;
 ALTER TABLE clinical_orders ADD COLUMN IF NOT EXISTS planning_completed_at TIMESTAMP;
 ALTER TABLE clinical_orders ADD COLUMN IF NOT EXISTS physicist_id INTEGER REFERENCES physicists(id);
 ALTER TABLE clinical_orders ADD COLUMN IF NOT EXISTS replan_count INTEGER DEFAULT 0;
+
+-- Two-way messaging on an order (e.g. oncologist <-> medical physicist on a
+-- clinical/planning order), supporting typed notes, an urgent "red flag"
+-- marker, and attached photo/video/voice-note media (via order_attachments).
+CREATE TABLE IF NOT EXISTS order_messages (
+  id SERIAL PRIMARY KEY,
+  order_type VARCHAR(20) NOT NULL, -- 'sim' or 'clinical'
+  order_id INTEGER NOT NULL,
+  sender_role VARCHAR(20) NOT NULL,
+  sender_id INTEGER NOT NULL,
+  body TEXT,
+  is_flagged BOOLEAN DEFAULT false,
+  read_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_order_messages_lookup ON order_messages(order_type, order_id);
+
+-- Link an attachment to a specific chat message (nullable — attachments
+-- uploaded from the RTT/physicist documentation panel stay order-level,
+-- not tied to any one message)
+ALTER TABLE order_attachments ADD COLUMN IF NOT EXISTS message_id INTEGER REFERENCES order_messages(id);

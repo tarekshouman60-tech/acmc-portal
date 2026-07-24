@@ -27,11 +27,12 @@ async function req(method, path, body) {
   }
 }
 
-async function uploadFile(orderType, orderId, kind, fileOrBlob, filename) {
+async function uploadFile(orderType, orderId, kind, fileOrBlob, filename, messageId) {
   const fd = new FormData()
   fd.append('order_type', orderType)
   fd.append('order_id', orderId)
   fd.append('kind', kind)
+  if (messageId != null) fd.append('message_id', messageId)
   fd.append('file', fileOrBlob, filename || fileOrBlob.name || `${kind}-${Date.now()}`)
   const res = await fetch(BASE + '/attachments', {
     method: 'POST',
@@ -81,10 +82,15 @@ export const api = {
   physicistClinicalOrders: () => req('GET','/physicist/clinical-orders'),
   updatePhysicistClinicalOrder: (id, data) => req('PATCH',`/physicist/clinical-orders/${id}`,data),
 
-  uploadAttachment: (orderType, orderId, kind, fileOrBlob, filename) => uploadFile(orderType, orderId, kind, fileOrBlob, filename),
+  uploadAttachment: (orderType, orderId, kind, fileOrBlob, filename, messageId) => uploadFile(orderType, orderId, kind, fileOrBlob, filename, messageId),
   listAttachments: (orderType, orderId) => req('GET', `/attachments?order_type=${orderType}&order_id=${orderId}`),
   attachmentBlobUrl: (id) => fetchAttachmentBlobUrl(id),
   deleteAttachment: (id) => req('DELETE', `/attachments/${id}`),
+
+  createMessage: (orderType, orderId, msgBody, isFlagged) => req('POST', '/messages', {order_type:orderType, order_id:orderId, body:msgBody, is_flagged:!!isFlagged}),
+  listMessages: (orderType, orderId) => req('GET', `/messages?order_type=${orderType}&order_id=${orderId}`),
+  markMessageRead: (id) => req('PATCH', `/messages/${id}/read`),
+  unreadMessageCount: () => req('GET', '/messages/unread-count'),
 
   patients: () => req('GET','/patients'),
   createPatient: (data) => req('POST','/patients',data),

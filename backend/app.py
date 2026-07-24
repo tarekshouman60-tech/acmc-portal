@@ -82,6 +82,12 @@ class PhysicistPlanningUpdate(BaseModel):
     planning_notes: Optional[str]=None
     replan: Optional[bool]=False
 
+class MessageCreate(BaseModel):
+    order_type: str
+    order_id: int
+    body: Optional[str]=None
+    is_flagged: bool=False
+
 class PatientCreate(BaseModel):
     full_name: str; date_of_birth: Optional[date]=None; gender: Optional[str]=None
     national_id: Optional[str]=None; phone: Optional[str]=None
@@ -448,12 +454,18 @@ async def _check_order_access(order_type: str, order_id: int, tok: dict, db) -> 
 @app.post("/api/attachments")
 async def upload_attachment(
     order_type: str = Form(...), order_id: int = Form(...), kind: str = Form(...),
+    message_id: Optional[int] = Form(None),
     file: UploadFile = File(...), db=Depends(get_db), tok=Depends(decode_token)):
     if kind not in ATTACHMENT_KINDS:
         raise HTTPException(400, f"kind must be one of {list(ATTACHMENT_KINDS)}")
-    if tok["role"] not in ("admin", "rtt", "physicist"):
-        raise HTTPException(403, "Only RTT, Medical Physicist or admin can upload attachments")
+    # Message-attached media (chat) is open to anyone with access to the order;
+    # order-level documentation attachments stay RTT/physicist/admin only.
+    if message_id is None and tok["role"] not in ("admin", "rtt", "physicist"):
+        raise HTTPException(403, "Only RTT, Medical Physicist or admin can upload documentation attachments")
     await _check_order_access(order_type, order_id, tok, db)
+    if message_id is not None:
+        mrow = await db.fetchrow("SELECT id FROM order_messages WHERE id=$1 AND order_type=$2 AND order_id=$3", message_id, order_type, order_id)
+        if not mrow: raise HTTPException(404, "Message not found")
     ext = pathlib.Path(file.filename or "").suffix.lower()
     if ext not in ATTACHMENT_KINDS[kind]:
         raise HTTPException(400, f"Unsupported file extension for {kind}: {ext or '(none)'}")
@@ -465,9 +477,9 @@ async def upload_attachment(
     fname = f"{uuid.uuid4().hex}{ext}"
     (subdir / fname).write_bytes(data)
     r = await db.fetchrow(
-        """INSERT INTO order_attachments(order_type,order_id,uploaded_by_role,uploaded_by_id,file_path,file_type,original_filename,size_bytes)
-           VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,created_at""",
-        order_type, order_id, tok["role"], int(tok["sub"]), f"{order_type}/{order_id}/{fname}", kind, file.filename, len(data))
+        """INSERT INTO order_attachments(order_type,order_id,uploaded_by_role,uploaded_by_id,file_path,file_type,original_filename,size_bytes,message_id)
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id,created_at""",
+        order_type, order_id, tok["role"], int(tok["sub"]), f"{order_type}/{order_id}/{fname}", kind, file.filename, len(data), message_id)
     return {"id": r["id"], "file_type": kind, "original_filename": file.filename, "created_at": r["created_at"]}
 
 @app.get("/api/attachments")
@@ -497,6 +509,72 @@ async def delete_attachment(aid: int, db=Depends(get_db), tok=Depends(decode_tok
     path.unlink(missing_ok=True)
     await db.execute("DELETE FROM order_attachments WHERE id=$1", aid)
     return {"ok": True}
+
+# ── order messaging (oncologist <-> RTT/physicist) ─────────────────────────────
+@app.post("/api/messages")
+async def create_message(body: MessageCreate, db=Depends(get_db), tok=Depends(decode_token)):
+    await _check_order_access(body.order_type, body.order_id, tok, db)
+    r = await db.fetchrow(
+        "INSERT INTO order_messages(order_type,order_id,sender_role,sender_id,body,is_flagged) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,created_at",
+        body.order_type, body.order_id, tok["role"], int(tok["sub"]), body.body, body.is_flagged)
+    return {"id": r["id"], "created_at": r["created_at"]}
+
+@app.get("/api/messages")
+async def list_messages(order_type: str, order_id: int, db=Depends(get_db), tok=Depends(decode_token)):
+    await _check_order_access(order_type, order_id, tok, db)
+    rows = await db.fetch(
+        "SELECT * FROM order_messages WHERE order_type=$1 AND order_id=$2 ORDER BY created_at",
+        order_type, order_id)
+    result = []
+    for r in rows:
+        d = dict(r)
+        table = ROLE_TABLE.get(d["sender_role"])
+        name = None
+        if table:
+            nrow = await db.fetchrow(f"SELECT full_name FROM {table} WHERE id=$1", d["sender_id"])
+            name = nrow["full_name"] if nrow else None
+        d["sender_name"] = name
+        atts = await db.fetch(
+            "SELECT id,file_type,original_filename,size_bytes FROM order_attachments WHERE message_id=$1 ORDER BY created_at",
+            d["id"])
+        d["attachments"] = [dict(a) for a in atts]
+        result.append(d)
+    return result
+
+@app.patch("/api/messages/{mid}/read")
+async def mark_message_read(mid: int, db=Depends(get_db), tok=Depends(decode_token)):
+    row = await db.fetchrow("SELECT * FROM order_messages WHERE id=$1", mid)
+    if not row: raise HTTPException(404)
+    await _check_order_access(row["order_type"], row["order_id"], tok, db)
+    if not (row["sender_role"] == tok["role"] and row["sender_id"] == int(tok["sub"])):
+        await db.execute("UPDATE order_messages SET read_at=COALESCE(read_at,NOW()) WHERE id=$1", mid)
+    return {"ok": True}
+
+@app.get("/api/messages/unread-count")
+async def unread_message_count(db=Depends(get_db), tok=Depends(decode_token)):
+    role = tok["role"]
+    if role == "admin":
+        rows = await db.fetch(
+            "SELECT order_type, order_id, COUNT(*) as cnt FROM order_messages WHERE is_flagged=true AND read_at IS NULL AND sender_role != 'admin' GROUP BY order_type, order_id")
+    elif role == "physicist":
+        rows = await db.fetch(
+            "SELECT order_id, COUNT(*) as cnt FROM order_messages WHERE order_type='clinical' AND is_flagged=true AND read_at IS NULL AND sender_role != 'physicist' GROUP BY order_id")
+    elif role == "rtt":
+        rows = await db.fetch(
+            "SELECT order_id, COUNT(*) as cnt FROM order_messages WHERE order_type='sim' AND is_flagged=true AND read_at IS NULL AND sender_role != 'rtt' GROUP BY order_id")
+    else:  # doctor
+        did = int(tok["sub"])
+        rows = await db.fetch("""
+            SELECT om.order_type, om.order_id, COUNT(*) as cnt FROM order_messages om
+            WHERE om.is_flagged=true AND om.read_at IS NULL AND om.sender_role != 'doctor'
+              AND (
+                (om.order_type='clinical' AND om.order_id IN (SELECT id FROM clinical_orders WHERE doctor_id=$1))
+                OR (om.order_type='sim' AND om.order_id IN (SELECT id FROM sim_orders WHERE doctor_id=$1))
+              )
+            GROUP BY om.order_type, om.order_id
+        """, did)
+    total = sum(r["cnt"] for r in rows)
+    return {"total": total, "by_order": [dict(r) for r in rows]}
 
 # ── cost estimates ────────────────────────────────────────────────────────────
 @app.post("/api/estimates")

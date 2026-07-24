@@ -1,5 +1,8 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAuth } from '../App.jsx'
+import { api } from '../api.js'
+
+const BADGE_NAV_ID = { physicist:'physicist-planning', rtt:'rtt-schedule', doctor:'my-orders', admin:'all-orders' }
 
 const DOCTOR_NAV = [
   { id:'dashboard', icon:'📊', label:'Dashboard' },
@@ -32,6 +35,17 @@ export default function Layout({ page, navigate, children }) {
     : user?.role === 'rtt' ? RTT_NAV
     : user?.role === 'physicist' ? PHYSICIST_NAV
     : DOCTOR_NAV
+  const [unread, setUnread] = useState(0)
+  const badgeNavId = BADGE_NAV_ID[user?.role]
+
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    function poll() { api.unreadMessageCount().then(d=>{ if(!cancelled) setUnread(d.total||0) }).catch(()=>{}) }
+    poll()
+    const t = setInterval(poll, 30000)
+    return () => { cancelled = true; clearInterval(t) }
+  }, [user])
 
   return (
     <div style={{display:'flex',minHeight:'100vh'}}>
@@ -48,6 +62,10 @@ export default function Layout({ page, navigate, children }) {
                 background: page===item.id ? 'rgba(255,255,255,.14)' : 'transparent',
                 cursor:'pointer',fontSize:13,fontWeight:500,marginBottom:2,transition:'all .12s'}}>
               <span style={{fontSize:15}}>{item.icon}</span>{item.label}
+              {item.id===badgeNavId && unread>0 && (
+                <span style={{marginLeft:'auto',background:'#e0554a',color:'#fff',fontSize:10.5,fontWeight:700,
+                  borderRadius:20,padding:'1px 7px',minWidth:16,textAlign:'center'}}>🚩{unread}</span>
+              )}
             </div>
           ))}
         </nav>
