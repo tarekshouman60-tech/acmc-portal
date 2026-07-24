@@ -58,7 +58,7 @@ export default function Services() {
         if (!svcs.length) return null
         const priced = svcs.filter(s => s.price_egp != null).length
         return (
-          <div key={cat} style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,marginBottom:12,overflow:'hidden'}}>
+          <div key={cat} style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,marginBottom:12,overflow:'hidden'}}>
             <div style={{padding:'12px 18px',background:'#fafbfc',borderBottom:'1px solid #dde3ec',display:'flex',alignItems:'center',gap:10}}>
               <span style={{background:CAT_COLORS[cat],color:CAT_TEXT[cat],fontSize:11,fontWeight:600,padding:'2px 10px',borderRadius:20}}>{cat}</span>
               <span style={{color:'#8898aa',fontSize:12}}>{svcs.length} service{svcs.length!==1?'s':''}</span>

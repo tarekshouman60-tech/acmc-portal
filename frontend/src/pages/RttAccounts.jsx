@@ -40,7 +40,7 @@ export default function RttAccounts() {
       </div>
 
       {showForm && (
-        <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:20,marginBottom:14}}>
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:20,marginBottom:14}}>
           <div style={{fontWeight:600,fontSize:13,marginBottom:14}}>New RTT Account</div>
           {error && <div style={{background:'#fdecea',color:'#c0392b',borderRadius:6,padding:'9px 13px',fontSize:13,marginBottom:12}}>{error}</div>}
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:13,marginBottom:13}}>
@@ -55,7 +55,7 @@ export default function RttAccounts() {
         </div>
       )}
 
-      <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,overflow:'hidden'}}>
+      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden'}}>
         {rtts.length===0
           ? <div style={{padding:32,textAlign:'center',color:'#8898aa',fontSize:13}}>No RTT accounts yet.</div>
           : <table style={{width:'100%',borderCollapse:'collapse'}}>

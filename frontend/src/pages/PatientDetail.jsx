@@ -165,14 +165,14 @@ export default function PatientDetail({ navigate, patientId }) {
       </div>
 
       {/* Patient info */}
-      <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'18px 22px',marginBottom:12,display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:14}}>
+      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'18px 22px',marginBottom:12,display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:14}}>
         {[['DOB',fmtDate(patient.date_of_birth)],['Gender',patient.gender||'—'],['National ID',patient.national_id||'—'],['Phone',patient.phone||'—'],['ICD-10',patient.icd10_code||'—'],[isAdmin?'Referring Dr':'Registered',isAdmin?(patient.doctor_name||'—'):fmtDate(patient.created_at)]].map(([l,v])=>(
           <div key={l}><div style={{fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:3}}>{l}</div><div style={{fontSize:13,fontWeight:500}}>{v}</div></div>
         ))}
       </div>
 
       {/* Milestones */}
-      <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'18px 22px',marginBottom:12}}>
+      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'18px 22px',marginBottom:12}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
           <div style={{fontSize:11,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em'}}>Treatment progress</div>
           {isAdmin && (
@@ -213,7 +213,7 @@ export default function PatientDetail({ navigate, patientId }) {
         {title:'Clinical Treatment Orders', items:clinical_orders, type:'clinical', route:'clinical-order', cols:['Ref','Technique','Dose','Status','Planning','Reserved','Physicist Notes','']},
         {title:'Cost Estimates',            items:cost_estimates,  type:'estimate', route:'cost-estimate',  cols:['Ref','Total (EGP)','Status','']},
       ].map(({title,items,type,route,cols})=>(
-        <div key={type} style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,marginBottom:12,overflow:'hidden'}}>
+        <div key={type} style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,marginBottom:12,overflow:'hidden'}}>
           <div style={{padding:'13px 20px',borderBottom:'1px solid #dde3ec',fontWeight:600,fontSize:13.5}}>
             {title} <span style={{color:'#8898aa',fontWeight:400,fontSize:12}}>({items.length})</span>
           </div>
@@ -273,7 +273,7 @@ export default function PatientDetail({ navigate, patientId }) {
 
       {/* Billing */}
       {billing && (
-        <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'18px 22px',marginBottom:12}}>
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'18px 22px',marginBottom:12}}>
           <div style={{fontSize:11,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:14}}>Billing</div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14,marginBottom:12}}>
             {[['Total',fmtEGP(billing.total_amount_egp)],['Paid',fmtEGP(billing.amount_paid_egp)],['Balance',fmtEGP(billing.balance_egp)]].map(([l,v])=>(

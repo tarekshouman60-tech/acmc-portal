@@ -13,7 +13,7 @@ const FL = ({label,children}) => <div><label style={{display:'block',fontSize:11
 
 function Section({ id, label, icon, color, open, onToggle, summary, children }) {
   return (
-    <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,marginBottom:8,overflow:'hidden'}}>
+    <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,marginBottom:8,overflow:'hidden'}}>
       <div onClick={onToggle} style={{display:'flex',alignItems:'center',gap:10,padding:'12px 18px',cursor:'pointer',userSelect:'none'}}>
         <div style={{width:28,height:28,borderRadius:7,background:color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0}}>{icon}</div>
         <span style={{flex:1,fontWeight:500,fontSize:13.5}}>{label}</span>
@@ -229,7 +229,7 @@ export default function SimOrder({ navigate, patientId }) {
   }
 
   const filled = [pos,fix,contrast,sgrt,rpm,mri,pet,bolus].filter(Boolean).length
-  const card = {background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'18px 20px',marginBottom:10}
+  const card = {background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'18px 20px',marginBottom:10}
 
   return (
     <div>
@@ -348,7 +348,7 @@ export default function SimOrder({ navigate, patientId }) {
           style={{width:'100%',minHeight:80,border:'1px solid #dde3ec',borderRadius:7,padding:'10px 12px',fontSize:13,fontFamily:'inherit',resize:'vertical',outline:'none'}}/>
       </Section>
 
-      <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'13px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',bottom:14}}>
+      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'13px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',bottom:14}}>
         <div style={{fontSize:12.5,color:'#8898aa'}}>{filled} / 8 core fields filled</div>
         <div style={{display:'flex',gap:8}}>
           <button onClick={submit} disabled={saving} style={{padding:"8px 16px",borderRadius:7,border:"1px solid #dde3ec",background:"#fff",cursor:"pointer",fontSize:13,fontWeight:500}}>💾 Save</button>

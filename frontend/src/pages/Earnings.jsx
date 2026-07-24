@@ -108,7 +108,7 @@ function AdminEarnings() {
       {/* Overview tab */}
       {tab==='overview' && (
         <div>
-          <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,overflow:'hidden',marginBottom:16}}>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden',marginBottom:16}}>
             <div style={{padding:'13px 20px',borderBottom:'1px solid #dde3ec',fontWeight:600,fontSize:14}}>Doctor Summary</div>
             <table style={{width:'100%',borderCollapse:'collapse'}}>
               <thead><tr style={{background:'#f7f9fc'}}>
@@ -134,7 +134,7 @@ function AdminEarnings() {
 
           {/* Selected doctor detail */}
           {selDoctor && (
-            <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,overflow:'hidden'}}>
+            <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden'}}>
               <div style={{padding:'13px 20px',borderBottom:'1px solid #dde3ec',fontWeight:600,fontSize:14}}>
                 {selDoctor.full_name} — Patient Earnings Detail
               </div>
@@ -173,7 +173,7 @@ function AdminEarnings() {
       {/* Calculate tab */}
       {tab==='calculate' && (
         <div>
-          <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'18px 20px',marginBottom:16,maxWidth:420}}>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'18px 20px',marginBottom:16,maxWidth:420}}>
             <div style={{fontWeight:600,fontSize:14,marginBottom:4}}>Workers Bonus Deduction</div>
             <div style={{fontSize:12.5,color:'#8898aa',marginBottom:14}}>Automatically deducted from every doctor's referral amount.</div>
             <div style={{display:'flex',gap:10,alignItems:'flex-end'}}>
@@ -190,7 +190,7 @@ function AdminEarnings() {
           </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
           {/* Set fee per doctor */}
-          <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'20px'}}>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'20px'}}>
             <div style={{fontWeight:600,fontSize:14,marginBottom:16}}>Set Referral Fee % per Doctor</div>
             <div style={{marginBottom:14}}>
               <FL label="Select doctor">
@@ -212,7 +212,7 @@ function AdminEarnings() {
           </div>
 
           {/* Calculate earning for patient */}
-          <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'20px'}}>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'20px'}}>
             <div style={{fontWeight:600,fontSize:14,marginBottom:16}}>Calculate Doctor Earning per Patient</div>
             <div style={{marginBottom:14}}>
               <FL label="Cost estimate (patient)">
@@ -242,7 +242,7 @@ function AdminEarnings() {
 
       {/* Transfer tab */}
       {tab==='transfer' && (
-        <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'20px',maxWidth:600}}>
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'20px',maxWidth:600}}>
           <div style={{fontWeight:600,fontSize:14,marginBottom:16}}>Record Transfer to Doctor</div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:13,marginBottom:13}}>
             <FL label="Earning record">
@@ -313,7 +313,7 @@ function DoctorEarnings() {
           ['Transferred',fmtEGP(summary.summary?.transferred),'#1a7a4a'],
           ['Pending',fmtEGP(summary.summary?.balance),'#c0392b'],
         ].map(([l,v,c])=>(
-          <div key={l} style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'18px 20px'}}>
+          <div key={l} style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'18px 20px'}}>
             <div style={{fontSize:11,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em'}}>{l}</div>
             <div style={{fontSize:22,fontWeight:700,color:c,marginTop:6,fontFamily:'monospace'}}>{v}</div>
           </div>
@@ -331,7 +331,7 @@ function DoctorEarnings() {
       )}
 
       {/* Earnings table */}
-      <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,overflow:'hidden'}}>
+      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden'}}>
         <div style={{padding:'13px 20px',borderBottom:'1px solid #dde3ec',fontWeight:600,fontSize:14}}>Earnings per Patient</div>
         {filtered.length===0
           ? <div style={{padding:32,textAlign:'center',color:'#8898aa',fontSize:13}}>No earnings recorded yet. ACMC admin will calculate your fees after patient billing.</div>
@@ -364,7 +364,7 @@ function DoctorEarnings() {
 
       {/* Monthly breakdown */}
       {summary.monthly?.length > 0 && (
-        <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,overflow:'hidden',marginTop:16}}>
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden',marginTop:16}}>
           <div style={{padding:'13px 20px',borderBottom:'1px solid #dde3ec',fontWeight:600,fontSize:14}}>Monthly Summary</div>
           <table style={{width:'100%',borderCollapse:'collapse'}}>
             <thead><tr style={{background:'#f7f9fc'}}>

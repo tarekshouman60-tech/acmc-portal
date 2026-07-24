@@ -169,7 +169,7 @@ th:last-child,td:last-child{text-align:right}
   }
 
   const { total, hasTbd } = calcTotal()
-  const card = {background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'18px 20px',marginBottom:10}
+  const card = {background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'18px 20px',marginBottom:10}
 
   return (
     <div>
@@ -276,7 +276,7 @@ th:last-child,td:last-child{text-align:right}
       </div>
 
       {/* Action bar */}
-      <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'13px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',bottom:14}}>
+      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'13px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',bottom:14}}>
         <div style={{fontSize:12.5,color:'#8898aa'}}>{selected.size ? `${selected.size} service${selected.size>1?'s':''} selected` : 'Select services above'}</div>
         <div style={{display:'flex',gap:8}}>
           <button onClick={submit} disabled={saving||selected.size===0} style={{padding:"8px 16px",borderRadius:7,border:"1px solid #dde3ec",background:"#fff",cursor:"pointer",fontSize:13,fontWeight:500,opacity:selected.size===0?.5:1}}>💾 Save</button>

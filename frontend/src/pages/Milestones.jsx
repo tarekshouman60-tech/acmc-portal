@@ -44,7 +44,7 @@ export default function Milestones({ navigate }) {
       <div style={{marginBottom:20}}><h1 style={{fontSize:22,fontWeight:700}}>Treatment Milestones</h1><p style={{color:'#4a5a70',fontSize:13,marginTop:3}}>Update patient progress for all referred cases.</p></div>
       <div style={{display:'grid',gridTemplateColumns:'300px 1fr',gap:16,alignItems:'start'}}>
         {/* Patient list */}
-        <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,overflow:'hidden'}}>
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden'}}>
           <div style={{padding:'12px 14px',borderBottom:'1px solid #dde3ec'}}>
             <input style={{...inp,width:'100%'}} placeholder="Search patients…" value={search} onChange={e=>setSearch(e.target.value)}/>
           </div>
@@ -60,7 +60,7 @@ export default function Milestones({ navigate }) {
 
         {/* Milestone editor */}
         {detail ? (
-          <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'20px'}}>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'20px'}}>
             <div style={{fontWeight:600,fontSize:14,marginBottom:4}}>{detail.patient.full_name}</div>
             <div style={{fontSize:12.5,color:'#4a5a70',marginBottom:18}}>{detail.patient.diagnosis}</div>
             {[
@@ -95,7 +95,7 @@ export default function Milestones({ navigate }) {
             {notifyMsg && <div style={{marginTop:10,fontSize:12.5,color:'#1a7a4a',background:'#e8f7ef',padding:'8px 12px',borderRadius:6}}>{notifyMsg}</div>}
           </div>
         ) : (
-          <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:40,textAlign:'center',color:'#8898aa',fontSize:13}}>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:40,textAlign:'center',color:'#8898aa',fontSize:13}}>
             Select a patient from the list to update their milestones.
           </div>
         )}

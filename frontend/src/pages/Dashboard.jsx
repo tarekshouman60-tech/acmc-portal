@@ -4,7 +4,7 @@ import { useAuth } from '../App.jsx'
 
 function Stat({ label, value, color='#0b4f82' }) {
   return (
-    <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'18px 22px'}}>
+    <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'18px 22px'}}>
       <div style={{fontSize:11,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em'}}>{label}</div>
       <div style={{fontSize:28,fontWeight:700,color,marginTop:6}}>{value}</div>
     </div>
@@ -49,7 +49,7 @@ export default function Dashboard({ navigate }) {
 
       <div style={{display:'grid',gridTemplateColumns:isAdmin?'1fr 1fr':'1fr',gap:16}}>
         {/* Recent patients */}
-        <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10}}>
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10}}>
           <div style={{padding:'14px 20px',borderBottom:'1px solid #dde3ec',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
             <span style={{fontWeight:600,fontSize:14}}>Recent Patients</span>
             <button onClick={()=>navigate('patients')} style={{fontSize:12.5,color:'#0b4f82',background:'none',border:'none',cursor:'pointer',fontWeight:500}}>View all →</button>
@@ -84,7 +84,7 @@ export default function Dashboard({ navigate }) {
 
         {/* Planning tracker — admin only */}
         {isAdmin && (
-          <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10}}>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10}}>
             <div style={{padding:'14px 20px',borderBottom:'1px solid #dde3ec'}}>
               <span style={{fontWeight:600,fontSize:14}}>Planning & Treatment Tracker</span>
             </div>

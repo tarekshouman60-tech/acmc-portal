@@ -147,7 +147,7 @@ function WeekCalendar({ orders, weekStart, setWeekStart, selectedId, onSelect })
   const days = [...Array(7)].map((_,i)=>addDays(weekStart,i))
   const today = new Date()
   return (
-    <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,overflow:'hidden'}}>
+    <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderBottom:'1px solid #dde3ec'}}>
         <button onClick={()=>setWeekStart(addDays(weekStart,-7))} style={{padding:'5px 11px',borderRadius:6,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:13}}>‹ Prev</button>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
@@ -254,7 +254,7 @@ export default function PhysicistPlanning() {
       {error && <div style={{background:'#fdecea',color:'#c0392b',border:'1px solid #f5c6c2',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>{error}</div>}
 
       {loading
-        ? <div style={{padding:40,textAlign:'center',background:'#fff',border:'1px solid #dde3ec',borderRadius:10}}><div style={{width:28,height:28,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
+        ? <div style={{padding:40,textAlign:'center',background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10}}><div style={{width:28,height:28,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
         : view==='calendar' ? (
           <>
             <WeekCalendar orders={filtered} weekStart={weekStart} setWeekStart={setWeekStart} selectedId={expanded} onSelect={id=>setExpanded(expanded===id?null:id)}/>
@@ -265,7 +265,7 @@ export default function PhysicistPlanning() {
             )}
           </>
         ) : (
-          <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,overflow:'hidden'}}>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden'}}>
             {filtered.length===0
               ? <div style={{padding:40,textAlign:'center',color:'#8898aa',fontSize:13}}>No clinical treatment orders found.</div>
               : <table style={{width:'100%',borderCollapse:'collapse'}}>

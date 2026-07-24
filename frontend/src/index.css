@@ -27,6 +27,8 @@
   --mono: 'DM Mono', monospace;
 }
 
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+
 body {
   font-family: var(--font);
   background: var(--bg);
@@ -46,6 +48,7 @@ button {
   font-weight: 500;
   transition: all .15s;
 }
+button:active { transform: translateY(1px); }
 
 input, select, textarea {
   font-family: var(--font);
@@ -57,9 +60,16 @@ input, select, textarea {
   padding: 8px 12px;
   width: 100%;
   outline: none;
-  transition: border-color .15s;
+  transition: border-color .15s, box-shadow .15s;
 }
-input:focus, select:focus, textarea:focus { border-color: var(--primary); }
+input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+input:hover:not(:focus), select:hover:not(:focus), textarea:hover:not(:focus) { border-color: #c7d1de; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(15,23,42,.16); border-radius: 20px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(15,23,42,.26); background-clip: padding-box; }
 
 label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em; }
 

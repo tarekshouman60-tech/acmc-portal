@@ -64,7 +64,7 @@ export default function Billing() {
 
       <div style={{display:'grid',gridTemplateColumns:'280px 1fr',gap:16,alignItems:'start'}}>
         {/* Patient list */}
-        <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,overflow:'hidden'}}>
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden'}}>
           <div style={{padding:'12px 14px',borderBottom:'1px solid #dde3ec'}}>
             <input style={{...inp}} placeholder="Search patients…" value={search} onChange={e=>setSearch(e.target.value)}/>
           </div>
@@ -93,7 +93,7 @@ export default function Billing() {
                     ['Amount Paid',  fmtEGP(totalPaid),   '#1a7a4a'],
                     ['Balance Due',  fmtEGP(balance),      balance>0?'#c0392b':'#1a7a4a'],
                   ].map(([l,v,c])=>(
-                    <div key={l} style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:9,padding:'14px 18px'}}>
+                    <div key={l} style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:9,padding:'14px 18px'}}>
                       <div style={{fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:6}}>{l}</div>
                       <div style={{fontSize:20,fontWeight:700,fontFamily:'monospace',color:c}}>{v}</div>
                     </div>
@@ -109,7 +109,7 @@ export default function Billing() {
 
                 {/* Payment history */}
                 {detail.payments.length > 0 && (
-                  <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:9,marginBottom:14,overflow:'hidden'}}>
+                  <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:9,marginBottom:14,overflow:'hidden'}}>
                     <div style={{padding:'12px 18px',borderBottom:'1px solid #dde3ec',fontWeight:600,fontSize:13}}>Payment History</div>
                     <table style={{width:'100%',borderCollapse:'collapse'}}>
                       <thead><tr style={{background:'#f7f9fc'}}>
@@ -133,7 +133,7 @@ export default function Billing() {
 
                 {/* Add payment — always show if balance > 0 */}
                 {!isFullyPaid && (
-                  <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:9,padding:'18px 20px'}}>
+                  <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:9,padding:'18px 20px'}}>
                     <div style={{fontWeight:600,fontSize:13,marginBottom:4}}>Record Payment</div>
                     <div style={{fontSize:12.5,color:'#8898aa',marginBottom:14}}>
                       Balance due: <strong style={{color:'#c0392b'}}>{fmtEGP(balance)}</strong>
@@ -186,13 +186,13 @@ export default function Billing() {
                 )}
               </>
             ) : (
-              <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:9,padding:32,textAlign:'center',color:'#8898aa',fontSize:13}}>
+              <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:9,padding:32,textAlign:'center',color:'#8898aa',fontSize:13}}>
                 No cost estimate has been submitted for this patient yet. A billing record is created automatically when the doctor submits a cost estimate.
               </div>
             )}
           </div>
         ) : (
-          <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:48,textAlign:'center',color:'#8898aa',fontSize:13}}>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:48,textAlign:'center',color:'#8898aa',fontSize:13}}>
             Select a patient from the list to view and manage billing.
           </div>
         )}

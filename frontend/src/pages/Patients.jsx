@@ -50,7 +50,7 @@ export default function Patients({ navigate }) {
 
       {/* New patient form */}
       {showForm && (
-        <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'20px',marginBottom:14}}>
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'20px',marginBottom:14}}>
           <div style={{fontSize:13,fontWeight:600,marginBottom:16,color:'#1a2636'}}>New Patient</div>
           {error && <div style={{background:'#fdecea',color:'#c0392b',border:'1px solid #f5c6c2',borderRadius:6,padding:'9px 13px',fontSize:13,marginBottom:14}}>{error}</div>}
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:13,marginBottom:13}}>
@@ -75,7 +75,7 @@ export default function Patients({ navigate }) {
       </div>
 
       {/* List */}
-      <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,overflow:'hidden'}}>
+      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden'}}>
         {loadingPatients ? <div style={{padding:32,textAlign:'center'}}><div style={{width:28,height:28,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div> : filtered.length === 0
           ? <div style={{padding:40,textAlign:'center',color:'#8898aa',fontSize:13}}>
               {patients.length===0 ? 'No patients yet. Create your first patient above.' : 'No patients match your search.'}

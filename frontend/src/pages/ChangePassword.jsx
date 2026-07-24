@@ -50,7 +50,7 @@ export default function ChangePassword() {
         <p style={{color:'#4a5a70',fontSize:13,marginTop:3}}>Update your account password.</p>
       </div>
       <div style={{maxWidth:420}}>
-        <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'24px'}}>
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'24px'}}>
           {error && <div style={{background:'#fdecea',color:'#c0392b',border:'1px solid #f5c6c2',borderRadius:6,padding:'10px 14px',fontSize:13,marginBottom:16}}>{error}</div>}
           {success && <div style={{background:'#e8f7ef',color:'#1a7a4a',border:'1px solid #b7e4cc',borderRadius:6,padding:'10px 14px',fontSize:13,marginBottom:16}}>✓ Password changed successfully.</div>}
           <PwInput label="Current password" value={current} onChange={setCurrent}/>

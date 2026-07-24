@@ -22,15 +22,16 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#f0f4f8'}}>
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',
+      background:'radial-gradient(circle at 30% 20%,#eef4fb 0%,#f0f4f8 45%,#eceff4 100%)'}}>
       <div style={{width:380}}>
-        <div style={{textAlign:'center',marginBottom:28}}>
-          <div style={{width:52,height:52,background:'#0b4f82',borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,margin:'0 auto 14px'}}>⚕️</div>
-          <h1 style={{fontSize:20,fontWeight:700,color:'#1a2636'}}>ACMC Portal</h1>
+        <div style={{textAlign:'center',marginBottom:30}}>
+          <div style={{width:56,height:56,background:'linear-gradient(145deg,#0f5a9c,#083758)',borderRadius:14,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,margin:'0 auto 16px',boxShadow:'0 8px 20px -6px rgba(11,79,130,.45)'}}>⚕️</div>
+          <h1 style={{fontSize:21,fontWeight:700,color:'#1a2636',letterSpacing:'-.01em'}}>ACMC Portal</h1>
           <p style={{color:'#4a5a70',fontSize:13,marginTop:4}}>Advanced Cancer Management Center</p>
         </div>
 
-        <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:12,padding:28}}>
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.05),0 20px 40px -16px rgba(15,23,42,.14)',borderRadius:14,padding:30}}>
           <form onSubmit={submit}>
             {error && (
               <div style={{background:'#fdecea',color:'#c0392b',border:'1px solid #f5c6c2',borderRadius:6,padding:'10px 14px',fontSize:13,marginBottom:16}}>
@@ -41,7 +42,7 @@ export default function Login({ onLogin }) {
             <div style={{marginBottom:16}}>
               <label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:5}}>Email</label>
               <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required
-                style={{width:'100%',border:'1px solid #dde3ec',borderRadius:6,padding:'9px 11px',fontSize:13,fontFamily:'inherit',outline:'none'}}
+                style={{width:'100%',border:'1.5px solid #dde3ec',borderRadius:8,padding:'10px 12px',fontSize:13,fontFamily:'inherit',outline:'none',transition:'border-color .15s,box-shadow .15s'}}
                 placeholder="doctor@clinic.com"/>
             </div>
 
@@ -53,7 +54,7 @@ export default function Login({ onLogin }) {
                   value={password}
                   onChange={e=>setPassword(e.target.value)}
                   required
-                  style={{width:'100%',border:'1px solid #dde3ec',borderRadius:6,padding:'9px 40px 9px 11px',fontSize:13,fontFamily:'inherit',outline:'none'}}
+                  style={{width:'100%',border:'1.5px solid #dde3ec',borderRadius:8,padding:'10px 40px 10px 12px',fontSize:13,fontFamily:'inherit',outline:'none',transition:'border-color .15s,box-shadow .15s'}}
                   placeholder="••••••••"/>
                 <button
                   type="button"
@@ -65,7 +66,7 @@ export default function Login({ onLogin }) {
             </div>
 
             <button type="submit" disabled={loading}
-              style={{width:'100%',padding:'10px',borderRadius:7,border:'none',background:'#0b4f82',color:'#fff',fontSize:14,fontWeight:600,cursor:loading?'not-allowed':'pointer',opacity:loading?.7:1}}>
+              style={{width:'100%',padding:'11px',borderRadius:8,border:'none',background:'linear-gradient(145deg,#0f5a9c,#0b4f82)',color:'#fff',fontSize:14,fontWeight:600,cursor:loading?'not-allowed':'pointer',opacity:loading?.7:1,boxShadow:'0 6px 16px -6px rgba(11,79,130,.55)'}}>
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>

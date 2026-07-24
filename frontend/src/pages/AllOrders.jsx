@@ -47,7 +47,7 @@ export default function AllOrders({ navigate }) {
         ))}
       </div>
 
-      <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,overflow:'hidden'}}>
+      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden'}}>
         {error ? <div style={{padding:24,color:'#c0392b',fontSize:13}}>{error}</div> : loading
           ? <div style={{padding:40,textAlign:'center'}}><div style={{width:28,height:28,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
           : filtered.length === 0

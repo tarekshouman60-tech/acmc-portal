@@ -116,7 +116,7 @@ export default function MessageThread({ orderType, orderId, title="Discussion" }
   }
 
   return (
-    <div style={{background:'#fff',border:'1px solid #dde3ec',borderRadius:10,padding:'16px 20px',marginTop:10}}>
+    <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'16px 20px',marginTop:10}}>
       <div style={{fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:12}}>💬 {title}</div>
 
       {loading ? (
