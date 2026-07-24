@@ -24,6 +24,56 @@ function ToggleGroup({ options, value, onChange, colorClass }) {
   )
 }
 
+const TARGET_PRESETS = ['GTV','PTVG','CTV1','CTV2','CTV3','PTV1','PTV2','PTV3']
+
+function TargetPicker({ value, onChange }) {
+  const selected = value ? value.split(',').map(s=>s.trim()).filter(Boolean) : []
+  const options = [...TARGET_PRESETS, ...selected.filter(v=>!TARGET_PRESETS.includes(v))]
+  const [newTarget, setNewTarget] = useState('')
+
+  function toggle(opt) {
+    const next = selected.includes(opt) ? selected.filter(v=>v!==opt) : [...selected, opt]
+    onChange(next.join(', '))
+  }
+
+  function addCustom() {
+    const t = newTarget.trim()
+    if (!t || selected.includes(t)) { setNewTarget(''); return }
+    onChange([...selected, t].join(', '))
+    setNewTarget('')
+  }
+
+  return (
+    <div>
+      <div style={{display:'flex',flexWrap:'wrap',gap:7,marginBottom:10}}>
+        {options.map(opt => {
+          const on = selected.includes(opt)
+          return (
+            <button key={opt} type="button" onClick={()=>toggle(opt)}
+              style={{padding:'7px 13px',borderRadius:7,border:on?'1.5px solid #0b4f82':'1px solid #dde3ec',
+                background:on?'#e8f0fb':'#fff',color:on?'#0b4f82':'#1a2636',
+                fontWeight:on?600:400,fontSize:13,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',gap:6,transition:'all .12s'}}>
+              <span style={{width:14,height:14,borderRadius:3,border:on?'none':'1.5px solid #aaa',
+                background:on?'#0b4f82':'transparent',color:'#fff',fontSize:9,
+                display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{on?'✓':''}</span>
+              {opt}
+            </button>
+          )
+        })}
+      </div>
+      <div style={{display:'flex',gap:7}}>
+        <input style={{...inp,flex:1}} value={newTarget} onChange={e=>setNewTarget(e.target.value)}
+          onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addCustom()}}}
+          placeholder="Add a new target volume, e.g. Spine L3"/>
+        <button type="button" onClick={addCustom}
+          style={{padding:'8px 16px',borderRadius:7,border:'1px solid #0b4f82',background:'#fff',color:'#0b4f82',cursor:'pointer',fontSize:13,fontWeight:600,whiteSpace:'nowrap'}}>
+          + Add
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function fmtDatePrint(d) {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})
@@ -283,7 +333,7 @@ export default function ClinicalOrder({ navigate, patientId }) {
           <FL label="Duration (weeks)"><input style={inp} type="number" value={weeks} onChange={e=>setWeeks(e.target.value)} placeholder="e.g. 3"/></FL>
           <FL label="Dose / fraction (Gy)"><input style={{...inp,background:'#f7f9fc',color:'#4a5a70'}} value={dpf} readOnly placeholder="auto"/></FL>
         </div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:13,marginBottom:13}}>
+        <div style={{marginBottom:13}}>
           <FL label="Technique">
             <select style={inp} value={tech} onChange={e=>setTech(e.target.value)}>
               <option value="">Select technique</option>
@@ -292,7 +342,9 @@ export default function ClinicalOrder({ navigate, patientId }) {
               <optgroup label="Special"><option>TBI</option><option>TSE – Stanford</option><option>Palliative RT</option><option>Emergency RT</option></optgroup>
             </select>
           </FL>
-          <FL label="Treatment site / target"><input style={inp} value={site} onChange={e=>setSite(e.target.value)} placeholder="e.g. Left breast only, whole brain, spine L3"/></FL>
+        </div>
+        <div style={{marginBottom:13}}>
+          <FL label="Treatment site / target"><TargetPicker value={site} onChange={setSite}/></FL>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:13,marginBottom:13}}>
           <FL label="SGRT"><ToggleGroup options={['Yes','No']} value={sgrt} onChange={setSgrt}/></FL>
