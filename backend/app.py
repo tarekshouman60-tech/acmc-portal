@@ -27,6 +27,13 @@ ATTACHMENT_MAX_BYTES = {"image": 8*1024*1024, "video": 30*1024*1024, "audio": 15
 def gen_ref(prefix):
     return f"{prefix}-{datetime.now().year}-{''.join(random.choices(string.digits,k=4))}"
 
+def gen_password(length=12):
+    alphabet = string.ascii_letters + string.digits
+    while True:
+        pw = ''.join(random.choices(alphabet, k=length))
+        if any(c.islower() for c in pw) and any(c.isupper() for c in pw) and any(c.isdigit() for c in pw):
+            return pw
+
 async def get_db():
     conn = await asyncpg.connect(DB_URL)
     try: yield conn
@@ -193,6 +200,14 @@ async def toggle_doctor(did: int, db=Depends(get_db), tok=Depends(admin_only)):
     await db.execute("UPDATE doctors SET is_active=NOT is_active WHERE id=$1", did)
     return {"ok":True}
 
+@app.post("/api/doctors/{did}/reset-password")
+async def reset_doctor_password(did: int, db=Depends(get_db), tok=Depends(admin_only)):
+    new_pw = gen_password()
+    pw_hash = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt()).decode()
+    row = await db.fetchrow("UPDATE doctors SET password_hash=$1 WHERE id=$2 RETURNING id", pw_hash, did)
+    if not row: raise HTTPException(404, "Doctor not found")
+    return {"password": new_pw}
+
 # ── RTT accounts (admin) ─────────────────────────────────────────────────────
 @app.get("/api/rtts")
 async def list_rtts(db=Depends(get_db), tok=Depends(admin_only)):
@@ -212,6 +227,14 @@ async def toggle_rtt(rid: int, db=Depends(get_db), tok=Depends(admin_only)):
     await db.execute("UPDATE rtts SET is_active=NOT is_active WHERE id=$1", rid)
     return {"ok":True}
 
+@app.post("/api/rtts/{rid}/reset-password")
+async def reset_rtt_password(rid: int, db=Depends(get_db), tok=Depends(admin_only)):
+    new_pw = gen_password()
+    pw_hash = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt()).decode()
+    row = await db.fetchrow("UPDATE rtts SET password_hash=$1 WHERE id=$2 RETURNING id", pw_hash, rid)
+    if not row: raise HTTPException(404, "RTT not found")
+    return {"password": new_pw}
+
 # ── Medical Physicist accounts (admin) ───────────────────────────────────────
 @app.get("/api/physicists")
 async def list_physicists(db=Depends(get_db), tok=Depends(admin_only)):
@@ -230,6 +253,14 @@ async def create_physicist(body: PhysicistCreate, db=Depends(get_db), tok=Depend
 async def toggle_physicist(pid: int, db=Depends(get_db), tok=Depends(admin_only)):
     await db.execute("UPDATE physicists SET is_active=NOT is_active WHERE id=$1", pid)
     return {"ok":True}
+
+@app.post("/api/physicists/{pid}/reset-password")
+async def reset_physicist_password(pid: int, db=Depends(get_db), tok=Depends(admin_only)):
+    new_pw = gen_password()
+    pw_hash = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt()).decode()
+    row = await db.fetchrow("UPDATE physicists SET password_hash=$1 WHERE id=$2 RETURNING id", pw_hash, pid)
+    if not row: raise HTTPException(404, "Physicist not found")
+    return {"password": new_pw}
 
 # ── patients ──────────────────────────────────────────────────────────────────
 @app.get("/api/patients")

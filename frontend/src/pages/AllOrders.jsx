@@ -16,11 +16,13 @@ export default function AllOrders({ navigate }) {
   const [filter, setFilter] = useState('sim')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [flaggedOrders, setFlaggedOrders] = useState(new Set())
 
   useEffect(() => {
     const fn = isAdmin ? api.allOrders : api.myOrders
     fn().then(data => { setOrders(data); setLoading(false) })
       .catch(e => { setError(e.message); setLoading(false) })
+    api.unreadMessageCount().then(d=>setFlaggedOrders(new Set((d.by_order||[]).map(r=>`${r.order_type}:${r.order_id}`)))).catch(()=>{})
   }, [])
 
   function updateStatus(id, type, newStatus) {
@@ -71,7 +73,10 @@ export default function AllOrders({ navigate }) {
                           <span style={{background:t.bg,color:t.color,fontSize:11,fontWeight:700,
                             padding:'2px 8px',borderRadius:5,fontFamily:'monospace'}}>{t.label}</span>
                         </td>
-                        <td style={{padding:'10px 16px',fontSize:12,fontFamily:'monospace',color:'#4a5a70'}}>{o.order_ref}</td>
+                        <td style={{padding:'10px 16px',fontSize:12,fontFamily:'monospace',color:'#4a5a70'}}>
+                          {flaggedOrders.has(`${o.type}:${o.id}`) && <span title="Unread urgent message" style={{marginRight:5}}>🚩</span>}
+                          {o.order_ref}
+                        </td>
                         <td style={{padding:'10px 16px',fontSize:13,fontWeight:500}}>{o.patient}</td>
                         {isAdmin && <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70'}}>{o.doctor}</td>}
                         <td style={{padding:'10px 16px',fontSize:12,color:'#8898aa',whiteSpace:'nowrap'}}>{fmtDate(o.created_at)}</td>

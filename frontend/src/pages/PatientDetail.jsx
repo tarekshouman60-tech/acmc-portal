@@ -126,10 +126,12 @@ export default function PatientDetail({ navigate, patientId }) {
   const [loading, setLoading] = useState(true)
   const [editMilestones, setEditMilestones] = useState(false)
   const [notesModal, setNotesModal] = useState(null)
+  const [flaggedOrders, setFlaggedOrders] = useState(new Set())
   const isAdmin = user?.role === 'admin'
 
   useEffect(() => {
     api.getPatient(patientId).then(d => { setData(d); setLoading(false) }).catch(() => setLoading(false))
+    api.unreadMessageCount().then(d=>setFlaggedOrders(new Set((d.by_order||[]).map(r=>`${r.order_type}:${r.order_id}`)))).catch(()=>{})
   }, [patientId])
 
   function updateOrderStatus(type, id, newStatus) {
@@ -226,7 +228,10 @@ export default function PatientDetail({ navigate, patientId }) {
                 <tbody>
                   {items.map(item=>(
                     <tr key={item.id} onClick={()=>navigate(route,{patientId})} style={{borderBottom:'1px solid #f0f4f8',cursor:'pointer'}}>
-                      <td style={{padding:'10px 16px',fontSize:12.5,fontFamily:'monospace'}}>{item.order_ref}</td>
+                      <td style={{padding:'10px 16px',fontSize:12.5,fontFamily:'monospace'}}>
+                        {flaggedOrders.has(`${type}:${item.id}`) && <span title="Unread urgent message" style={{marginRight:5}}>🚩</span>}
+                        {item.order_ref}
+                      </td>
                       {type==='sim' && <>
                         <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70'}}>{fmtDate(item.sim_date_requested)}</td>
                         <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70',whiteSpace:'nowrap'}}>{item.scheduled_at?fmtDateTime(item.scheduled_at):'—'}</td>

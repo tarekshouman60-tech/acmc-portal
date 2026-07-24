@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { api } from '../api.js'
 import { useAuth } from '../App.jsx'
 import { AttachmentGallery } from '../components/Attachments.jsx'
+import MessageThread from '../components/MessageThread.jsx'
 
 const POSITIONING = ['Supine','Prone','Abdominal compression','Hand side','Hand on abdomen','Hand on chest','Hands above head']
 const FIXATION = ['SRS mask','Head closed','Head open','Head & neck closed','Head & neck open','Pelvis','Peripheral limb','Vac-Lok adult','Vac-Lok pediatric']
@@ -282,6 +283,8 @@ export default function SimOrder({ navigate, patientId }) {
           <AttachmentGallery orderType="sim" orderId={rttFeedback.id} allowDelete={false}/>
         </div>
       )}
+
+      {rttFeedback && <MessageThread orderType="sim" orderId={rttFeedback.id} title="Discussion with RTT"/>}
 
       {/* Patient header */}
       <div style={card}>

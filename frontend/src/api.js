@@ -69,16 +69,19 @@ export const api = {
   doctors: () => req('GET','/doctors'),
   createDoctor: (data) => req('POST','/doctors',data),
   toggleDoctor: (id) => req('PATCH',`/doctors/${id}/toggle`),
+  resetDoctorPassword: (id) => req('POST',`/doctors/${id}/reset-password`),
 
   rtts: () => req('GET','/rtts'),
   createRtt: (data) => req('POST','/rtts',data),
   toggleRtt: (id) => req('PATCH',`/rtts/${id}/toggle`),
+  resetRttPassword: (id) => req('POST',`/rtts/${id}/reset-password`),
   rttSimOrders: () => req('GET','/rtt/sim-orders'),
   updateRttSimOrder: (id, data) => req('PATCH',`/rtt/sim-orders/${id}`,data),
 
   physicists: () => req('GET','/physicists'),
   createPhysicist: (data) => req('POST','/physicists',data),
   togglePhysicist: (id) => req('PATCH',`/physicists/${id}/toggle`),
+  resetPhysicistPassword: (id) => req('POST',`/physicists/${id}/reset-password`),
   physicistClinicalOrders: () => req('GET','/physicist/clinical-orders'),
   updatePhysicistClinicalOrder: (id, data) => req('PATCH',`/physicist/clinical-orders/${id}`,data),
 
