@@ -51,9 +51,9 @@ export default function Layout({ page, navigate, children }) {
 
   return (
     <div style={{display:'flex',minHeight:'100vh'}}>
-      <div style={{width:228,background:'linear-gradient(180deg,#0c5490 0%,#0a4470 55%,#083758 100%)',display:'flex',flexDirection:'column',position:'fixed',top:0,left:0,bottom:0,zIndex:100,boxShadow:'2px 0 24px rgba(3,15,30,.18)'}}>
+      <div style={{width:228,background:'linear-gradient(195deg,#1a63e8 0%,#0d3fb0 55%,#082a80 100%)',display:'flex',flexDirection:'column',position:'fixed',top:0,left:0,bottom:0,zIndex:100,boxShadow:'2px 0 32px rgba(8,26,80,.35)'}}>
         <div style={{padding:'22px 20px 19px',borderBottom:'1px solid rgba(255,255,255,.1)',display:'flex',alignItems:'center',gap:10}}>
-          <div style={{width:32,height:32,borderRadius:9,background:'rgba(255,255,255,.14)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0,boxShadow:'inset 0 0 0 1px rgba(255,255,255,.12)'}}>⚕️</div>
+          <div style={{width:34,height:34,borderRadius:11,background:'rgba(255,255,255,.16)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,flexShrink:0,boxShadow:'inset 0 0 0 1px rgba(255,255,255,.14)'}}>⚕️</div>
           <div>
             <div style={{color:'#fff',fontSize:15.5,fontWeight:700,letterSpacing:'-.01em'}}>ACMC</div>
             <div style={{color:'rgba(255,255,255,.5)',fontSize:10.5,marginTop:1}}>Referring Physician Portal</div>
@@ -64,16 +64,16 @@ export default function Layout({ page, navigate, children }) {
             const active = page===item.id
             return (
               <div key={item.id} onClick={() => navigate(item.id)}
-                style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',borderRadius:8,position:'relative',
+                style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',borderRadius:10,position:'relative',
                   color: active ? '#fff' : 'rgba(255,255,255,.62)',
-                  background: active ? 'rgba(255,255,255,.12)' : 'transparent',
-                  boxShadow: active ? 'inset 0 0 0 1px rgba(255,255,255,.08)' : 'none',
-                  cursor:'pointer',fontSize:13,fontWeight:active?600:500,marginBottom:2,transition:'background .15s,color .15s'}}>
-                {active && <span style={{position:'absolute',left:-10,top:'50%',transform:'translateY(-50%)',width:3,height:16,borderRadius:3,background:'#4fb0ff'}}/>}
+                  background: active ? 'rgba(255,255,255,.15)' : 'transparent',
+                  boxShadow: active ? 'inset 0 0 0 1px rgba(255,255,255,.1)' : 'none',
+                  cursor:'pointer',fontSize:13,fontWeight:active?700:500,marginBottom:2,transition:'background .15s,color .15s'}}>
+                {active && <span style={{position:'absolute',left:-10,top:'50%',transform:'translateY(-50%)',width:4,height:18,borderRadius:3,background:'#00e0b8',boxShadow:'0 0 10px rgba(0,224,184,.7)'}}/>}
                 <span style={{fontSize:15,opacity:active?1:.85}}>{item.icon}</span>{item.label}
                 {item.id===badgeNavId && unread>0 && (
-                  <span style={{marginLeft:'auto',background:'#e0554a',color:'#fff',fontSize:10.5,fontWeight:700,
-                    borderRadius:20,padding:'1px 7px',minWidth:16,textAlign:'center',boxShadow:'0 1px 4px rgba(224,85,74,.5)'}}>🚩{unread}</span>
+                  <span style={{marginLeft:'auto',background:'#f43f5e',color:'#fff',fontSize:10.5,fontWeight:700,
+                    borderRadius:20,padding:'1px 7px',minWidth:16,textAlign:'center',boxShadow:'0 1px 6px rgba(244,63,94,.6)'}}>🚩{unread}</span>
                 )}
               </div>
             )

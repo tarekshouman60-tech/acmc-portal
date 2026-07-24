@@ -31,9 +31,9 @@ function AttachmentThumb({ item, onDeleted, canDelete }) {
           style={{position:'absolute',top:4,right:4,zIndex:1,width:20,height:20,borderRadius:'50%',border:'none',background:'rgba(0,0,0,.55)',color:'#fff',cursor:'pointer',fontSize:11,lineHeight:1}}>✕</button>
       )}
       {error ? (
-        <div style={{padding:12,fontSize:11,color:'#c0392b'}}>Failed to load</div>
+        <div style={{padding:12,fontSize:11,color:'#e11d48'}}>Failed to load</div>
       ) : !url ? (
-        <div style={{padding:20,textAlign:'center'}}><div style={{width:18,height:18,border:'2px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
+        <div style={{padding:20,textAlign:'center'}}><div style={{width:18,height:18,border:'2px solid #dde3ec',borderTopColor:'#155eef',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
       ) : item.file_type==='image' ? (
         <img src={url} alt={item.original_filename} style={{width:'100%',height:110,objectFit:'cover',display:'block'}}/>
       ) : item.file_type==='video' ? (
@@ -145,13 +145,13 @@ export function AttachmentUploader({ orderType, orderId, onUploaded }) {
             style={{padding:'7px 13px',borderRadius:7,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12.5,fontWeight:500}}>🎙️ Record voice note</button>
         ) : (
           <button type="button" onClick={stopRecording}
-            style={{padding:'7px 13px',borderRadius:7,border:'1px solid #c0392b',background:'#fdecea',color:'#c0392b',cursor:'pointer',fontSize:12.5,fontWeight:600}}>
+            style={{padding:'7px 13px',borderRadius:7,border:'1px solid #e11d48',background:'#ffe4e6',color:'#e11d48',cursor:'pointer',fontSize:12.5,fontWeight:600}}>
             ⏹ Stop ({recSeconds}s)
           </button>
         )}
         {uploading && <span style={{fontSize:12,color:'#8898aa'}}>Uploading…</span>}
       </div>
-      {error && <div style={{color:'#c0392b',fontSize:12,marginTop:6}}>{error}</div>}
+      {error && <div style={{color:'#e11d48',fontSize:12,marginTop:6}}>{error}</div>}
       <div style={{fontSize:11,color:'#aaa',marginTop:4}}>JPG up to 8MB · MP4/MOV/WebM up to 30MB (keep clips short) · Voice notes up to 15MB</div>
     </div>
   )

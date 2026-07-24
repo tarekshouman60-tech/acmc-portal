@@ -14,8 +14,8 @@ function ToggleGroup({ options, value, onChange, colorClass }) {
         const active = value === opt
         return (
           <button key={opt} onClick={() => onChange(active ? null : opt)}
-            style={{padding:'7px 13px',borderRadius:7,border:active?'1.5px solid #0b4f82':'1px solid #dde3ec',
-              background:active?'#e8f0fb':'#fff',color:active?'#0b4f82':'#1a2636',
+            style={{padding:'7px 13px',borderRadius:7,border:active?'1.5px solid #155eef':'1px solid #dde3ec',
+              background:active?'#dce9ff':'#fff',color:active?'#155eef':'#1a2636',
               fontWeight:active?600:400,fontSize:13,cursor:'pointer',fontFamily:'inherit',transition:'all .12s'}}>
             {opt}
           </button>
@@ -53,11 +53,11 @@ function TargetPicker({ value, onChange }) {
           const on = selected.includes(opt)
           return (
             <button key={opt} type="button" onClick={()=>toggle(opt)}
-              style={{padding:'7px 13px',borderRadius:7,border:on?'1.5px solid #0b4f82':'1px solid #dde3ec',
-                background:on?'#e8f0fb':'#fff',color:on?'#0b4f82':'#1a2636',
+              style={{padding:'7px 13px',borderRadius:7,border:on?'1.5px solid #155eef':'1px solid #dde3ec',
+                background:on?'#dce9ff':'#fff',color:on?'#155eef':'#1a2636',
                 fontWeight:on?600:400,fontSize:13,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',gap:6,transition:'all .12s'}}>
               <span style={{width:14,height:14,borderRadius:3,border:on?'none':'1.5px solid #aaa',
-                background:on?'#0b4f82':'transparent',color:'#fff',fontSize:9,
+                background:on?'#155eef':'transparent',color:'#fff',fontSize:9,
                 display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{on?'✓':''}</span>
               {opt}
             </button>
@@ -69,7 +69,7 @@ function TargetPicker({ value, onChange }) {
           onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addCustom()}}}
           placeholder="Add a new target volume, e.g. CTVLN: level II, III, IV"/>
         <button type="button" onClick={addCustom}
-          style={{padding:'8px 16px',borderRadius:7,border:'1px solid #0b4f82',background:'#fff',color:'#0b4f82',cursor:'pointer',fontSize:13,fontWeight:600,whiteSpace:'nowrap'}}>
+          style={{padding:'8px 16px',borderRadius:7,border:'1px solid #155eef',background:'#fff',color:'#155eef',cursor:'pointer',fontSize:13,fontWeight:600,whiteSpace:'nowrap'}}>
           + Add
         </button>
       </div>
@@ -197,7 +197,7 @@ export default function ClinicalOrder({ navigate, patientId }) {
     const yn = (l,v) => v ? `<div class="field"><div class="fl">${l}</div><div class="fv ${v==='Yes'?'yes':'blue'}">${v}</div></div>` : ''
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${d.orderNum}</title>
 <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:13px;color:#1a2636}
-.header{background:#0b4f82;color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:flex-start}
+.header{background:#155eef;color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:flex-start}
 .h-title{font-size:15px;font-weight:700}.h-sub{font-size:11px;opacity:.6;margin-top:3px}
 .h-right{text-align:right}.on{font-size:13px;font-weight:700;font-family:monospace}.od{font-size:11px;opacity:.6;margin-top:3px}
 .badge{display:inline-block;background:rgba(255,255,255,.2);font-size:10px;padding:2px 8px;border-radius:20px;margin-top:5px}
@@ -207,10 +207,10 @@ export default function ClinicalOrder({ navigate, patientId }) {
 .sec-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#8898aa;padding-bottom:6px;border-bottom:1px solid #dde3ec;margin-bottom:10px}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
 .field{background:#f7f9fc;border-radius:6px;padding:8px 11px}.fl{font-size:10px;color:#8898aa;margin-bottom:2px}
-.fv{font-size:13px;font-weight:500}.fv.yes{color:#1a7a4a}.fv.blue{color:#0b4f82}
-.rx-box{background:#f0f4f8;border-left:3px solid #0b4f82;border-radius:0 6px 6px 0;padding:12px 16px;font-size:14px;font-weight:600;line-height:1.7}
+.fv{font-size:13px;font-weight:500}.fv.yes{color:#059669}.fv.blue{color:#155eef}
+.rx-box{background:#f0f4f8;border-left:3px solid #155eef;border-radius:0 6px 6px 0;padding:12px 16px;font-size:14px;font-weight:600;line-height:1.7}
 .hx-box{font-size:12.5px;color:#4a5a70;line-height:1.7}
-.notes-box{background:#f7f9fc;border-left:3px solid #0b4f82;border-radius:0 6px 6px 0;padding:10px 14px;font-size:12.5px;line-height:1.6}
+.notes-box{background:#f7f9fc;border-left:3px solid #155eef;border-radius:0 6px 6px 0;padding:10px 14px;font-size:12.5px;line-height:1.6}
 .div{height:1px;background:#dde3ec;margin:16px 0}
 .sig{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:10px}
 .sb{border-top:1px solid #dde3ec;padding-top:10px}.sl{font-size:10px;color:#8898aa}.sn{font-size:13px;font-weight:600;margin-top:22px}
@@ -257,12 +257,12 @@ export default function ClinicalOrder({ navigate, patientId }) {
     const w = window.open('','_blank'); w.document.write(html); w.document.close(); setTimeout(()=>w.print(),600)
   }
 
-  const card = {background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'18px 20px',marginBottom:10}
+  const card = {background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'18px 20px',marginBottom:10}
 
   return (
     <div>
       <div style={{marginBottom:20}}>
-        <button onClick={()=>navigate(patientId?'patient-detail':'patients',{patientId})} style={{background:'none',border:'none',color:'#0b4f82',cursor:'pointer',fontSize:13,fontWeight:500,marginBottom:8,padding:0}}>← Back</button>
+        <button onClick={()=>navigate(patientId?'patient-detail':'patients',{patientId})} style={{background:'none',border:'none',color:'#155eef',cursor:'pointer',fontSize:13,fontWeight:500,marginBottom:8,padding:0}}>← Back</button>
         <h1 style={{fontSize:22,fontWeight:700}}>Clinical Treatment Order</h1>
         <p style={{color:'#4a5a70',fontSize:13,marginTop:3}}>Prescription only — no pricing. Use Cost Estimate for billing.</p>
       </div>
@@ -274,21 +274,21 @@ export default function ClinicalOrder({ navigate, patientId }) {
         </div>
       )}
 
-      {error && <div style={{background:'#fdecea',color:'#c0392b',border:'1px solid #f5c6c2',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>{error}</div>}
-      {saved && <div style={{background:'#e8f7ef',color:'#1a7a4a',border:'1px solid #b7e4cc',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>✓ {saved.updated ? 'Updated' : 'Saved'} as <strong>{saved.order_ref}</strong></div>}
+      {error && <div style={{background:'#ffe4e6',color:'#e11d48',border:'1px solid #fecdd3',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>{error}</div>}
+      {saved && <div style={{background:'#d1fae5',color:'#059669',border:'1px solid #a7f3d0',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>✓ {saved.updated ? 'Updated' : 'Saved'} as <strong>{saved.order_ref}</strong></div>}
 
       {/* Physicist planning feedback */}
       {planning && (
         <div style={{...card,background:'#fafbfc'}}>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
             <div style={{fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em'}}>Medical Physicist — Planning Status</div>
-            {planning.replanCount>0 && <span style={{background:'#fdecea',color:'#c0392b',fontSize:11,fontWeight:600,padding:'2px 9px',borderRadius:20}}>Replanned {planning.replanCount}×</span>}
+            {planning.replanCount>0 && <span style={{background:'#ffe4e6',color:'#e11d48',fontSize:11,fontWeight:600,padding:'2px 9px',borderRadius:20}}>Replanned {planning.replanCount}×</span>}
           </div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:13,marginBottom:planning.notes?13:0}}>
             <div>
               <div style={{fontSize:10,color:'#8898aa',marginBottom:3,textTransform:'uppercase',letterSpacing:'.03em'}}>Status</div>
-              <span style={{background:{pending:'#fef4e7',in_progress:'#eef2ff',completed:'#e8f7ef',cancelled:'#f0f4f8'}[planning.status],
-                color:{pending:'#e67e22',in_progress:'#4338ca',completed:'#1a7a4a',cancelled:'#8898aa'}[planning.status],
+              <span style={{background:{pending:'#fef3c7',in_progress:'#eef2ff',completed:'#d1fae5',cancelled:'#f0f4f8'}[planning.status],
+                color:{pending:'#f59e0b',in_progress:'#4338ca',completed:'#059669',cancelled:'#8898aa'}[planning.status],
                 fontSize:12,fontWeight:600,padding:'3px 10px',borderRadius:20}}>
                 {{pending:'Pending',in_progress:'In Progress',completed:'Completed',cancelled:'Cancelled'}[planning.status]}
               </span>
@@ -305,7 +305,7 @@ export default function ClinicalOrder({ navigate, patientId }) {
             )}
           </div>
           {planning.notes && (
-            <div style={{background:'#f0f4f8',borderLeft:'3px solid #0b4f82',borderRadius:'0 6px 6px 0',padding:'10px 14px'}}>
+            <div style={{background:'#f0f4f8',borderLeft:'3px solid #155eef',borderRadius:'0 6px 6px 0',padding:'10px 14px'}}>
               <div style={{fontSize:10,color:'#8898aa',marginBottom:3,textTransform:'uppercase',letterSpacing:'.03em'}}>Physicist notes</div>
               <div style={{fontSize:13}}>{planning.notes}</div>
             </div>
@@ -361,7 +361,7 @@ export default function ClinicalOrder({ navigate, patientId }) {
           <FL label="Sequence"><ToggleGroup options={['Concurrent','Sequential','Standalone']} value={sequence} onChange={setSequence}/></FL>
         </div>
         <FL label="Special instructions / fixation notes"><input style={inp} value={special} onChange={e=>setSpecial(e.target.value)} placeholder="e.g. Breast wing fixation, prone position, bilateral hip prosthesis"/></FL>
-        <div style={{marginTop:14,background:'#f0f4f8',borderLeft:'3px solid #0b4f82',borderRadius:'0 6px 6px 0',padding:'10px 14px'}}>
+        <div style={{marginTop:14,background:'#f0f4f8',borderLeft:'3px solid #155eef',borderRadius:'0 6px 6px 0',padding:'10px 14px'}}>
           <div style={{fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:4}}>Prescription summary</div>
           <div style={{fontSize:13.5,fontWeight:600,color:'#1a2636',lineHeight:1.6}}>{buildRx()}</div>
         </div>
@@ -373,12 +373,12 @@ export default function ClinicalOrder({ navigate, patientId }) {
       </div>
 
       {/* Action bar */}
-      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'13px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',bottom:14}}>
+      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'13px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',bottom:14}}>
         <div style={{fontSize:12.5,color:'#8898aa'}}>{dose&&fx&&tech&&site ? '✓ Ready to save and print' : 'Fill dose, fractions, technique and site'}</div>
         <div style={{display:'flex',gap:8}}>
           <button onClick={submit} disabled={saving} style={{padding:"8px 16px",borderRadius:7,border:"1px solid #dde3ec",background:"#fff",cursor:"pointer",fontSize:13,fontWeight:500}}>💾 Save</button>
           <button onClick={openPrint} style={{padding:"8px 16px",borderRadius:7,border:"1px solid #dde3ec",background:"#fff",cursor:"pointer",fontSize:13,fontWeight:500}}>🖨️ Print only</button>
-          <button onClick={async()=>{await submit();openPrint()}} disabled={saving} style={{padding:'8px 20px',borderRadius:7,border:'none',background:'#0b4f82',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
+          <button onClick={async()=>{await submit();openPrint()}} disabled={saving} style={{padding:'8px 20px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
             {saving?'Saving…':'💾 Save & Print'}
           </button>
         </div>

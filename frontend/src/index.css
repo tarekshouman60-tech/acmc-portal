@@ -5,24 +5,24 @@
   --surface: #ffffff;
   --surface2: #f7f9fc;
   --border: #dde3ec;
-  --primary: #0b4f82;
-  --primary-light: #e8f0fb;
-  --primary-hover: #093d66;
-  --accent: #00a896;
-  --accent-light: #e0f5f3;
-  --danger: #c0392b;
-  --danger-light: #fdecea;
-  --warning: #e67e22;
-  --warning-light: #fef4e7;
-  --success: #1a7a4a;
-  --success-light: #e8f7ef;
+  --primary: #155eef;
+  --primary-light: #dce9ff;
+  --primary-hover: #1147c2;
+  --accent: #00c9a7;
+  --accent-light: #c9f7ee;
+  --danger: #e11d48;
+  --danger-light: #ffe4e6;
+  --warning: #f59e0b;
+  --warning-light: #fef3c7;
+  --success: #059669;
+  --success-light: #d1fae5;
   --text: #1a2636;
   --text2: #4a5a70;
   --text3: #8898aa;
-  --radius: 10px;
-  --radius-sm: 6px;
-  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.05);
-  --shadow-lg: 0 4px 20px rgba(0,0,0,.12);
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow: 0 2px 6px rgba(15,23,42,.06), 0 14px 32px -12px rgba(21,94,239,.28);
+  --shadow-lg: 0 8px 28px -6px rgba(21,94,239,.35);
   --font: 'Inter', system-ui, sans-serif;
   --mono: 'DM Mono', monospace;
 }
@@ -81,7 +81,7 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); 
 .btn-primary { background: var(--primary); color: #fff; }
 .btn-primary:hover { background: var(--primary-hover); }
 .btn-accent { background: var(--accent); color: #fff; }
-.btn-accent:hover { background: #008577; }
+.btn-accent:hover { background: #00a88f; }
 .btn-ghost { background: transparent; color: var(--primary); border: 1.5px solid var(--border); }
 .btn-ghost:hover { background: var(--primary-light); border-color: var(--primary); }
 .btn-danger { background: var(--danger); color: #fff; }
@@ -137,7 +137,7 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); 
 }
 
 .alert { padding: 12px 16px; border-radius: var(--radius-sm); font-size: 13.5px; margin-bottom: 16px; }
-.alert-error { background: var(--danger-light); color: var(--danger); border: 1px solid #f5c6c2; }
+.alert-error { background: var(--danger-light); color: var(--danger); border: 1px solid #fecdd3; }
 .alert-success { background: var(--success-light); color: var(--success); }
 .alert-info { background: var(--primary-light); color: var(--primary); }
 

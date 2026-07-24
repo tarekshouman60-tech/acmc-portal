@@ -3,7 +3,7 @@ import { api, fmtEGP } from '../api.js'
 import { useAuth } from '../App.jsx'
 
 const CATS = ['Simulation','Immobilization','Special Technique','Planning','Treatment Delivery','SBRT/SRS Package','Special Procedure','Quality & Review']
-const CAT_COLORS = {'Simulation':'#e8f0fb','Immobilization':'#f3e8ff','Special Technique':'#eef2ff','Planning':'#e0f5f3','Treatment Delivery':'#fef4e7','SBRT/SRS Package':'#fdecea','Special Procedure':'#fdecea','Quality & Review':'#e0f5f3'}
+const CAT_COLORS = {'Simulation':'#dce9ff','Immobilization':'#f3e8ff','Special Technique':'#eef2ff','Planning':'#c9f7ee','Treatment Delivery':'#fef3c7','SBRT/SRS Package':'#ffe4e6','Special Procedure':'#ffe4e6','Quality & Review':'#c9f7ee'}
 const CAT_TEXT = {'Simulation':'#0c447c','Immobilization':'#5b21b6','Special Technique':'#3730a3','Planning':'#085041','Treatment Delivery':'#633806','SBRT/SRS Package':'#791f1f','Special Procedure':'#791f1f','Quality & Review':'#085041'}
 
 export default function Services() {
@@ -51,18 +51,18 @@ export default function Services() {
         </p>
       </div>
 
-      {error && <div style={{background:'#fdecea',color:'#c0392b',border:'1px solid #f5c6c2',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:14}}>{error}</div>}
+      {error && <div style={{background:'#ffe4e6',color:'#e11d48',border:'1px solid #fecdd3',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:14}}>{error}</div>}
 
       {CATS.map(cat => {
         const svcs = services.filter(s => s.category === cat)
         if (!svcs.length) return null
         const priced = svcs.filter(s => s.price_egp != null).length
         return (
-          <div key={cat} style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,marginBottom:12,overflow:'hidden'}}>
+          <div key={cat} style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,marginBottom:12,overflow:'hidden'}}>
             <div style={{padding:'12px 18px',background:'#fafbfc',borderBottom:'1px solid #dde3ec',display:'flex',alignItems:'center',gap:10}}>
               <span style={{background:CAT_COLORS[cat],color:CAT_TEXT[cat],fontSize:11,fontWeight:600,padding:'2px 10px',borderRadius:20}}>{cat}</span>
               <span style={{color:'#8898aa',fontSize:12}}>{svcs.length} service{svcs.length!==1?'s':''}</span>
-              {isAdmin && <span style={{color:priced===svcs.length?'#1a7a4a':'#e67e22',fontSize:11.5,marginLeft:'auto',fontWeight:500}}>
+              {isAdmin && <span style={{color:priced===svcs.length?'#059669':'#f59e0b',fontSize:11.5,marginLeft:'auto',fontWeight:500}}>
                 {priced}/{svcs.length} priced
               </span>}
             </div>
@@ -83,12 +83,12 @@ export default function Services() {
                     </td>
                     <td style={{padding:'10px 16px',fontSize:12,color:'#8898aa'}}>
                       {svc.unit}
-                      {svc.per_fraction && <span style={{marginLeft:5,background:'#e8f0fb',color:'#0b4f82',fontSize:10,padding:'1px 6px',borderRadius:10,fontWeight:600}}>×Fx</span>}
+                      {svc.per_fraction && <span style={{marginLeft:5,background:'#dce9ff',color:'#155eef',fontSize:10,padding:'1px 6px',borderRadius:14,fontWeight:600}}>×Fx</span>}
                     </td>
                     <td style={{padding:'10px 16px',textAlign:'right'}}>
                       {isAdmin ? (
                         <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:7}}>
-                          {saved[svc.id] && <span style={{fontSize:11.5,color:'#1a7a4a',fontWeight:500}}>✓ Saved</span>}
+                          {saved[svc.id] && <span style={{fontSize:11.5,color:'#059669',fontWeight:500}}>✓ Saved</span>}
                           <input
                             type="number" min="0" step="0.01"
                             value={editing[svc.id] !== undefined ? editing[svc.id] : (svc.price_egp ?? '')}
@@ -96,10 +96,10 @@ export default function Services() {
                             onKeyDown={e => handleKey(e, svc)}
                             placeholder="Enter price"
                             style={{width:110,border:'1px solid #dde3ec',borderRadius:5,padding:'5px 9px',fontSize:13,textAlign:'right',fontFamily:'monospace',outline:'none',
-                              borderColor: editing[svc.id] !== undefined ? '#0b4f82' : '#dde3ec'}}/>
+                              borderColor: editing[svc.id] !== undefined ? '#155eef' : '#dde3ec'}}/>
                           {editing[svc.id] !== undefined && (
                             <button onClick={() => savePrice(svc)} disabled={saving[svc.id]}
-                              style={{padding:'5px 12px',borderRadius:5,border:'none',background:'#1a7a4a',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:600}}>
+                              style={{padding:'5px 12px',borderRadius:5,border:'none',background:'#059669',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:600}}>
                               {saving[svc.id] ? '…' : 'Save'}
                             </button>
                           )}

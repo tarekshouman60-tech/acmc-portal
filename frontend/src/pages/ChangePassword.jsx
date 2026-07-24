@@ -50,14 +50,14 @@ export default function ChangePassword() {
         <p style={{color:'#4a5a70',fontSize:13,marginTop:3}}>Update your account password.</p>
       </div>
       <div style={{maxWidth:420}}>
-        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'24px'}}>
-          {error && <div style={{background:'#fdecea',color:'#c0392b',border:'1px solid #f5c6c2',borderRadius:6,padding:'10px 14px',fontSize:13,marginBottom:16}}>{error}</div>}
-          {success && <div style={{background:'#e8f7ef',color:'#1a7a4a',border:'1px solid #b7e4cc',borderRadius:6,padding:'10px 14px',fontSize:13,marginBottom:16}}>✓ Password changed successfully.</div>}
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'24px'}}>
+          {error && <div style={{background:'#ffe4e6',color:'#e11d48',border:'1px solid #fecdd3',borderRadius:6,padding:'10px 14px',fontSize:13,marginBottom:16}}>{error}</div>}
+          {success && <div style={{background:'#d1fae5',color:'#059669',border:'1px solid #a7f3d0',borderRadius:6,padding:'10px 14px',fontSize:13,marginBottom:16}}>✓ Password changed successfully.</div>}
           <PwInput label="Current password" value={current} onChange={setCurrent}/>
           <PwInput label="New password" value={newPw} onChange={setNewPw} placeholder="At least 8 characters"/>
           <PwInput label="Confirm new password" value={confirm} onChange={setConfirm} placeholder="Repeat new password"/>
           <button onClick={submit} disabled={saving}
-            style={{width:'100%',padding:'10px',borderRadius:7,border:'none',background:'#0b4f82',color:'#fff',fontSize:13,fontWeight:600,cursor:saving?'not-allowed':'pointer',opacity:saving?.7:1}}>
+            style={{width:'100%',padding:'10px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',fontSize:13,fontWeight:600,cursor:saving?'not-allowed':'pointer',opacity:saving?.7:1}}>
             {saving ? 'Saving…' : 'Change Password'}
           </button>
         </div>

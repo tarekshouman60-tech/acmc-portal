@@ -6,17 +6,17 @@ const CLINICAL_STATUSES = ['submitted'] // doctor-only, read-only for admin
 const ESTIMATE_STATUSES = ['pending','in_settlement','paid','cancelled']
 
 const COLORS = {
-  submitted:     {bg:'#e8f0fb',color:'#0b4f82'},
-  pending:       {bg:'#fef4e7',color:'#e67e22'},
-  scheduled:     {bg:'#e8f0fb',color:'#0b4f82'},
-  done:          {bg:'#e8f7ef',color:'#1a7a4a'},
+  submitted:     {bg:'#dce9ff',color:'#155eef'},
+  pending:       {bg:'#fef3c7',color:'#f59e0b'},
+  scheduled:     {bg:'#dce9ff',color:'#155eef'},
+  done:          {bg:'#d1fae5',color:'#059669'},
   in_progress:   {bg:'#eef2ff',color:'#4338ca'},
-  completed:     {bg:'#e8f7ef',color:'#1a7a4a'},
-  in_settlement: {bg:'#fef4e7',color:'#e67e22'},
-  paid:          {bg:'#e8f7ef',color:'#1a7a4a'},
-  cancelled:     {bg:'#fdecea',color:'#c0392b'},
-  unpaid:        {bg:'#fdecea',color:'#c0392b'},
-  partial:       {bg:'#fef4e7',color:'#e67e22'},
+  completed:     {bg:'#d1fae5',color:'#059669'},
+  in_settlement: {bg:'#fef3c7',color:'#f59e0b'},
+  paid:          {bg:'#d1fae5',color:'#059669'},
+  cancelled:     {bg:'#ffe4e6',color:'#e11d48'},
+  unpaid:        {bg:'#ffe4e6',color:'#e11d48'},
+  partial:       {bg:'#fef3c7',color:'#f59e0b'},
 }
 
 const LABELS = {
@@ -36,7 +36,7 @@ export function StatusBadge({ status, doctorView=false }) {
   const labels = doctorView ? DOCTOR_LABELS : LABELS
   return (
     <span style={{display:'inline-block',background:s.bg,color:s.color,
-      fontSize:11,fontWeight:600,padding:'2px 9px',borderRadius:20,whiteSpace:'nowrap'}}>
+      fontSize:11,fontWeight:700,padding:'3px 10px',borderRadius:20,whiteSpace:'nowrap'}}>
       {labels[status] || status?.toUpperCase()}
     </span>
   )

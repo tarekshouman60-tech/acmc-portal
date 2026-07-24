@@ -4,9 +4,9 @@ import { useAuth } from '../App.jsx'
 import { StatusBadge, StatusDropdown } from '../components/StatusBadge.jsx'
 
 const TYPE_META = {
-  sim:      { label:'SIM', bg:'#e8f0fb', color:'#0c447c' },
-  clinical: { label:'CLN', bg:'#e0f5f3', color:'#085041' },
-  estimate: { label:'EST', bg:'#fef4e7', color:'#633806' },
+  sim:      { label:'SIM', bg:'#dce9ff', color:'#0c447c' },
+  clinical: { label:'CLN', bg:'#c9f7ee', color:'#085041' },
+  estimate: { label:'EST', bg:'#fef3c7', color:'#633806' },
 }
 
 export default function AllOrders({ navigate }) {
@@ -42,16 +42,16 @@ export default function AllOrders({ navigate }) {
         {['sim','clinical','estimate'].map(f=>(
           <button key={f} onClick={()=>setFilter(f)}
             style={{padding:'6px 14px',borderRadius:20,border:'1px solid #dde3ec',
-              background:filter===f?'#0b4f82':'#fff',color:filter===f?'#fff':'#4a5a70',
+              background:filter===f?'#155eef':'#fff',color:filter===f?'#fff':'#4a5a70',
               cursor:'pointer',fontSize:12.5,fontWeight:500}}>
             {f==='sim'?'Simulation':f==='clinical'?'Clinical':'Billing'}
           </button>
         ))}
       </div>
 
-      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden'}}>
-        {error ? <div style={{padding:24,color:'#c0392b',fontSize:13}}>{error}</div> : loading
-          ? <div style={{padding:40,textAlign:'center'}}><div style={{width:28,height:28,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
+      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,overflow:'hidden'}}>
+        {error ? <div style={{padding:24,color:'#e11d48',fontSize:13}}>{error}</div> : loading
+          ? <div style={{padding:40,textAlign:'center'}}><div style={{width:28,height:28,border:'3px solid #dde3ec',borderTopColor:'#155eef',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
           : filtered.length === 0
             ? <div style={{padding:40,textAlign:'center',color:'#8898aa',fontSize:13}}>
                 No orders found.{!isAdmin && <span> Open a patient record to create your first order.</span>}

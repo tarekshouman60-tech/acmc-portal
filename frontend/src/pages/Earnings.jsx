@@ -7,9 +7,9 @@ const FL = ({label,children}) => <div><label style={{display:'block',fontSize:11
 
 function Badge({status}) {
   const map = {
-    pending:{bg:'#fef4e7',color:'#e67e22'},
+    pending:{bg:'#fef3c7',color:'#f59e0b'},
     partial:{bg:'#eef2ff',color:'#4338ca'},
-    transferred:{bg:'#e8f7ef',color:'#1a7a4a'}
+    transferred:{bg:'#d1fae5',color:'#059669'}
   }
   const s = map[status]||{bg:'#f0f4f8',color:'#8898aa'}
   return <span style={{background:s.bg,color:s.color,fontSize:11,fontWeight:600,padding:'2px 9px',borderRadius:20}}>{status?.replace('_',' ').toUpperCase()}</span>
@@ -97,18 +97,18 @@ function AdminEarnings() {
         {['overview','calculate','transfer'].map(t=>(
           <button key={t} onClick={()=>setTab(t)}
             style={{padding:'7px 16px',borderRadius:20,border:'1px solid #dde3ec',fontSize:13,fontWeight:500,cursor:'pointer',
-              background:tab===t?'#0b4f82':'#fff',color:tab===t?'#fff':'#4a5a70'}}>
+              background:tab===t?'#155eef':'#fff',color:tab===t?'#fff':'#4a5a70'}}>
             {t==='overview'?'Overview':t==='calculate'?'Set Fee & Calculate':'Record Transfer'}
           </button>
         ))}
       </div>
 
-      {error && <div style={{background:'#fdecea',color:'#c0392b',border:'1px solid #f5c6c2',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>{error}</div>}
+      {error && <div style={{background:'#ffe4e6',color:'#e11d48',border:'1px solid #fecdd3',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>{error}</div>}
 
       {/* Overview tab */}
       {tab==='overview' && (
         <div>
-          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden',marginBottom:16}}>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,overflow:'hidden',marginBottom:16}}>
             <div style={{padding:'13px 20px',borderBottom:'1px solid #dde3ec',fontWeight:600,fontSize:14}}>Doctor Summary</div>
             <table style={{width:'100%',borderCollapse:'collapse'}}>
               <thead><tr style={{background:'#f7f9fc'}}>
@@ -124,8 +124,8 @@ function AdminEarnings() {
                     <td style={{padding:'11px 16px',fontSize:13}}>{d.referral_fee_pct}%</td>
                     <td style={{padding:'11px 16px',fontSize:13}}>{d.patient_count}</td>
                     <td style={{padding:'11px 16px',fontSize:13,fontFamily:'monospace',fontWeight:500}}>{fmtEGP(d.total_due)}</td>
-                    <td style={{padding:'11px 16px',fontSize:13,fontFamily:'monospace',color:'#1a7a4a'}}>{fmtEGP(d.total_transferred)}</td>
-                    <td style={{padding:'11px 16px',fontSize:13,fontFamily:'monospace',color:parseFloat(d.total_balance)>0?'#c0392b':'#1a7a4a',fontWeight:600}}>{fmtEGP(d.total_balance)}</td>
+                    <td style={{padding:'11px 16px',fontSize:13,fontFamily:'monospace',color:'#059669'}}>{fmtEGP(d.total_transferred)}</td>
+                    <td style={{padding:'11px 16px',fontSize:13,fontFamily:'monospace',color:parseFloat(d.total_balance)>0?'#e11d48':'#059669',fontWeight:600}}>{fmtEGP(d.total_balance)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -134,7 +134,7 @@ function AdminEarnings() {
 
           {/* Selected doctor detail */}
           {selDoctor && (
-            <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden'}}>
+            <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,overflow:'hidden'}}>
               <div style={{padding:'13px 20px',borderBottom:'1px solid #dde3ec',fontWeight:600,fontSize:14}}>
                 {selDoctor.full_name} — Patient Earnings Detail
               </div>
@@ -154,11 +154,11 @@ function AdminEarnings() {
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.total_billed_egp)}</td>
                           <td style={{padding:'9px 12px',fontSize:12}}>{e.referral_pct}%</td>
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.referral_amount_egp)}</td>
-                          <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',color:'#c0392b'}}>-{fmtEGP(e.workers_bonus_egp)}</td>
+                          <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',color:'#e11d48'}}>-{fmtEGP(e.workers_bonus_egp)}</td>
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.doctor_fees_egp)}</td>
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',fontWeight:600}}>{fmtEGP(e.total_due_egp)}</td>
-                          <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',color:'#1a7a4a'}}>{fmtEGP(e.transferred_egp)}</td>
-                          <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',color:parseFloat(e.balance_egp)>0?'#c0392b':'#1a7a4a',fontWeight:600}}>{fmtEGP(e.balance_egp)}</td>
+                          <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',color:'#059669'}}>{fmtEGP(e.transferred_egp)}</td>
+                          <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',color:parseFloat(e.balance_egp)>0?'#e11d48':'#059669',fontWeight:600}}>{fmtEGP(e.balance_egp)}</td>
                           <td style={{padding:'9px 12px'}}><Badge status={e.status}/></td>
                         </tr>
                       ))}
@@ -173,7 +173,7 @@ function AdminEarnings() {
       {/* Calculate tab */}
       {tab==='calculate' && (
         <div>
-          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'18px 20px',marginBottom:16,maxWidth:420}}>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'18px 20px',marginBottom:16,maxWidth:420}}>
             <div style={{fontWeight:600,fontSize:14,marginBottom:4}}>Workers Bonus Deduction</div>
             <div style={{fontSize:12.5,color:'#8898aa',marginBottom:14}}>Automatically deducted from every doctor's referral amount.</div>
             <div style={{display:'flex',gap:10,alignItems:'flex-end'}}>
@@ -190,7 +190,7 @@ function AdminEarnings() {
           </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
           {/* Set fee per doctor */}
-          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'20px'}}>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'20px'}}>
             <div style={{fontWeight:600,fontSize:14,marginBottom:16}}>Set Referral Fee % per Doctor</div>
             <div style={{marginBottom:14}}>
               <FL label="Select doctor">
@@ -206,13 +206,13 @@ function AdminEarnings() {
               </FL>
             </div>
             <button onClick={saveFee} disabled={savingFee||!selDoctor}
-              style={{width:'100%',padding:'9px',borderRadius:7,border:'none',background:'#0b4f82',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
+              style={{width:'100%',padding:'9px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
               {savingFee?'Saving…':'Save Fee %'}
             </button>
           </div>
 
           {/* Calculate earning for patient */}
-          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'20px'}}>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'20px'}}>
             <div style={{fontWeight:600,fontSize:14,marginBottom:16}}>Calculate Doctor Earning per Patient</div>
             <div style={{marginBottom:14}}>
               <FL label="Cost estimate (patient)">
@@ -232,7 +232,7 @@ function AdminEarnings() {
               </FL>
             </div>
             <button onClick={createEarning} disabled={saving}
-              style={{width:'100%',padding:'9px',borderRadius:7,border:'none',background:'#1a7a4a',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
+              style={{width:'100%',padding:'9px',borderRadius:7,border:'none',background:'#059669',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
               {saving?'Calculating…':'Calculate & Save'}
             </button>
           </div>
@@ -242,7 +242,7 @@ function AdminEarnings() {
 
       {/* Transfer tab */}
       {tab==='transfer' && (
-        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'20px',maxWidth:600}}>
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'20px',maxWidth:600}}>
           <div style={{fontWeight:600,fontSize:14,marginBottom:16}}>Record Transfer to Doctor</div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:13,marginBottom:13}}>
             <FL label="Earning record">
@@ -273,7 +273,7 @@ function AdminEarnings() {
             </FL>
           </div>
           <button onClick={addTransfer} disabled={saving||!transferForm.earning_id||!transferForm.amount_egp}
-            style={{width:'100%',padding:'9px',borderRadius:7,border:'none',background:'#0b4f82',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
+            style={{width:'100%',padding:'9px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
             {saving?'Saving…':'Record Transfer'}
           </button>
         </div>
@@ -296,7 +296,7 @@ function DoctorEarnings() {
   const months = [...new Set(earnings.map(e=>e.month))].sort().reverse()
   const filtered = month ? earnings.filter(e=>e.month===month) : earnings
 
-  if (!summary) return <div style={{padding:40,textAlign:'center'}}><div style={{width:28,height:28,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
+  if (!summary) return <div style={{padding:40,textAlign:'center'}}><div style={{width:28,height:28,border:'3px solid #dde3ec',borderTopColor:'#155eef',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
 
   return (
     <div>
@@ -308,12 +308,12 @@ function DoctorEarnings() {
       {/* Summary cards */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:14,marginBottom:20}}>
         {[
-          ['Patients',summary.summary?.patient_count,'#0b4f82'],
+          ['Patients',summary.summary?.patient_count,'#155eef'],
           ['Total Due',fmtEGP(summary.summary?.total_due),'#1a2636'],
-          ['Transferred',fmtEGP(summary.summary?.transferred),'#1a7a4a'],
-          ['Pending',fmtEGP(summary.summary?.balance),'#c0392b'],
+          ['Transferred',fmtEGP(summary.summary?.transferred),'#059669'],
+          ['Pending',fmtEGP(summary.summary?.balance),'#e11d48'],
         ].map(([l,v,c])=>(
-          <div key={l} style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'18px 20px'}}>
+          <div key={l} style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'18px 20px'}}>
             <div style={{fontSize:11,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em'}}>{l}</div>
             <div style={{fontSize:22,fontWeight:700,color:c,marginTop:6,fontFamily:'monospace'}}>{v}</div>
           </div>
@@ -323,15 +323,15 @@ function DoctorEarnings() {
       {/* Monthly filter */}
       {months.length > 0 && (
         <div style={{display:'flex',gap:8,marginBottom:14,flexWrap:'wrap'}}>
-          <button onClick={()=>setMonth('')} style={{padding:'5px 13px',borderRadius:20,border:'1px solid #dde3ec',fontSize:12.5,fontWeight:500,cursor:'pointer',background:!month?'#0b4f82':'#fff',color:!month?'#fff':'#4a5a70'}}>All</button>
+          <button onClick={()=>setMonth('')} style={{padding:'5px 13px',borderRadius:20,border:'1px solid #dde3ec',fontSize:12.5,fontWeight:500,cursor:'pointer',background:!month?'#155eef':'#fff',color:!month?'#fff':'#4a5a70'}}>All</button>
           {months.map(m=>(
-            <button key={m} onClick={()=>setMonth(m)} style={{padding:'5px 13px',borderRadius:20,border:'1px solid #dde3ec',fontSize:12.5,fontWeight:500,cursor:'pointer',background:month===m?'#0b4f82':'#fff',color:month===m?'#fff':'#4a5a70'}}>{m}</button>
+            <button key={m} onClick={()=>setMonth(m)} style={{padding:'5px 13px',borderRadius:20,border:'1px solid #dde3ec',fontSize:12.5,fontWeight:500,cursor:'pointer',background:month===m?'#155eef':'#fff',color:month===m?'#fff':'#4a5a70'}}>{m}</button>
           ))}
         </div>
       )}
 
       {/* Earnings table */}
-      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden'}}>
+      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,overflow:'hidden'}}>
         <div style={{padding:'13px 20px',borderBottom:'1px solid #dde3ec',fontWeight:600,fontSize:14}}>Earnings per Patient</div>
         {filtered.length===0
           ? <div style={{padding:32,textAlign:'center',color:'#8898aa',fontSize:13}}>No earnings recorded yet. ACMC admin will calculate your fees after patient billing.</div>
@@ -349,11 +349,11 @@ function DoctorEarnings() {
                     <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.total_billed_egp)}</td>
                     <td style={{padding:'10px 12px',fontSize:12}}>{e.referral_pct}%</td>
                     <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.referral_amount_egp)}</td>
-                    <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace',color:'#c0392b'}}>-{fmtEGP(e.workers_bonus_egp)}</td>
+                    <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace',color:'#e11d48'}}>-{fmtEGP(e.workers_bonus_egp)}</td>
                     <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace'}}>{fmtEGP(e.doctor_fees_egp)}</td>
                     <td style={{padding:'10px 12px',fontSize:13,fontFamily:'monospace',fontWeight:700}}>{fmtEGP(e.total_due_egp)}</td>
-                    <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace',color:'#1a7a4a'}}>{fmtEGP(e.transferred_egp)}</td>
-                    <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace',color:parseFloat(e.balance_egp)>0?'#c0392b':'#1a7a4a',fontWeight:600}}>{fmtEGP(e.balance_egp)}</td>
+                    <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace',color:'#059669'}}>{fmtEGP(e.transferred_egp)}</td>
+                    <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace',color:parseFloat(e.balance_egp)>0?'#e11d48':'#059669',fontWeight:600}}>{fmtEGP(e.balance_egp)}</td>
                     <td style={{padding:'10px 12px'}}><Badge status={e.status}/></td>
                   </tr>
                 ))}
@@ -364,7 +364,7 @@ function DoctorEarnings() {
 
       {/* Monthly breakdown */}
       {summary.monthly?.length > 0 && (
-        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden',marginTop:16}}>
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,overflow:'hidden',marginTop:16}}>
           <div style={{padding:'13px 20px',borderBottom:'1px solid #dde3ec',fontWeight:600,fontSize:14}}>Monthly Summary</div>
           <table style={{width:'100%',borderCollapse:'collapse'}}>
             <thead><tr style={{background:'#f7f9fc'}}>
@@ -378,8 +378,8 @@ function DoctorEarnings() {
                   <td style={{padding:'10px 16px',fontSize:13,fontWeight:500}}>{m.month}</td>
                   <td style={{padding:'10px 16px',fontSize:13}}>{m.patients}</td>
                   <td style={{padding:'10px 16px',fontSize:13,fontFamily:'monospace',fontWeight:600}}>{fmtEGP(m.due)}</td>
-                  <td style={{padding:'10px 16px',fontSize:13,fontFamily:'monospace',color:'#1a7a4a'}}>{fmtEGP(m.transferred)}</td>
-                  <td style={{padding:'10px 16px',fontSize:13,fontFamily:'monospace',color:parseFloat(m.balance)>0?'#c0392b':'#1a7a4a',fontWeight:600}}>{fmtEGP(m.balance)}</td>
+                  <td style={{padding:'10px 16px',fontSize:13,fontFamily:'monospace',color:'#059669'}}>{fmtEGP(m.transferred)}</td>
+                  <td style={{padding:'10px 16px',fontSize:13,fontFamily:'monospace',color:parseFloat(m.balance)>0?'#e11d48':'#059669',fontWeight:600}}>{fmtEGP(m.balance)}</td>
                 </tr>
               ))}
             </tbody>

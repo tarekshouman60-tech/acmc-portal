@@ -5,9 +5,9 @@ import { StatusBadge, StatusDropdown } from '../components/StatusBadge.jsx'
 import NotesModal from '../components/NotesModal.jsx'
 
 const PLANNING_META = {
-  pending:     {bg:'#fef4e7',color:'#e67e22',label:'Pending'},
+  pending:     {bg:'#fef3c7',color:'#f59e0b',label:'Pending'},
   in_progress: {bg:'#eef2ff',color:'#4338ca',label:'In Progress'},
-  completed:   {bg:'#e8f7ef',color:'#1a7a4a',label:'Completed'},
+  completed:   {bg:'#d1fae5',color:'#059669',label:'Completed'},
   cancelled:   {bg:'#f0f4f8',color:'#8898aa',label:'Cancelled'},
 }
 function PlanningBadge({status}) {
@@ -19,11 +19,11 @@ function MilestoneStep({ label, done, date }) {
   return (
     <div style={{flex:1,textAlign:'center'}}>
       <div style={{width:28,height:28,borderRadius:'50%',margin:'0 auto',position:'relative',zIndex:1,
-        background:done?'#1a7a4a':'#fff',border:done?'none':'2px solid #dde3ec',
+        background:done?'#059669':'#fff',border:done?'none':'2px solid #dde3ec',
         display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,color:'#fff'}}>
         {done?'✓':''}
       </div>
-      <div style={{fontSize:11,fontWeight:600,color:done?'#1a7a4a':'#8898aa',marginTop:6}}>{label}</div>
+      <div style={{fontSize:11,fontWeight:600,color:done?'#059669':'#8898aa',marginTop:6}}>{label}</div>
       {date && <div style={{fontSize:10.5,color:'#8898aa',marginTop:2}}>{fmtDate(date)}</div>}
     </div>
   )
@@ -44,11 +44,11 @@ function MilestoneTimeline({ milestones }) {
         {steps.map(s => (
           <div key={s.label} style={{flex:1,textAlign:'center'}}>
             <div style={{width:28,height:28,borderRadius:'50%',margin:'0 auto',position:'relative',zIndex:1,
-              background:s.done?'#1a7a4a':'#fff',border:s.done?'none':'2px solid #dde3ec',
+              background:s.done?'#059669':'#fff',border:s.done?'none':'2px solid #dde3ec',
               display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,color:'#fff'}}>
               {s.done?'✓':''}
             </div>
-            <div style={{fontSize:11,fontWeight:600,color:s.done?'#1a7a4a':'#8898aa',marginTop:6}}>{s.label}</div>
+            <div style={{fontSize:11,fontWeight:600,color:s.done?'#059669':'#8898aa',marginTop:6}}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -56,13 +56,13 @@ function MilestoneTimeline({ milestones }) {
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:10}}>
         {steps.map(s => (
           <div key={s.label} style={{
-            background: s.done ? '#e8f7ef' : '#f7f9fc',
-            border: `1px solid ${s.done ? '#b7e4cc' : '#dde3ec'}`,
+            background: s.done ? '#d1fae5' : '#f7f9fc',
+            border: `1px solid ${s.done ? '#a7f3d0' : '#dde3ec'}`,
             borderRadius:8, padding:'10px 14px'
           }}>
-            <div style={{fontSize:10.5,fontWeight:700,color:s.done?'#1a7a4a':'#8898aa',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>{s.label}</div>
+            <div style={{fontSize:10.5,fontWeight:700,color:s.done?'#059669':'#8898aa',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>{s.label}</div>
             {s.done
-              ? <div style={{fontSize:13,fontWeight:600,color:'#1a7a4a'}}>✓ {fmtDate(s.date)}</div>
+              ? <div style={{fontSize:13,fontWeight:600,color:'#059669'}}>✓ {fmtDate(s.date)}</div>
               : <div style={{fontSize:12.5,color:'#aaa',fontStyle:'italic'}}>Not yet done</div>
             }
           </div>
@@ -112,7 +112,7 @@ function MilestoneEditor({ patientId, milestones, onSaved }) {
       </div>
       <div style={{display:'flex',justifyContent:'flex-end',marginTop:10}}>
         <button onClick={save} disabled={saving}
-          style={{padding:'8px 18px',borderRadius:7,border:'none',background:'#0b4f82',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
+          style={{padding:'8px 18px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
           {saving?'Saving…':'Save Milestones'}
         </button>
       </div>
@@ -143,8 +143,8 @@ export default function PatientDetail({ navigate, patientId }) {
     }))
   }
 
-  if (loading) return <div style={{padding:40,textAlign:'center'}}><div style={{width:32,height:32,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
-  if (!data) return <div style={{padding:40,color:'#c0392b'}}>Patient not found.</div>
+  if (loading) return <div style={{padding:40,textAlign:'center'}}><div style={{width:32,height:32,border:'3px solid #dde3ec',borderTopColor:'#155eef',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
+  if (!data) return <div style={{padding:40,color:'#e11d48'}}>Patient not found.</div>
 
   const { patient, sim_orders, clinical_orders, cost_estimates, milestones, billing, payments } = data
 
@@ -153,7 +153,7 @@ export default function PatientDetail({ navigate, patientId }) {
       {/* Header */}
       <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:20}}>
         <div>
-          <button onClick={()=>navigate('patients')} style={{background:'none',border:'none',color:'#0b4f82',cursor:'pointer',fontSize:13,fontWeight:500,marginBottom:8,padding:0}}>← Back to patients</button>
+          <button onClick={()=>navigate('patients')} style={{background:'none',border:'none',color:'#155eef',cursor:'pointer',fontSize:13,fontWeight:500,marginBottom:8,padding:0}}>← Back to patients</button>
           <h1 style={{fontSize:22,fontWeight:700}}>{patient.full_name}</h1>
           <p style={{color:'#4a5a70',fontSize:13,marginTop:3}}>{patient.diagnosis||'No diagnosis recorded'}</p>
         </div>
@@ -161,26 +161,26 @@ export default function PatientDetail({ navigate, patientId }) {
           <div style={{display:'flex',gap:8}}>
             <button onClick={()=>navigate('sim-order',{patientId})} style={{padding:'8px 14px',borderRadius:7,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12.5,fontWeight:500}}>+ Sim Order</button>
             <button onClick={()=>navigate('clinical-order',{patientId})} style={{padding:'8px 14px',borderRadius:7,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12.5,fontWeight:500}}>+ Clinical Order</button>
-            <button onClick={()=>navigate('cost-estimate',{patientId})} style={{padding:'8px 14px',borderRadius:7,border:'none',background:'#0b4f82',color:'#fff',cursor:'pointer',fontSize:12.5,fontWeight:600}}>+ Cost Estimate</button>
+            <button onClick={()=>navigate('cost-estimate',{patientId})} style={{padding:'8px 14px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:12.5,fontWeight:600}}>+ Cost Estimate</button>
           </div>
         )}
       </div>
 
       {/* Patient info */}
-      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'18px 22px',marginBottom:12,display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:14}}>
+      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'18px 22px',marginBottom:12,display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:14}}>
         {[['DOB',fmtDate(patient.date_of_birth)],['Gender',patient.gender||'—'],['National ID',patient.national_id||'—'],['Phone',patient.phone||'—'],['ICD-10',patient.icd10_code||'—'],[isAdmin?'Referring Dr':'Registered',isAdmin?(patient.doctor_name||'—'):fmtDate(patient.created_at)]].map(([l,v])=>(
           <div key={l}><div style={{fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:3}}>{l}</div><div style={{fontSize:13,fontWeight:500}}>{v}</div></div>
         ))}
       </div>
 
       {/* Milestones */}
-      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'18px 22px',marginBottom:12}}>
+      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'18px 22px',marginBottom:12}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
           <div style={{fontSize:11,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em'}}>Treatment progress</div>
           {isAdmin && (
             <button onClick={()=>setEditMilestones(e=>!e)}
-              style={{padding:'5px 12px',borderRadius:6,border:'1px solid #dde3ec',background:editMilestones?'#0b4f82':'#fff',
-                color:editMilestones?'#fff':'#0b4f82',cursor:'pointer',fontSize:12,fontWeight:600}}>
+              style={{padding:'5px 12px',borderRadius:6,border:'1px solid #dde3ec',background:editMilestones?'#155eef':'#fff',
+                color:editMilestones?'#fff':'#155eef',cursor:'pointer',fontSize:12,fontWeight:600}}>
               {editMilestones ? '✕ Close' : '✏️ Edit Milestones'}
             </button>
           )}
@@ -215,7 +215,7 @@ export default function PatientDetail({ navigate, patientId }) {
         {title:'Clinical Treatment Orders', items:clinical_orders, type:'clinical', route:'clinical-order', cols:['Ref','Technique','Dose','Status','Planning','Reserved','Physicist Notes','']},
         {title:'Cost Estimates',            items:cost_estimates,  type:'estimate', route:'cost-estimate',  cols:['Ref','Total (EGP)','Status','']},
       ].map(({title,items,type,route,cols})=>(
-        <div key={type} style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,marginBottom:12,overflow:'hidden'}}>
+        <div key={type} style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,marginBottom:12,overflow:'hidden'}}>
           <div style={{padding:'13px 20px',borderBottom:'1px solid #dde3ec',fontWeight:600,fontSize:13.5}}>
             {title} <span style={{color:'#8898aa',fontWeight:400,fontSize:12}}>({items.length})</span>
           </div>
@@ -251,22 +251,22 @@ export default function PatientDetail({ navigate, patientId }) {
                       {type==='clinical' && <>
                         <td style={{padding:'10px 16px'}}>
                           <PlanningBadge status={item.planning_status}/>
-                          {item.replan_count>0 && <span style={{marginLeft:6,fontSize:10.5,color:'#c0392b',fontWeight:600}}>↻{item.replan_count}</span>}
+                          {item.replan_count>0 && <span style={{marginLeft:6,fontSize:10.5,color:'#e11d48',fontWeight:600}}>↻{item.replan_count}</span>}
                         </td>
                         <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70',whiteSpace:'nowrap'}}>{item.planning_scheduled_at?fmtDateTime(item.planning_scheduled_at):'—'}</td>
-                        <td style={{padding:'10px 16px',fontSize:12.5,color:item.planning_notes?'#0b4f82':'#4a5a70',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',cursor:'pointer',textDecoration:item.planning_notes?'underline':'none'}}
+                        <td style={{padding:'10px 16px',fontSize:12.5,color:item.planning_notes?'#155eef':'#4a5a70',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',cursor:'pointer',textDecoration:item.planning_notes?'underline':'none'}}
                           onClick={e=>{e.stopPropagation(); setNotesModal({title:'Physicist Notes',subtitle:item.order_ref,notes:item.planning_notes,orderType:'clinical',orderId:item.id})}}>
                           {item.planning_notes||'—'}
                         </td>
                       </>}
                       {type==='sim' && (
-                        <td style={{padding:'10px 16px',fontSize:12.5,color:item.completion_notes?'#0b4f82':'#4a5a70',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',cursor:'pointer',textDecoration:item.completion_notes?'underline':'none'}}
+                        <td style={{padding:'10px 16px',fontSize:12.5,color:item.completion_notes?'#155eef':'#4a5a70',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',cursor:'pointer',textDecoration:item.completion_notes?'underline':'none'}}
                           onClick={e=>{e.stopPropagation(); setNotesModal({title:'RTT Notes',subtitle:item.order_ref,notes:item.completion_notes,orderType:'sim',orderId:item.id})}}>
                           {item.completion_notes||'—'}
                         </td>
                       )}
                       <td style={{padding:'10px 16px',textAlign:'right'}}>
-                        <span style={{fontSize:12,color:'#0b4f82',fontWeight:500,whiteSpace:'nowrap'}}>View →</span>
+                        <span style={{fontSize:12,color:'#155eef',fontWeight:500,whiteSpace:'nowrap'}}>View →</span>
                       </td>
                     </tr>
                   ))}
@@ -278,7 +278,7 @@ export default function PatientDetail({ navigate, patientId }) {
 
       {/* Billing */}
       {billing && (
-        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'18px 22px',marginBottom:12}}>
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'18px 22px',marginBottom:12}}>
           <div style={{fontSize:11,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:14}}>Billing</div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14,marginBottom:12}}>
             {[['Total',fmtEGP(billing.total_amount_egp)],['Paid',fmtEGP(billing.amount_paid_egp)],['Balance',fmtEGP(billing.balance_egp)]].map(([l,v])=>(
@@ -295,7 +295,7 @@ export default function PatientDetail({ navigate, patientId }) {
               {payments.map(p=>(
                 <div key={p.id} style={{display:'flex',justifyContent:'space-between',fontSize:12.5,padding:'5px 0',borderBottom:'1px solid #f7f9fc'}}>
                   <span style={{color:'#4a5a70'}}>{fmtDate(p.payment_date)} · {p.method}</span>
-                  <span style={{fontWeight:600,color:'#1a7a4a'}}>{fmtEGP(p.amount_egp)}</span>
+                  <span style={{fontWeight:600,color:'#059669'}}>{fmtEGP(p.amount_egp)}</span>
                 </div>
               ))}
             </div>

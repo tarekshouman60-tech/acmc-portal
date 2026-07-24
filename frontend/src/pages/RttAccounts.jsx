@@ -36,13 +36,13 @@ export default function RttAccounts() {
           <h1 style={{fontSize:22,fontWeight:700}}>RTT Accounts</h1>
           <p style={{color:'#4a5a70',fontSize:13,marginTop:3}}>{rtts.length} registered technologist{rtts.length!==1?'s':''}</p>
         </div>
-        <button onClick={()=>setShowForm(true)} style={{padding:'9px 18px',borderRadius:7,border:'none',background:'#0b4f82',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>+ Add RTT</button>
+        <button onClick={()=>setShowForm(true)} style={{padding:'9px 18px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>+ Add RTT</button>
       </div>
 
       {showForm && (
-        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:20,marginBottom:14}}>
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:20,marginBottom:14}}>
           <div style={{fontWeight:600,fontSize:13,marginBottom:14}}>New RTT Account</div>
-          {error && <div style={{background:'#fdecea',color:'#c0392b',borderRadius:6,padding:'9px 13px',fontSize:13,marginBottom:12}}>{error}</div>}
+          {error && <div style={{background:'#ffe4e6',color:'#e11d48',borderRadius:6,padding:'9px 13px',fontSize:13,marginBottom:12}}>{error}</div>}
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:13,marginBottom:13}}>
             <FL label="Full name *"><input style={inp} value={form.full_name} onChange={e=>setForm(f=>({...f,full_name:e.target.value}))} placeholder="Full name"/></FL>
             <FL label="Email *"><input style={inp} type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="rtt@acmc.eg"/></FL>
@@ -50,12 +50,12 @@ export default function RttAccounts() {
           </div>
           <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
             <button onClick={()=>setShowForm(false)} style={{padding:'8px 16px',borderRadius:6,border:'1px solid #dde3ec',background:'transparent',cursor:'pointer',fontSize:13}}>Cancel</button>
-            <button onClick={save} disabled={saving} style={{padding:'8px 18px',borderRadius:6,border:'none',background:'#0b4f82',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>{saving?'Saving…':'Create Account'}</button>
+            <button onClick={save} disabled={saving} style={{padding:'8px 18px',borderRadius:6,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>{saving?'Saving…':'Create Account'}</button>
           </div>
         </div>
       )}
 
-      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden'}}>
+      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,overflow:'hidden'}}>
         {rtts.length===0
           ? <div style={{padding:32,textAlign:'center',color:'#8898aa',fontSize:13}}>No RTT accounts yet.</div>
           : <table style={{width:'100%',borderCollapse:'collapse'}}>
@@ -71,10 +71,10 @@ export default function RttAccounts() {
                     <td style={{padding:'11px 16px',fontSize:12.5,color:'#4a5a70',borderBottom:'1px solid #f0f4f8'}}>{r.email}</td>
                     <td style={{padding:'11px 16px',fontSize:12,color:'#8898aa',borderBottom:'1px solid #f0f4f8'}}>{fmtDate(r.created_at)}</td>
                     <td style={{padding:'11px 16px',borderBottom:'1px solid #f0f4f8'}}>
-                      <span style={{background:r.is_active?'#e8f7ef':'#fdecea',color:r.is_active?'#1a7a4a':'#c0392b',fontSize:11,fontWeight:600,padding:'2px 9px',borderRadius:20}}>{r.is_active?'ACTIVE':'INACTIVE'}</span>
+                      <span style={{background:r.is_active?'#d1fae5':'#ffe4e6',color:r.is_active?'#059669':'#e11d48',fontSize:11,fontWeight:600,padding:'2px 9px',borderRadius:20}}>{r.is_active?'ACTIVE':'INACTIVE'}</span>
                     </td>
                     <td style={{padding:'11px 16px',borderBottom:'1px solid #f0f4f8'}}>
-                      <button onClick={()=>toggle(r.id)} style={{padding:'5px 12px',borderRadius:5,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12,fontWeight:500,color:r.is_active?'#c0392b':'#1a7a4a'}}>
+                      <button onClick={()=>toggle(r.id)} style={{padding:'5px 12px',borderRadius:5,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12,fontWeight:500,color:r.is_active?'#e11d48':'#059669'}}>
                         {r.is_active?'Deactivate':'Activate'}
                       </button>
                     </td>

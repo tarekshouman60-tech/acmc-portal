@@ -27,7 +27,7 @@ function Bubble({ msg, isMine }) {
           {msg.sender_name||msg.sender_role} · {fmtWhen(msg.created_at)}
         </div>
         <div style={{
-          background: msg.is_flagged ? '#fdecea' : (isMine ? '#0b4f82' : '#f0f4f8'),
+          background: msg.is_flagged ? '#ffe4e6' : (isMine ? '#155eef' : '#f0f4f8'),
           color: msg.is_flagged ? '#7a1a1a' : (isMine ? '#fff' : '#1a2636'),
           border: msg.is_flagged ? '1.5px solid #e0554a' : 'none',
           borderRadius:12,
@@ -116,11 +116,11 @@ export default function MessageThread({ orderType, orderId, title="Discussion" }
   }
 
   return (
-    <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'16px 20px',marginTop:10}}>
+    <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'16px 20px',marginTop:10}}>
       <div style={{fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:12}}>💬 {title}</div>
 
       {loading ? (
-        <div style={{padding:20,textAlign:'center'}}><div style={{width:22,height:22,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
+        <div style={{padding:20,textAlign:'center'}}><div style={{width:22,height:22,border:'3px solid #dde3ec',borderTopColor:'#155eef',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
       ) : messages.length===0 ? (
         <div style={{padding:'10px 0',color:'#8898aa',fontSize:12.5}}>No messages yet. Start the conversation below.</div>
       ) : (
@@ -129,12 +129,12 @@ export default function MessageThread({ orderType, orderId, title="Discussion" }
         </div>
       )}
 
-      {error && <div style={{background:'#fdecea',color:'#c0392b',border:'1px solid #f5c6c2',borderRadius:6,padding:'8px 12px',fontSize:12.5,marginBottom:10}}>{error}</div>}
+      {error && <div style={{background:'#ffe4e6',color:'#e11d48',border:'1px solid #fecdd3',borderRadius:6,padding:'8px 12px',fontSize:12.5,marginBottom:10}}>{error}</div>}
 
       {pending && (
         <div style={{display:'flex',alignItems:'center',gap:8,background:'#f0f6ff',border:'1px solid #c5d8f5',borderRadius:7,padding:'6px 10px',marginBottom:8,fontSize:12}}>
           <span>📎 {pending.kind === 'audio' ? 'Voice note ready' : pending.name}</span>
-          <button onClick={()=>setPending(null)} style={{marginLeft:'auto',border:'none',background:'transparent',color:'#c0392b',cursor:'pointer',fontSize:13}}>✕</button>
+          <button onClick={()=>setPending(null)} style={{marginLeft:'auto',border:'none',background:'transparent',color:'#e11d48',cursor:'pointer',fontSize:13}}>✕</button>
         </div>
       )}
 
@@ -153,17 +153,17 @@ export default function MessageThread({ orderType, orderId, title="Discussion" }
         {!recording ? (
           <button type="button" onClick={startRecording} style={{padding:'6px 11px',borderRadius:6,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12}}>🎙️</button>
         ) : (
-          <button type="button" onClick={stopRecording} style={{padding:'6px 11px',borderRadius:6,border:'1px solid #c0392b',background:'#fdecea',color:'#c0392b',cursor:'pointer',fontSize:12,fontWeight:600}}>⏹ {recSeconds}s</button>
+          <button type="button" onClick={stopRecording} style={{padding:'6px 11px',borderRadius:6,border:'1px solid #e11d48',background:'#ffe4e6',color:'#e11d48',cursor:'pointer',fontSize:12,fontWeight:600}}>⏹ {recSeconds}s</button>
         )}
 
         <button type="button" onClick={()=>setFlagged(f=>!f)}
-          style={{padding:'6px 12px',borderRadius:6,border:flagged?'1px solid #c0392b':'1px solid #dde3ec',
-            background:flagged?'#fdecea':'#fff',color:flagged?'#c0392b':'#4a5a70',cursor:'pointer',fontSize:12,fontWeight:flagged?700:500}}>
+          style={{padding:'6px 12px',borderRadius:6,border:flagged?'1px solid #e11d48':'1px solid #dde3ec',
+            background:flagged?'#ffe4e6':'#fff',color:flagged?'#e11d48':'#4a5a70',cursor:'pointer',fontSize:12,fontWeight:flagged?700:500}}>
           🚩 {flagged?'Urgent':'Mark urgent'}
         </button>
 
         <button type="button" onClick={send} disabled={sending||(!body.trim()&&!pending)}
-          style={{marginLeft:'auto',padding:'8px 18px',borderRadius:7,border:'none',background:'#0b4f82',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600,opacity:(sending||(!body.trim()&&!pending))?.6:1}}>
+          style={{marginLeft:'auto',padding:'8px 18px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600,opacity:(sending||(!body.trim()&&!pending))?.6:1}}>
           {sending?'Sending…':'Send'}
         </button>
       </div>

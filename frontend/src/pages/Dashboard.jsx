@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react'
 import { api, fmtEGP, fmtDate } from '../api.js'
 import { useAuth } from '../App.jsx'
 
-function Stat({ label, value, color='#0b4f82' }) {
+function Stat({ label, value, color='#155eef' }) {
   return (
-    <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'18px 22px'}}>
+    <div style={{background:'#fff',border:'1px solid #e7ebf1',borderTop:`3px solid ${color}`,boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'18px 22px'}}>
       <div style={{fontSize:11,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em'}}>{label}</div>
-      <div style={{fontSize:28,fontWeight:700,color,marginTop:6}}>{value}</div>
+      <div style={{fontSize:32,fontWeight:800,color,marginTop:6,letterSpacing:'-.02em'}}>{value}</div>
     </div>
   )
 }
@@ -26,7 +26,7 @@ export default function Dashboard({ navigate }) {
 
   if (!data) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:200}}>
-      <div style={{width:32,height:32,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite'}}/>
+      <div style={{width:32,height:32,border:'3px solid #dde3ec',borderTopColor:'#155eef',borderRadius:'50%',animation:'spin .7s linear infinite'}}/>
     </div>
   )
 
@@ -43,16 +43,16 @@ export default function Dashboard({ navigate }) {
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:14,marginBottom:24}}>
         <Stat label="Patients" value={data.total_patients}/>
         <Stat label="Sim Orders" value={data.sim_orders} color="#4338ca"/>
-        <Stat label="Clinical Orders" value={data.clinical_orders} color="#00a896"/>
-        <Stat label="Billing" value={data.cost_estimates} color="#e67e22"/>
+        <Stat label="Clinical Orders" value={data.clinical_orders} color="#00c9a7"/>
+        <Stat label="Billing" value={data.cost_estimates} color="#f59e0b"/>
       </div>
 
       <div style={{display:'grid',gridTemplateColumns:isAdmin?'1fr 1fr':'1fr',gap:16}}>
         {/* Recent patients */}
-        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10}}>
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14}}>
           <div style={{padding:'14px 20px',borderBottom:'1px solid #dde3ec',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
             <span style={{fontWeight:600,fontSize:14}}>Recent Patients</span>
-            <button onClick={()=>navigate('patients')} style={{fontSize:12.5,color:'#0b4f82',background:'none',border:'none',cursor:'pointer',fontWeight:500}}>View all →</button>
+            <button onClick={()=>navigate('patients')} style={{fontSize:12.5,color:'#155eef',background:'none',border:'none',cursor:'pointer',fontWeight:500}}>View all →</button>
           </div>
           {data.recent_patients?.length === 0
             ? <div style={{padding:32,textAlign:'center',color:'#8898aa',fontSize:13}}>No patients yet.</div>
@@ -73,7 +73,7 @@ export default function Dashboard({ navigate }) {
                       {isAdmin && <td style={{padding:'11px 16px',fontSize:13,color:'#4a5a70',borderBottom:'1px solid #f0f4f8'}}>{p.doctor}</td>}
                       <td style={{padding:'11px 16px',fontSize:12.5,color:'#8898aa',borderBottom:'1px solid #f0f4f8'}}>{fmtDate(p.created_at)}</td>
                       <td style={{padding:'11px 16px',borderBottom:'1px solid #f0f4f8',textAlign:'right'}}>
-                        <span style={{fontSize:12,color:'#0b4f82',fontWeight:500}}>Open →</span>
+                        <span style={{fontSize:12,color:'#155eef',fontWeight:500}}>Open →</span>
                       </td>
                     </tr>
                   ))}
@@ -84,7 +84,7 @@ export default function Dashboard({ navigate }) {
 
         {/* Planning tracker — admin only */}
         {isAdmin && (
-          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10}}>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14}}>
             <div style={{padding:'14px 20px',borderBottom:'1px solid #dde3ec'}}>
               <span style={{fontWeight:600,fontSize:14}}>Planning & Treatment Tracker</span>
             </div>
@@ -103,18 +103,18 @@ export default function Dashboard({ navigate }) {
                         <td style={{padding:'10px 14px',fontSize:12,color:'#4a5a70'}}>{r.doctor}</td>
                         <td style={{padding:'10px 14px',fontSize:12}}>
                           {r.planning_done
-                            ? <span style={{color:'#1a7a4a',fontWeight:500}}>✓ {fmtDate(r.planning_date)}</span>
+                            ? <span style={{color:'#059669',fontWeight:500}}>✓ {fmtDate(r.planning_date)}</span>
                             : <span style={{color:'#8898aa'}}>—</span>}
                         </td>
                         <td style={{padding:'10px 14px',fontSize:12}}>
                           {r.treatment_started
-                            ? <span style={{color:'#0b4f82',fontWeight:500}}>✓ {fmtDate(r.treatment_start)}</span>
+                            ? <span style={{color:'#155eef',fontWeight:500}}>✓ {fmtDate(r.treatment_start)}</span>
                             : <span style={{color:'#8898aa'}}>—</span>}
                         </td>
                         <td style={{padding:'10px 14px',fontSize:12}}>
                           {r.treatment_completed
-                            ? <span style={{color:'#1a7a4a',fontWeight:500}}>✓ {fmtDate(r.treatment_end)}</span>
-                            : <span style={{color:'#e67e22'}}>In progress</span>}
+                            ? <span style={{color:'#059669',fontWeight:500}}>✓ {fmtDate(r.treatment_end)}</span>
+                            : <span style={{color:'#f59e0b'}}>In progress</span>}
                         </td>
                       </tr>
                     ))}

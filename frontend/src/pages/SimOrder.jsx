@@ -14,7 +14,7 @@ const FL = ({label,children}) => <div><label style={{display:'block',fontSize:11
 
 function Section({ id, label, icon, color, open, onToggle, summary, children }) {
   return (
-    <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,marginBottom:8,overflow:'hidden'}}>
+    <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,marginBottom:8,overflow:'hidden'}}>
       <div onClick={onToggle} style={{display:'flex',alignItems:'center',gap:10,padding:'12px 18px',cursor:'pointer',userSelect:'none'}}>
         <div style={{width:28,height:28,borderRadius:7,background:color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0}}>{icon}</div>
         <span style={{flex:1,fontWeight:500,fontSize:13.5}}>{label}</span>
@@ -31,8 +31,8 @@ function RadioGroup({ options, value, onChange }) {
     <div style={{display:'flex',flexWrap:'wrap',gap:7}}>
       {options.map(opt => (
         <button key={opt} onClick={() => onChange(opt===value?null:opt)}
-          style={{padding:'7px 13px',borderRadius:7,border:value===opt?'1.5px solid #0b4f82':'1px solid #dde3ec',
-            background:value===opt?'#e8f0fb':'#fff',color:value===opt?'#0b4f82':'#1a2636',
+          style={{padding:'7px 13px',borderRadius:7,border:value===opt?'1.5px solid #155eef':'1px solid #dde3ec',
+            background:value===opt?'#dce9ff':'#fff',color:value===opt?'#155eef':'#1a2636',
             fontWeight:value===opt?600:400,fontSize:13,cursor:'pointer',fontFamily:'inherit',transition:'all .12s'}}>
           {opt}
         </button>
@@ -48,11 +48,11 @@ function CheckGroup({ options, values, onChange }) {
         const on = values.includes(opt)
         return (
           <button key={opt} onClick={() => onChange(on?values.filter(v=>v!==opt):[...values,opt])}
-            style={{padding:'7px 13px',borderRadius:7,border:on?'1.5px solid #0b4f82':'1px solid #dde3ec',
-              background:on?'#e8f0fb':'#fff',color:on?'#0b4f82':'#1a2636',
+            style={{padding:'7px 13px',borderRadius:7,border:on?'1.5px solid #155eef':'1px solid #dde3ec',
+              background:on?'#dce9ff':'#fff',color:on?'#155eef':'#1a2636',
               fontWeight:on?600:400,fontSize:13,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',gap:6,transition:'all .12s'}}>
             <span style={{width:14,height:14,borderRadius:3,border:on?'none':'1.5px solid #aaa',
-              background:on?'#0b4f82':'transparent',color:'#fff',fontSize:9,
+              background:on?'#155eef':'transparent',color:'#fff',fontSize:9,
               display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{on?'✓':''}</span>
             {opt}
           </button>
@@ -168,7 +168,7 @@ export default function SimOrder({ navigate, patientId }) {
     const yn=(l,v)=>v?`<div class="field"><div class="fl">${l}</div><div class="fv ${v==='Yes'?'yes':'no'}">${v}</div></div>`:''
     const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${d.orderNum}</title>
 <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:13px;color:#1a2636}
-.header{background:#0b4f82;color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:flex-start}
+.header{background:#155eef;color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:flex-start}
 .h-title{font-size:15px;font-weight:700}.h-sub{font-size:11px;opacity:.6;margin-top:3px}
 .h-right{text-align:right}.on{font-size:13px;font-weight:700;font-family:monospace}.od{font-size:11px;opacity:.6;margin-top:3px}
 .badge{display:inline-block;background:rgba(255,255,255,.2);font-size:10px;padding:2px 8px;border-radius:20px;margin-top:5px}
@@ -178,9 +178,9 @@ export default function SimOrder({ navigate, patientId }) {
 .sec-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#8898aa;padding-bottom:6px;border-bottom:1px solid #dde3ec;margin-bottom:10px}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
 .field{background:#f7f9fc;border-radius:6px;padding:8px 11px}.fl{font-size:10px;color:#8898aa;margin-bottom:2px}.fv{font-size:13px;font-weight:500}
-.fv.yes{color:#1a7a4a}.fv.no{color:#aaa}
-.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{background:#fef4e7;color:#7a3800;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid #f0d5b0}
-.nbox{background:#f7f9fc;border-left:3px solid #0b4f82;border-radius:0 6px 6px 0;padding:10px 14px;font-size:12.5px;line-height:1.6}
+.fv.yes{color:#059669}.fv.no{color:#aaa}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{background:#fef3c7;color:#7a3800;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid #fde68a}
+.nbox{background:#f7f9fc;border-left:3px solid #155eef;border-radius:0 6px 6px 0;padding:10px 14px;font-size:12.5px;line-height:1.6}
 .div{height:1px;background:#dde3ec;margin:14px 0}
 .sig{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:8px}
 .sb{border-top:1px solid #dde3ec;padding-top:8px}.sl{font-size:10px;color:#8898aa}.sn{font-size:13px;font-weight:600;margin-top:18px}
@@ -230,12 +230,12 @@ export default function SimOrder({ navigate, patientId }) {
   }
 
   const filled = [pos.length>0,fix.length>0,contrast,sgrt,rpm,mri,pet,bolus].filter(Boolean).length
-  const card = {background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'18px 20px',marginBottom:10}
+  const card = {background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'18px 20px',marginBottom:10}
 
   return (
     <div>
       <div style={{marginBottom:20}}>
-        <button onClick={()=>navigate(patientId?'patient-detail':'patients',{patientId})} style={{background:'none',border:'none',color:'#0b4f82',cursor:'pointer',fontSize:13,fontWeight:500,marginBottom:8,padding:0}}>← Back</button>
+        <button onClick={()=>navigate(patientId?'patient-detail':'patients',{patientId})} style={{background:'none',border:'none',color:'#155eef',cursor:'pointer',fontSize:13,fontWeight:500,marginBottom:8,padding:0}}>← Back</button>
         <h1 style={{fontSize:22,fontWeight:700}}>Simulation Order</h1>
         <p style={{color:'#4a5a70',fontSize:13,marginTop:3}}>Fill in all relevant sections then save and print for ACMC.</p>
       </div>
@@ -247,8 +247,8 @@ export default function SimOrder({ navigate, patientId }) {
         </div>
       )}
 
-      {error && <div style={{background:'#fdecea',color:'#c0392b',border:'1px solid #f5c6c2',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>{error}</div>}
-      {saved && <div style={{background:'#e8f7ef',color:'#1a7a4a',border:'1px solid #b7e4cc',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>✓ {saved.updated ? 'Updated' : 'Saved'} as <strong>{saved.order_ref}</strong></div>}
+      {error && <div style={{background:'#ffe4e6',color:'#e11d48',border:'1px solid #fecdd3',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>{error}</div>}
+      {saved && <div style={{background:'#d1fae5',color:'#059669',border:'1px solid #a7f3d0',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>✓ {saved.updated ? 'Updated' : 'Saved'} as <strong>{saved.order_ref}</strong></div>}
 
       {/* RTT scheduling feedback */}
       {rttFeedback && (
@@ -257,8 +257,8 @@ export default function SimOrder({ navigate, patientId }) {
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:13,marginBottom:rttFeedback.notes?13:0}}>
             <div>
               <div style={{fontSize:10,color:'#8898aa',marginBottom:3,textTransform:'uppercase',letterSpacing:'.03em'}}>Status</div>
-              <span style={{background:{pending:'#fef4e7',scheduled:'#eef2ff',done:'#e8f7ef',cancelled:'#f0f4f8'}[rttFeedback.status],
-                color:{pending:'#e67e22',scheduled:'#4338ca',done:'#1a7a4a',cancelled:'#8898aa'}[rttFeedback.status],
+              <span style={{background:{pending:'#fef3c7',scheduled:'#eef2ff',done:'#d1fae5',cancelled:'#f0f4f8'}[rttFeedback.status],
+                color:{pending:'#f59e0b',scheduled:'#4338ca',done:'#059669',cancelled:'#8898aa'}[rttFeedback.status],
                 fontSize:12,fontWeight:600,padding:'3px 10px',borderRadius:20}}>
                 {{pending:'Pending',scheduled:'Scheduled',done:'Done',cancelled:'Cancelled'}[rttFeedback.status]}
               </span>
@@ -275,7 +275,7 @@ export default function SimOrder({ navigate, patientId }) {
             )}
           </div>
           {rttFeedback.notes && (
-            <div style={{background:'#f0f4f8',borderLeft:'3px solid #0b4f82',borderRadius:'0 6px 6px 0',padding:'10px 14px'}}>
+            <div style={{background:'#f0f4f8',borderLeft:'3px solid #155eef',borderRadius:'0 6px 6px 0',padding:'10px 14px'}}>
               <div style={{fontSize:10,color:'#8898aa',marginBottom:3,textTransform:'uppercase',letterSpacing:'.03em'}}>RTT notes</div>
               <div style={{fontSize:13}}>{rttFeedback.notes}</div>
             </div>
@@ -297,20 +297,20 @@ export default function SimOrder({ navigate, patientId }) {
         </div>
       </div>
 
-      <Section id="positioning" label="Positioning" icon="🧍" color="#e8f0fb" open={open.positioning} onToggle={()=>tog('positioning')} summary={pos.length?pos.join(', '):null}>
+      <Section id="positioning" label="Positioning" icon="🧍" color="#dce9ff" open={open.positioning} onToggle={()=>tog('positioning')} summary={pos.length?pos.join(', '):null}>
         <CheckGroup options={POSITIONING} values={pos} onChange={setPos}/>
       </Section>
       <Section id="fixation" label="Fixation / Immobilization" icon="🔒" color="#f3e8ff" open={open.fixation} onToggle={()=>tog('fixation')} summary={fix.length?fix.join(', '):null}>
         <CheckGroup options={FIXATION} values={fix} onChange={setFix}/>
       </Section>
-      <Section id="shield" label="Shielding" icon="🛡️" color="#fef4e7" open={open.shield} onToggle={()=>tog('shield')} summary={shields.length?shields.join(', '):null}>
+      <Section id="shield" label="Shielding" icon="🛡️" color="#fef3c7" open={open.shield} onToggle={()=>tog('shield')} summary={shields.length?shields.join(', '):null}>
         <CheckGroup options={SHIELDS} values={shields} onChange={setShields}/>
       </Section>
-      <Section id="bolus" label="Bolus" icon="📐" color="#e0f5f3" open={open.bolus} onToggle={()=>tog('bolus')} summary={bolus?(bolus==='Yes'&&bolusThick?'Yes · '+bolusThick+'mm':bolus):null}>
+      <Section id="bolus" label="Bolus" icon="📐" color="#c9f7ee" open={open.bolus} onToggle={()=>tog('bolus')} summary={bolus?(bolus==='Yes'&&bolusThick?'Yes · '+bolusThick+'mm':bolus):null}>
         <RadioGroup options={['Yes','No']} value={bolus} onChange={setBolus}/>
         {bolus==='Yes' && <div style={{marginTop:12,maxWidth:180}}><FL label="Thickness (mm)"><input style={inp} type="number" value={bolusThick} onChange={e=>setBolusThick(e.target.value)} placeholder="e.g. 5"/></FL></div>}
       </Section>
-      <Section id="ct" label="CT Simulation" icon="🔬" color="#e8f0fb" open={open.ct} onToggle={()=>tog('ct')} summary={[contrast,sliceThick?sliceThick+'mm':'',fourDct?'4D:'+fourDct:''].filter(Boolean).join(' · ')||null}>
+      <Section id="ct" label="CT Simulation" icon="🔬" color="#dce9ff" open={open.ct} onToggle={()=>tog('ct')} summary={[contrast,sliceThick?sliceThick+'mm':'',fourDct?'4D:'+fourDct:''].filter(Boolean).join(' · ')||null}>
         <div style={{marginBottom:12}}>
           <div style={{fontSize:11.5,fontWeight:600,color:'#4a5a70',marginBottom:8}}>Contrast</div>
           <RadioGroup options={['With contrast','No contrast']} value={contrast} onChange={setContrast}/>
@@ -327,10 +327,10 @@ export default function SimOrder({ navigate, patientId }) {
       <Section id="sgrt" label="SGRT – Surface Guided RT (Identify)" icon="📡" color="#eef2ff" open={open.sgrt} onToggle={()=>tog('sgrt')} summary={sgrt}>
         <RadioGroup options={['Yes','No']} value={sgrt} onChange={setSgrt}/>
       </Section>
-      <Section id="rpm" label="Respiratory Gating (RPM / ARMS)" icon="🫁" color="#e0f5f3" open={open.rpm} onToggle={()=>tog('rpm')} summary={rpm}>
+      <Section id="rpm" label="Respiratory Gating (RPM / ARMS)" icon="🫁" color="#c9f7ee" open={open.rpm} onToggle={()=>tog('rpm')} summary={rpm}>
         <RadioGroup options={['Yes','No']} value={rpm} onChange={setRpm}/>
       </Section>
-      <Section id="mri" label="MRI Simulation" icon="🧲" color="#fdecea" open={open.mri} onToggle={()=>tog('mri')} summary={mri}>
+      <Section id="mri" label="MRI Simulation" icon="🧲" color="#ffe4e6" open={open.mri} onToggle={()=>tog('mri')} summary={mri}>
         <RadioGroup options={['Yes','No']} value={mri} onChange={setMri}/>
         {mri==='Yes' && (
           <div style={{background:'#fafbfc',borderRadius:8,padding:13,marginTop:12,display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:13}}>
@@ -340,10 +340,10 @@ export default function SimOrder({ navigate, patientId }) {
           </div>
         )}
       </Section>
-      <Section id="pet" label="PET-CT Simulation" icon="⚛️" color="#fef4e7" open={open.pet} onToggle={()=>tog('pet')} summary={pet}>
+      <Section id="pet" label="PET-CT Simulation" icon="⚛️" color="#fef3c7" open={open.pet} onToggle={()=>tog('pet')} summary={pet}>
         <RadioGroup options={['Yes','No']} value={pet} onChange={setPet}/>
       </Section>
-      <Section id="special" label="Special Preparation Orders" icon="📋" color="#fdecea" open={open.special} onToggle={()=>tog('special')} summary={special.length?special.length+' orders':null}>
+      <Section id="special" label="Special Preparation Orders" icon="📋" color="#ffe4e6" open={open.special} onToggle={()=>tog('special')} summary={special.length?special.length+' orders':null}>
         <CheckGroup options={SPECIAL} values={special} onChange={setSpecial}/>
       </Section>
       <Section id="notes" label="Notes to RTT" icon="📝" color="#f7f9fc" open={open.notes} onToggle={()=>tog('notes')} summary={notes.trim()?'Added':null}>
@@ -351,13 +351,13 @@ export default function SimOrder({ navigate, patientId }) {
           style={{width:'100%',minHeight:80,border:'1px solid #dde3ec',borderRadius:7,padding:'10px 12px',fontSize:13,fontFamily:'inherit',resize:'vertical',outline:'none'}}/>
       </Section>
 
-      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'13px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',bottom:14}}>
+      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'13px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',bottom:14}}>
         <div style={{fontSize:12.5,color:'#8898aa'}}>{filled} / 8 core fields filled</div>
         <div style={{display:'flex',gap:8}}>
           <button onClick={submit} disabled={saving} style={{padding:"8px 16px",borderRadius:7,border:"1px solid #dde3ec",background:"#fff",cursor:"pointer",fontSize:13,fontWeight:500}}>💾 Save</button>
           <button onClick={openPrint} style={{padding:"8px 16px",borderRadius:7,border:"1px solid #dde3ec",background:"#fff",cursor:"pointer",fontSize:13,fontWeight:500}}>🖨️ Print only</button>
           <button onClick={async()=>{await submit();openPrint()}} disabled={saving}
-            style={{padding:'8px 20px',borderRadius:7,border:'none',background:'#0b4f82',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
+            style={{padding:'8px 20px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
             {saving?'Saving…':'💾 Save & Print'}
           </button>
         </div>

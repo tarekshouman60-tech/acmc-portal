@@ -8,9 +8,9 @@ const inp = {width:'100%',border:'1px solid #dde3ec',borderRadius:6,padding:'8px
 const FL = ({label,children}) => <div><label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>{label}</label>{children}</div>
 
 const STATUS_META = {
-  pending:     {bg:'#fef4e7',color:'#e67e22',label:'Pending'},
+  pending:     {bg:'#fef3c7',color:'#f59e0b',label:'Pending'},
   in_progress: {bg:'#eef2ff',color:'#4338ca',label:'In Progress'},
-  completed:   {bg:'#e8f7ef',color:'#1a7a4a',label:'Completed'},
+  completed:   {bg:'#d1fae5',color:'#059669',label:'Completed'},
   cancelled:   {bg:'#f0f4f8',color:'#8898aa',label:'Cancelled'},
 }
 function Badge({status}) {
@@ -59,7 +59,7 @@ function RequestDetail({ o }) {
         </div>
       ))}
       {o.special_instructions && (
-        <div style={{gridColumn:'1/-1',background:'#f0f4f8',borderLeft:'3px solid #0b4f82',borderRadius:'0 6px 6px 0',padding:'9px 13px'}}>
+        <div style={{gridColumn:'1/-1',background:'#f0f4f8',borderLeft:'3px solid #155eef',borderRadius:'0 6px 6px 0',padding:'9px 13px'}}>
           <div style={{fontSize:10,color:'#8898aa',marginBottom:2,textTransform:'uppercase',letterSpacing:'.03em'}}>Special instructions</div>
           <div style={{fontSize:12.5}}>{o.special_instructions}</div>
         </div>
@@ -99,13 +99,13 @@ function ManageRow({ o, onSaved, onClose }) {
   }
 
   return (
-    <div style={{background:'#fafbfc',border:'1px solid #dde3ec',borderRadius:10,padding:'16px 20px'}}>
+    <div style={{background:'#fafbfc',border:'1px solid #dde3ec',borderRadius:14,padding:'16px 20px'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
         <div style={{fontSize:13,fontWeight:600}}>{o.patient_name} <span style={{color:'#8898aa',fontWeight:400}}>· {o.order_ref} · {o.doctor_name}</span></div>
-        {o.replan_count>0 && <span style={{background:'#fdecea',color:'#c0392b',fontSize:11,fontWeight:600,padding:'2px 9px',borderRadius:20}}>Replanned {o.replan_count}×</span>}
+        {o.replan_count>0 && <span style={{background:'#ffe4e6',color:'#e11d48',fontSize:11,fontWeight:600,padding:'2px 9px',borderRadius:20}}>Replanned {o.replan_count}×</span>}
       </div>
       <RequestDetail o={o}/>
-      {error && <div style={{background:'#fdecea',color:'#c0392b',border:'1px solid #f5c6c2',borderRadius:6,padding:'9px 13px',fontSize:13,marginBottom:12}}>{error}</div>}
+      {error && <div style={{background:'#ffe4e6',color:'#e11d48',border:'1px solid #fecdd3',borderRadius:6,padding:'9px 13px',fontSize:13,marginBottom:12}}>{error}</div>}
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:13,marginBottom:13}}>
         <FL label="Reserve planning time">
           <input style={inp} type="datetime-local" value={scheduledAt} onChange={e=>setScheduledAt(e.target.value)}/>
@@ -129,12 +129,12 @@ function ManageRow({ o, onSaved, onClose }) {
       </div>
       <MessageThread orderType="clinical" orderId={o.id} title="Discussion with Oncologist"/>
       <div style={{display:'flex',gap:8,justifyContent:'space-between',marginTop:13}}>
-        <button onClick={replan} disabled={replanning} style={{padding:'8px 16px',borderRadius:6,border:'1px solid #f5c6c2',background:'#fdecea',color:'#c0392b',cursor:'pointer',fontSize:13,fontWeight:600}}>
+        <button onClick={replan} disabled={replanning} style={{padding:'8px 16px',borderRadius:6,border:'1px solid #fecdd3',background:'#ffe4e6',color:'#e11d48',cursor:'pointer',fontSize:13,fontWeight:600}}>
           {replanning?'Starting…':'🔁 Replan'}
         </button>
         <div style={{display:'flex',gap:8}}>
           <button onClick={onClose} style={{padding:'8px 16px',borderRadius:6,border:'1px solid #dde3ec',background:'transparent',cursor:'pointer',fontSize:13}}>Close</button>
-          <button onClick={save} disabled={saving} style={{padding:'8px 18px',borderRadius:6,border:'none',background:'#0b4f82',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
+          <button onClick={save} disabled={saving} style={{padding:'8px 18px',borderRadius:6,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
             {saving?'Saving…':'💾 Save'}
           </button>
         </div>
@@ -147,7 +147,7 @@ function WeekCalendar({ orders, weekStart, setWeekStart, selectedId, onSelect })
   const days = [...Array(7)].map((_,i)=>addDays(weekStart,i))
   const today = new Date()
   return (
-    <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden'}}>
+    <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,overflow:'hidden'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderBottom:'1px solid #dde3ec'}}>
         <button onClick={()=>setWeekStart(addDays(weekStart,-7))} style={{padding:'5px 11px',borderRadius:6,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:13}}>‹ Prev</button>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
@@ -165,14 +165,14 @@ function WeekCalendar({ orders, weekStart, setWeekStart, selectedId, onSelect })
           return (
             <div key={d.toISOString()} style={{borderRight:'1px solid #f0f4f8',minHeight:220,padding:'8px 6px'}}>
               <div style={{fontSize:11,fontWeight:700,textAlign:'center',padding:'4px 0',marginBottom:6,borderRadius:6,
-                color:isToday?'#fff':'#4a5a70',background:isToday?'#0b4f82':'transparent'}}>{fmtDayHeader(d)}</div>
+                color:isToday?'#fff':'#4a5a70',background:isToday?'#155eef':'transparent'}}>{fmtDayHeader(d)}</div>
               {dayOrders.length===0
                 ? <div style={{textAlign:'center',color:'#dde3ec',fontSize:11,marginTop:10}}>—</div>
                 : dayOrders.map(o=>{
                     const s = STATUS_META[o.planning_status]||STATUS_META.pending
                     return (
                       <div key={o.id} onClick={()=>onSelect(o.id)}
-                        style={{background:selectedId===o.id?'#0b4f82':s.bg,color:selectedId===o.id?'#fff':s.color,
+                        style={{background:selectedId===o.id?'#155eef':s.bg,color:selectedId===o.id?'#fff':s.color,
                           borderRadius:6,padding:'6px 8px',marginBottom:5,cursor:'pointer',fontSize:11.5}}>
                         <div style={{fontWeight:700}}>{fmtTime(o.planning_scheduled_at)}</div>
                         <div style={{fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{o.patient_name}</div>
@@ -225,14 +225,14 @@ export default function PhysicistPlanning() {
         {['all','pending','in_progress','completed','cancelled'].map(f=>(
           <button key={f} onClick={()=>setFilter(f)}
             style={{padding:'6px 14px',borderRadius:20,border:'1px solid #dde3ec',
-              background:filter===f?'#0b4f82':'#fff',color:filter===f?'#fff':'#4a5a70',
+              background:filter===f?'#155eef':'#fff',color:filter===f?'#fff':'#4a5a70',
               cursor:'pointer',fontSize:12.5,fontWeight:500}}>
             {f==='all'?'All':f==='in_progress'?'In Progress':f.charAt(0).toUpperCase()+f.slice(1)}
           </button>
         ))}
         <button onClick={()=>setMineOnly(m=>!m)}
-          style={{padding:'6px 14px',borderRadius:20,border:mineOnly?'1px solid #0b4f82':'1px solid #dde3ec',
-            background:mineOnly?'#e8f0fb':'#fff',color:mineOnly?'#0b4f82':'#4a5a70',
+          style={{padding:'6px 14px',borderRadius:20,border:mineOnly?'1px solid #155eef':'1px solid #dde3ec',
+            background:mineOnly?'#dce9ff':'#fff',color:mineOnly?'#155eef':'#4a5a70',
             cursor:'pointer',fontSize:12.5,fontWeight:600}}>
           👤 My planning
         </button>
@@ -242,7 +242,7 @@ export default function PhysicistPlanning() {
           <div style={{display:'flex',border:'1px solid #dde3ec',borderRadius:20,overflow:'hidden'}}>
             {['list','calendar'].map(v=>(
               <button key={v} onClick={()=>{setView(v); setExpanded(null)}}
-                style={{padding:'6px 14px',border:'none',background:view===v?'#0b4f82':'#fff',color:view===v?'#fff':'#4a5a70',
+                style={{padding:'6px 14px',border:'none',background:view===v?'#155eef':'#fff',color:view===v?'#fff':'#4a5a70',
                   cursor:'pointer',fontSize:12.5,fontWeight:500,textTransform:'capitalize'}}>
                 {v==='list'?'☰ List':'📅 Calendar'}
               </button>
@@ -251,10 +251,10 @@ export default function PhysicistPlanning() {
         </div>
       </div>
 
-      {error && <div style={{background:'#fdecea',color:'#c0392b',border:'1px solid #f5c6c2',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>{error}</div>}
+      {error && <div style={{background:'#ffe4e6',color:'#e11d48',border:'1px solid #fecdd3',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>{error}</div>}
 
       {loading
-        ? <div style={{padding:40,textAlign:'center',background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10}}><div style={{width:28,height:28,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
+        ? <div style={{padding:40,textAlign:'center',background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14}}><div style={{width:28,height:28,border:'3px solid #dde3ec',borderTopColor:'#155eef',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
         : view==='calendar' ? (
           <>
             <WeekCalendar orders={filtered} weekStart={weekStart} setWeekStart={setWeekStart} selectedId={expanded} onSelect={id=>setExpanded(expanded===id?null:id)}/>
@@ -265,7 +265,7 @@ export default function PhysicistPlanning() {
             )}
           </>
         ) : (
-          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden'}}>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,overflow:'hidden'}}>
             {filtered.length===0
               ? <div style={{padding:40,textAlign:'center',color:'#8898aa',fontSize:13}}>No clinical treatment orders found.</div>
               : <table style={{width:'100%',borderCollapse:'collapse'}}>
@@ -288,10 +288,10 @@ export default function PhysicistPlanning() {
                           <td style={{padding:'11px 16px',fontSize:12.5,color:'#4a5a70'}}>{o.planning_scheduled_at ? fmtDateTime(o.planning_scheduled_at) : '—'}</td>
                           <td style={{padding:'11px 16px'}}>
                             <Badge status={o.planning_status||'pending'}/>
-                            {o.replan_count>0 && <span style={{marginLeft:6,fontSize:10.5,color:'#c0392b',fontWeight:600}}>↻{o.replan_count}</span>}
+                            {o.replan_count>0 && <span style={{marginLeft:6,fontSize:10.5,color:'#e11d48',fontWeight:600}}>↻{o.replan_count}</span>}
                           </td>
                           <td style={{padding:'11px 16px',textAlign:'right'}}>
-                            <span style={{fontSize:12,color:'#0b4f82',fontWeight:500}}>{expanded===o.id?'Close ▲':'Manage ▾'}</span>
+                            <span style={{fontSize:12,color:'#155eef',fontWeight:500}}>{expanded===o.id?'Close ▲':'Manage ▾'}</span>
                           </td>
                         </tr>
                         {expanded===o.id && (

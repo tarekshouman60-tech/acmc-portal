@@ -42,7 +42,7 @@ export default function Patients({ navigate }) {
         </div>
         {user?.role !== 'admin' && (
           <button onClick={() => setShowForm(true)}
-            style={{padding:'9px 18px',borderRadius:7,border:'none',background:'#0b4f82',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',gap:7}}>
+            style={{padding:'9px 18px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',gap:7}}>
             + New Patient
           </button>
         )}
@@ -50,9 +50,9 @@ export default function Patients({ navigate }) {
 
       {/* New patient form */}
       {showForm && (
-        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'20px',marginBottom:14}}>
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'20px',marginBottom:14}}>
           <div style={{fontSize:13,fontWeight:600,marginBottom:16,color:'#1a2636'}}>New Patient</div>
-          {error && <div style={{background:'#fdecea',color:'#c0392b',border:'1px solid #f5c6c2',borderRadius:6,padding:'9px 13px',fontSize:13,marginBottom:14}}>{error}</div>}
+          {error && <div style={{background:'#ffe4e6',color:'#e11d48',border:'1px solid #fecdd3',borderRadius:6,padding:'9px 13px',fontSize:13,marginBottom:14}}>{error}</div>}
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:13,marginBottom:13}}>
             <FL label="Full name *"><input style={inp} value={form.full_name} onChange={e=>setForm(f=>({...f,full_name:e.target.value}))} placeholder="Full name"/></FL>
             <FL label="Date of birth"><input style={inp} type="date" value={form.date_of_birth} onChange={e=>setForm(f=>({...f,date_of_birth:e.target.value}))}/></FL>
@@ -64,7 +64,7 @@ export default function Patients({ navigate }) {
           <FL label="Diagnosis"><textarea style={{...inp,resize:'vertical',minHeight:60}} value={form.diagnosis} onChange={e=>setForm(f=>({...f,diagnosis:e.target.value}))} placeholder="e.g. Left breast cancer, conservative surgery T2N0M0, luminal disease"/></FL>
           <div style={{display:'flex',gap:8,marginTop:14,justifyContent:'flex-end'}}>
             <button onClick={()=>setShowForm(false)} style={{padding:'8px 16px',borderRadius:6,border:'1px solid #dde3ec',background:'transparent',cursor:'pointer',fontSize:13}}>Cancel</button>
-            <button onClick={save} disabled={saving} style={{padding:'8px 18px',borderRadius:6,border:'none',background:'#0b4f82',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>{saving?'Saving…':'Save Patient'}</button>
+            <button onClick={save} disabled={saving} style={{padding:'8px 18px',borderRadius:6,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>{saving?'Saving…':'Save Patient'}</button>
           </div>
         </div>
       )}
@@ -75,8 +75,8 @@ export default function Patients({ navigate }) {
       </div>
 
       {/* List */}
-      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden'}}>
-        {loadingPatients ? <div style={{padding:32,textAlign:'center'}}><div style={{width:28,height:28,border:'3px solid #dde3ec',borderTopColor:'#0b4f82',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div> : filtered.length === 0
+      <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,overflow:'hidden'}}>
+        {loadingPatients ? <div style={{padding:32,textAlign:'center'}}><div style={{width:28,height:28,border:'3px solid #dde3ec',borderTopColor:'#155eef',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div> : filtered.length === 0
           ? <div style={{padding:40,textAlign:'center',color:'#8898aa',fontSize:13}}>
               {patients.length===0 ? 'No patients yet. Create your first patient above.' : 'No patients match your search.'}
             </div>
@@ -94,7 +94,7 @@ export default function Patients({ navigate }) {
                     <td style={{padding:'12px 16px',fontSize:12.5,color:'#4a5a70',borderBottom:'1px solid #f0f4f8',maxWidth:220}}><div style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.diagnosis||'—'}</div></td>
                     <td style={{padding:'12px 16px',fontSize:12.5,color:'#4a5a70',borderBottom:'1px solid #f0f4f8'}}>{user?.role==='admin'?(p.doctor_name||'—'):(p.phone||'—')}</td>
                     <td style={{padding:'12px 16px',borderBottom:'1px solid #f0f4f8'}}>
-                      <button onClick={e=>{e.stopPropagation();navigate('patient-detail',{patientId:p.id})}} style={{padding:'5px 11px',borderRadius:5,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12,fontWeight:500,color:'#0b4f82'}}>View →</button>
+                      <button onClick={e=>{e.stopPropagation();navigate('patient-detail',{patientId:p.id})}} style={{padding:'5px 11px',borderRadius:5,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12,fontWeight:500,color:'#155eef'}}>View →</button>
                     </td>
                   </tr>
                 ))}

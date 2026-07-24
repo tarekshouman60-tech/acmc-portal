@@ -44,7 +44,7 @@ export default function Milestones({ navigate }) {
       <div style={{marginBottom:20}}><h1 style={{fontSize:22,fontWeight:700}}>Treatment Milestones</h1><p style={{color:'#4a5a70',fontSize:13,marginTop:3}}>Update patient progress for all referred cases.</p></div>
       <div style={{display:'grid',gridTemplateColumns:'300px 1fr',gap:16,alignItems:'start'}}>
         {/* Patient list */}
-        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,overflow:'hidden'}}>
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,overflow:'hidden'}}>
           <div style={{padding:'12px 14px',borderBottom:'1px solid #dde3ec'}}>
             <input style={{...inp,width:'100%'}} placeholder="Search patients…" value={search} onChange={e=>setSearch(e.target.value)}/>
           </div>
@@ -60,7 +60,7 @@ export default function Milestones({ navigate }) {
 
         {/* Milestone editor */}
         {detail ? (
-          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'20px'}}>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'20px'}}>
             <div style={{fontWeight:600,fontSize:14,marginBottom:4}}>{detail.patient.full_name}</div>
             <div style={{fontSize:12.5,color:'#4a5a70',marginBottom:18}}>{detail.patient.diagnosis}</div>
             {[
@@ -72,7 +72,7 @@ export default function Milestones({ navigate }) {
               <div key={key} style={{display:'grid',gridTemplateColumns:'1fr auto auto',alignItems:'center',gap:14,padding:'12px 0',borderBottom:'1px solid #f0f4f8'}}>
                 <div>
                   <div style={{fontSize:13,fontWeight:500}}>{label}</div>
-                  {form[dateKey] && <div style={{fontSize:11.5,color:'#1a7a4a',marginTop:2}}>✓ {fmtDate(form[dateKey])}</div>}
+                  {form[dateKey] && <div style={{fontSize:11.5,color:'#059669',marginTop:2}}>✓ {fmtDate(form[dateKey])}</div>}
                 </div>
                 <input type="date" style={inp} value={form[dateKey]||''} onChange={e=>setForm(f=>({...f,[dateKey]:e.target.value}))}/>
                 <label style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',fontSize:13}}>
@@ -87,15 +87,15 @@ export default function Milestones({ navigate }) {
                 style={{...inp,width:'100%',resize:'vertical'}} placeholder="Optional notes about the patient's progress…"/>
             </div>
             <div style={{display:'flex',justifyContent:'space-between',marginTop:14,alignItems:'center'}}>
-              <button onClick={()=>testNotify(selected)} style={{padding:'7px 14px',borderRadius:7,border:'1px solid #dde3ec',background:'#fff',color:'#0b4f82',cursor:'pointer',fontSize:12.5,fontWeight:500}}>
+              <button onClick={()=>testNotify(selected)} style={{padding:'7px 14px',borderRadius:7,border:'1px solid #dde3ec',background:'#fff',color:'#155eef',cursor:'pointer',fontSize:12.5,fontWeight:500}}>
                 📧 Test notification email
               </button>
-              <button onClick={save} disabled={saving} style={{padding:'9px 20px',borderRadius:7,border:'none',background:'#0b4f82',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>{saving?'Saving…':'Save Milestones'}</button>
+              <button onClick={save} disabled={saving} style={{padding:'9px 20px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>{saving?'Saving…':'Save Milestones'}</button>
             </div>
-            {notifyMsg && <div style={{marginTop:10,fontSize:12.5,color:'#1a7a4a',background:'#e8f7ef',padding:'8px 12px',borderRadius:6}}>{notifyMsg}</div>}
+            {notifyMsg && <div style={{marginTop:10,fontSize:12.5,color:'#059669',background:'#d1fae5',padding:'8px 12px',borderRadius:6}}>{notifyMsg}</div>}
           </div>
         ) : (
-          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:40,textAlign:'center',color:'#8898aa',fontSize:13}}>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:40,textAlign:'center',color:'#8898aa',fontSize:13}}>
             Select a patient from the list to update their milestones.
           </div>
         )}
