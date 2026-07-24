@@ -27,19 +27,21 @@ function ToggleGroup({ options, value, onChange, colorClass }) {
 const TARGET_PRESETS = ['GTV','PTVG','CTV1','CTV2','CTV3','PTV1','PTV2','PTV3']
 
 function TargetPicker({ value, onChange }) {
-  const selected = value ? value.split(',').map(s=>s.trim()).filter(Boolean) : []
+  // Semicolon-delimited so a custom target can itself contain commas
+  // (e.g. "CTVLN: level II, III, IV") without being split into multiple chips.
+  const selected = value ? value.split(';').map(s=>s.trim()).filter(Boolean) : []
   const options = [...TARGET_PRESETS, ...selected.filter(v=>!TARGET_PRESETS.includes(v))]
   const [newTarget, setNewTarget] = useState('')
 
   function toggle(opt) {
     const next = selected.includes(opt) ? selected.filter(v=>v!==opt) : [...selected, opt]
-    onChange(next.join(', '))
+    onChange(next.join('; '))
   }
 
   function addCustom() {
     const t = newTarget.trim()
     if (!t || selected.includes(t)) { setNewTarget(''); return }
-    onChange([...selected, t].join(', '))
+    onChange([...selected, t].join('; '))
     setNewTarget('')
   }
 
@@ -64,7 +66,7 @@ function TargetPicker({ value, onChange }) {
       <div style={{display:'flex',gap:7}}>
         <input style={{...inp,flex:1}} value={newTarget} onChange={e=>setNewTarget(e.target.value)}
           onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addCustom()}}}
-          placeholder="Add a new target volume, e.g. Spine L3"/>
+          placeholder="Add a new target volume, e.g. CTVLN: level II, III, IV"/>
         <button type="button" onClick={addCustom}
           style={{padding:'8px 16px',borderRadius:7,border:'1px solid #0b4f82',background:'#fff',color:'#0b4f82',cursor:'pointer',fontSize:13,fontWeight:600,whiteSpace:'nowrap'}}>
           + Add
