@@ -76,7 +76,7 @@ export default function SimOrder({ navigate, patientId }) {
 
   const [simDate, setSimDate] = useState('')
   const [pos, setPos] = useState([])
-  const [fix, setFix] = useState(null)
+  const [fix, setFix] = useState([])
   const [shields, setShields] = useState([])
   const [bolus, setBolus] = useState(null)
   const [bolusThick, setBolusThick] = useState('')
@@ -104,7 +104,7 @@ export default function SimOrder({ navigate, patientId }) {
         api.getSimOrder(existing.id).then(s => {
           setSimDate(s.sim_date_requested ? String(s.sim_date_requested).slice(0,10) : '')
           setPos(s.positioning ? s.positioning.split(';').map(x=>x.trim()).filter(Boolean) : [])
-          setFix(s.fixation || null)
+          setFix(s.fixation ? s.fixation.split(';').map(x=>x.trim()).filter(Boolean) : [])
           setShields(s.shields || [])
           setBolus(s.bolus || null)
           setBolusThick(s.bolus_thickness || '')
@@ -140,7 +140,7 @@ export default function SimOrder({ navigate, patientId }) {
     setSaving(true); setError('')
     try {
       const res = await api.createSimOrder({
-        patient_id: patientId, positioning: pos.length ? pos.join('; ') : null, fixation: fix,
+        patient_id: patientId, positioning: pos.length ? pos.join('; ') : null, fixation: fix.length ? fix.join('; ') : null,
         shields, bolus, bolus_thickness: bolusThick,
         ct_contrast: contrast, ct_slice_thickness: sliceThick,
         ct_scan_region: scanRegion, ct_4d: fourDct,
@@ -158,7 +158,7 @@ export default function SimOrder({ navigate, patientId }) {
     const d = {
       name: patient?.full_name||'—', dob: patient?.date_of_birth||'', gender: patient?.gender||'',
       diagnosis: patient?.diagnosis||'—', simDate, doctor: user?.full_name||'', clinic: user?.clinic_affiliation||'',
-      pos: pos.join(', '), fix, shields, bolus, bolusThick, contrast, sliceThick, scanRegion, fourDct,
+      pos: pos.join(', '), fix: fix.join(', '), shields, bolus, bolusThick, contrast, sliceThick, scanRegion, fourDct,
       sgrt, rpm, mri, mriSeq, mriContrast, mriSlice, pet, special, notes,
       orderNum: saved?.order_ref || 'SIM-PREVIEW',
       orderDate: new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})
@@ -228,7 +228,7 @@ export default function SimOrder({ navigate, patientId }) {
     const w=window.open('','_blank'); w.document.write(html); w.document.close(); setTimeout(()=>w.print(),600)
   }
 
-  const filled = [pos.length>0,fix,contrast,sgrt,rpm,mri,pet,bolus].filter(Boolean).length
+  const filled = [pos.length>0,fix.length>0,contrast,sgrt,rpm,mri,pet,bolus].filter(Boolean).length
   const card = {background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 1px 2px rgba(15,23,42,.04),0 8px 20px -8px rgba(15,23,42,.08)',borderRadius:10,padding:'18px 20px',marginBottom:10}
 
   return (
@@ -297,8 +297,8 @@ export default function SimOrder({ navigate, patientId }) {
       <Section id="positioning" label="Positioning" icon="🧍" color="#e8f0fb" open={open.positioning} onToggle={()=>tog('positioning')} summary={pos.length?pos.join(', '):null}>
         <CheckGroup options={POSITIONING} values={pos} onChange={setPos}/>
       </Section>
-      <Section id="fixation" label="Fixation / Immobilization" icon="🔒" color="#f3e8ff" open={open.fixation} onToggle={()=>tog('fixation')} summary={fix}>
-        <RadioGroup options={FIXATION} value={fix} onChange={setFix}/>
+      <Section id="fixation" label="Fixation / Immobilization" icon="🔒" color="#f3e8ff" open={open.fixation} onToggle={()=>tog('fixation')} summary={fix.length?fix.join(', '):null}>
+        <CheckGroup options={FIXATION} values={fix} onChange={setFix}/>
       </Section>
       <Section id="shield" label="Shielding" icon="🛡️" color="#fef4e7" open={open.shield} onToggle={()=>tog('shield')} summary={shields.length?shields.join(', '):null}>
         <CheckGroup options={SHIELDS} values={shields} onChange={setShields}/>
