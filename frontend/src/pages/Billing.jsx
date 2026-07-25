@@ -24,6 +24,7 @@ export default function Billing() {
     const amount = parseFloat(payForm.amount_egp)
     if (!amount || amount <= 0) { setError('Enter a valid payment amount'); return }
     if (amount > parseFloat(detail.billing.balance_egp)) { setError(`Amount exceeds balance due (${fmtEGP(detail.billing.balance_egp)})`); return }
+    if (payForm.method === 'credit' && !payForm.reference.trim()) { setError('Enter the insurance / company name for credit payments'); return }
     setSaving(true); setError('')
     try {
       await api.addPayment({
@@ -113,7 +114,7 @@ export default function Billing() {
                     <div style={{padding:'12px 18px',borderBottom:'1px solid #dde3ec',fontWeight:600,fontSize:13}}>Payment History</div>
                     <table style={{width:'100%',borderCollapse:'collapse'}}>
                       <thead><tr style={{background:'#f7f9fc'}}>
-                        {['Date','Amount (EGP)','Method','Reference'].map(h=>(
+                        {['Date','Amount (EGP)','Method','Insurance / Company / Notes'].map(h=>(
                           <th key={h} style={{padding:'8px 16px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec'}}>{h}</th>
                         ))}
                       </tr></thead>
@@ -122,7 +123,12 @@ export default function Billing() {
                           <tr key={p.id} style={{borderBottom:'1px solid #f0f4f8'}}>
                             <td style={{padding:'10px 16px',fontSize:13}}>{fmtDate(p.payment_date)}</td>
                             <td style={{padding:'10px 16px',fontSize:13,fontWeight:600,color:'#059669',fontFamily:'monospace'}}>{fmtEGP(p.amount_egp)}</td>
-                            <td style={{padding:'10px 16px',fontSize:13,color:'#4a5a70',textTransform:'capitalize'}}>{p.method.replace('_',' ')}</td>
+                            <td style={{padding:'10px 16px'}}>
+                              <span style={{fontSize:11,fontWeight:700,padding:'2px 9px',borderRadius:20,textTransform:'capitalize',
+                                background:p.method==='credit'?'#eef2ff':'#d1fae5',color:p.method==='credit'?'#4338ca':'#059669'}}>
+                                {p.method.replace('_',' ')}
+                              </span>
+                            </td>
                             <td style={{padding:'10px 16px',fontSize:12.5,color:'#8898aa'}}>{p.reference||'—'}</td>
                           </tr>
                         ))}
@@ -153,9 +159,7 @@ export default function Billing() {
                         <label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>Method *</label>
                         <select style={inp} value={payForm.method} onChange={e=>setPayForm(f=>({...f,method:e.target.value}))}>
                           <option value="cash">Cash</option>
-                          <option value="bank_transfer">Bank Transfer</option>
-                          <option value="card">Card</option>
-                          <option value="installment">Instalment</option>
+                          <option value="credit">Credit</option>
                         </select>
                       </div>
                       <div>
@@ -164,15 +168,18 @@ export default function Billing() {
                       </div>
                     </div>
                     <div style={{marginBottom:14}}>
-                      <label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>Reference / notes</label>
-                      <input style={inp} placeholder="Transaction reference, cheque number, or notes"
+                      <label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>
+                        {payForm.method === 'credit' ? 'Insurance / Company name *' : 'Reference / notes'}
+                      </label>
+                      <input style={inp}
+                        placeholder={payForm.method === 'credit' ? 'e.g. Allianz, Bupa, employer name…' : 'Transaction reference, cheque number, or notes'}
                         value={payForm.reference} onChange={e=>setPayForm(f=>({...f,reference:e.target.value}))}/>
                     </div>
                     <div style={{display:'flex',justifyContent:'flex-end'}}>
-                      <button onClick={addPayment} disabled={saving||!payForm.amount_egp}
+                      <button onClick={addPayment} disabled={saving||!payForm.amount_egp||(payForm.method==='credit'&&!payForm.reference.trim())}
                         style={{padding:'9px 22px',borderRadius:7,border:'none',background:'#059669',color:'#fff',
                           cursor:saving||!payForm.amount_egp?'not-allowed':'pointer',fontSize:13,fontWeight:600,
-                          opacity:!payForm.amount_egp?.6:1}}>
+                          opacity:(!payForm.amount_egp||(payForm.method==='credit'&&!payForm.reference.trim()))?.6:1}}>
                         {saving ? 'Saving…' : 'Record Payment'}
                       </button>
                     </div>

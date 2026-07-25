@@ -694,6 +694,10 @@ async def update_milestones(pid: int, body: MilestoneUpdate, db=Depends(get_db),
 # ── payments (admin) ──────────────────────────────────────────────────────────
 @app.post("/api/payments")
 async def add_payment(body: PaymentCreate, db=Depends(get_db), tok=Depends(admin_only)):
+    if body.method not in ("cash", "credit"):
+        raise HTTPException(400, "method must be 'cash' or 'credit'")
+    if body.method == "credit" and not (body.reference or "").strip():
+        raise HTTPException(400, "reference (insurance / company name) is required for credit payments")
     b = await db.fetchrow("SELECT * FROM billing WHERE id=$1", body.billing_id)
     if not b: raise HTTPException(404)
     await db.execute(
