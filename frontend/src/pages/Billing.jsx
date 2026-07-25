@@ -9,6 +9,11 @@ export default function Billing() {
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
   const [error, setError] = useState('')
+  const [editingId, setEditingId] = useState(null)
+  const [editAmount, setEditAmount] = useState('')
+  const [editStatus, setEditStatus] = useState('confirmed')
+  const [editSaving, setEditSaving] = useState(false)
+  const [editError, setEditError] = useState('')
 
   useEffect(() => { api.patients().then(setPatients) }, [])
 
@@ -38,6 +43,24 @@ export default function Billing() {
       await load(selected)
       setPayForm({amount_egp:'',method:'cash',reference:'',notes:'',payment_date:''})
     } catch(e) { setError(e.message) } finally { setSaving(false) }
+  }
+
+  function startEdit(p) {
+    setEditingId(p.id)
+    setEditAmount(String(p.amount_egp))
+    setEditStatus(p.status || 'confirmed')
+    setEditError('')
+  }
+
+  async function saveEdit(pid) {
+    const amount = parseFloat(editAmount)
+    if (!amount || amount <= 0) { setEditError('Enter a valid amount'); return }
+    setEditSaving(true); setEditError('')
+    try {
+      await api.editPayment(pid, { amount_egp: amount, status: editStatus })
+      await load(selected)
+      setEditingId(null)
+    } catch(e) { setEditError(e.message) } finally { setEditSaving(false) }
   }
 
   const filtered = patients.filter(p => p.full_name.toLowerCase().includes(search.toLowerCase()))
@@ -114,15 +137,29 @@ export default function Billing() {
                     <div style={{padding:'12px 18px',borderBottom:'1px solid #dde3ec',fontWeight:600,fontSize:13}}>Payment History</div>
                     <table style={{width:'100%',borderCollapse:'collapse'}}>
                       <thead><tr style={{background:'#f7f9fc'}}>
-                        {['Date','Amount (EGP)','Method','Insurance / Company / Notes'].map(h=>(
+                        {['Date','Amount (EGP)','Method','Insurance / Company / Notes','Status',''].map(h=>(
                           <th key={h} style={{padding:'8px 16px',textAlign:'left',fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',borderBottom:'1px solid #dde3ec'}}>{h}</th>
                         ))}
                       </tr></thead>
                       <tbody>
-                        {detail.payments.map(p=>(
-                          <tr key={p.id} style={{borderBottom:'1px solid #f0f4f8'}}>
+                        {detail.payments.map(p=>{
+                          const editing = editingId === p.id
+                          const st = p.status || 'confirmed'
+                          const PAY_STATUS_COLORS = {
+                            confirmed: {bg:'#d1fae5',color:'#059669'},
+                            pending:   {bg:'#fef3c7',color:'#f59e0b'},
+                            cancelled: {bg:'#ffe4e6',color:'#e11d48'},
+                          }
+                          const psc = PAY_STATUS_COLORS[st] || PAY_STATUS_COLORS.confirmed
+                          return (
+                          <tr key={p.id} style={{borderBottom:'1px solid #f0f4f8',background:editing?'#f0f6ff':'transparent'}}>
                             <td style={{padding:'10px 16px',fontSize:13}}>{fmtDate(p.payment_date)}</td>
-                            <td style={{padding:'10px 16px',fontSize:13,fontWeight:600,color:'#059669',fontFamily:'monospace'}}>{fmtEGP(p.amount_egp)}</td>
+                            <td style={{padding:'10px 16px',fontSize:13,fontWeight:600,color:'#059669',fontFamily:'monospace'}}>
+                              {editing
+                                ? <input style={{...inp,width:110,padding:'5px 8px'}} type="number" step="0.01" min="0.01"
+                                    value={editAmount} onChange={e=>setEditAmount(e.target.value)}/>
+                                : fmtEGP(p.amount_egp)}
+                            </td>
                             <td style={{padding:'10px 16px'}}>
                               <span style={{fontSize:11,fontWeight:700,padding:'2px 9px',borderRadius:20,textTransform:'capitalize',
                                 background:p.method==='credit'?'#eef2ff':'#d1fae5',color:p.method==='credit'?'#4338ca':'#059669'}}>
@@ -130,10 +167,36 @@ export default function Billing() {
                               </span>
                             </td>
                             <td style={{padding:'10px 16px',fontSize:12.5,color:'#8898aa'}}>{p.reference||'—'}</td>
+                            <td style={{padding:'10px 16px'}}>
+                              {editing
+                                ? <select style={{...inp,width:120,padding:'5px 8px'}} value={editStatus} onChange={e=>setEditStatus(e.target.value)}>
+                                    <option value="confirmed">Confirmed</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="cancelled">Cancelled</option>
+                                  </select>
+                                : <span style={{fontSize:11,fontWeight:700,padding:'2px 9px',borderRadius:20,textTransform:'capitalize',background:psc.bg,color:psc.color}}>{st}</span>}
+                            </td>
+                            <td style={{padding:'10px 16px',textAlign:'right',whiteSpace:'nowrap'}}>
+                              {editing ? (
+                                <div style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
+                                  <button onClick={()=>setEditingId(null)} disabled={editSaving}
+                                    style={{padding:'5px 10px',borderRadius:6,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12}}>Cancel</button>
+                                  <button onClick={()=>saveEdit(p.id)} disabled={editSaving}
+                                    style={{padding:'5px 12px',borderRadius:6,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:600}}>
+                                    {editSaving?'Saving…':'Save'}
+                                  </button>
+                                </div>
+                              ) : (
+                                <button onClick={()=>startEdit(p)}
+                                  style={{padding:'5px 10px',borderRadius:6,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12,color:'#155eef',fontWeight:500}}>✎ Edit</button>
+                              )}
+                            </td>
                           </tr>
-                        ))}
+                          )
+                        })}
                       </tbody>
                     </table>
+                    {editError && editingId && <div style={{padding:'10px 18px',background:'#ffe4e6',color:'#e11d48',fontSize:12.5,borderTop:'1px solid #fecdd3'}}>{editError}</div>}
                   </div>
                 )}
 

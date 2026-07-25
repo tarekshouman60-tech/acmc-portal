@@ -273,3 +273,8 @@ CREATE INDEX IF NOT EXISTS idx_order_messages_lookup ON order_messages(order_typ
 -- uploaded from the RTT/physicist documentation panel stay order-level,
 -- not tied to any one message)
 ALTER TABLE order_attachments ADD COLUMN IF NOT EXISTS message_id INTEGER REFERENCES order_messages(id);
+
+-- Admin can edit a recorded payment's amount/status at any time (e.g. a
+-- pending insurance credit later confirmed, or a bounced payment cancelled).
+-- Cancelled payments are excluded from billing.amount_paid_egp/balance_egp.
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'confirmed';

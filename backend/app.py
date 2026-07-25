@@ -692,6 +692,22 @@ async def update_milestones(pid: int, body: MilestoneUpdate, db=Depends(get_db),
     return {"ok":True}
 
 # ── payments (admin) ──────────────────────────────────────────────────────────
+async def _recalc_billing(db, billing_id):
+    b = await db.fetchrow("SELECT * FROM billing WHERE id=$1", billing_id)
+    if not b: return
+    paid = await db.fetchval(
+        "SELECT COALESCE(SUM(amount_egp),0) FROM payments WHERE billing_id=$1 AND status != 'cancelled'", billing_id)
+    bal = round(float(b["total_amount_egp"]) - float(paid), 2)
+    if bal <= 0:
+        st = "paid"
+        bal = 0
+    elif float(paid) > 0:
+        st = "partial"
+    else:
+        st = "unpaid"
+    await db.execute("UPDATE billing SET amount_paid_egp=$1,balance_egp=$2,status=$3,updated_at=NOW() WHERE id=$4", paid, bal, st, billing_id)
+    return bal
+
 @app.post("/api/payments")
 async def add_payment(body: PaymentCreate, db=Depends(get_db), tok=Depends(admin_only)):
     if body.method not in ("cash", "credit"):
@@ -703,16 +719,25 @@ async def add_payment(body: PaymentCreate, db=Depends(get_db), tok=Depends(admin
     await db.execute(
         "INSERT INTO payments(billing_id,amount_egp,payment_date,method,reference,recorded_by,notes) VALUES($1,$2,$3,$4,$5,$6,$7)",
         body.billing_id, body.amount_egp, body.payment_date or date.today(), body.method, body.reference, int(tok["sub"]), body.notes)
-    paid = await db.fetchval("SELECT COALESCE(SUM(amount_egp),0) FROM payments WHERE billing_id=$1", body.billing_id)
-    bal = round(float(b["total_amount_egp"]) - float(paid), 2)
-    if bal <= 0:
-        st = "paid"
-        bal = 0
-    elif float(paid) > 0:
-        st = "partial"
-    else:
-        st = "unpaid"
-    await db.execute("UPDATE billing SET amount_paid_egp=$1,balance_egp=$2,status=$3,updated_at=NOW() WHERE id=$4", paid, bal, st, body.billing_id)
+    bal = await _recalc_billing(db, body.billing_id)
+    return {"ok":True,"balance_egp":bal}
+
+class PaymentEdit(BaseModel):
+    amount_egp: Optional[float] = None
+    status: Optional[str] = None
+
+@app.patch("/api/payments/{pid}")
+async def edit_payment(pid: int, body: PaymentEdit, db=Depends(get_db), tok=Depends(admin_only)):
+    p = await db.fetchrow("SELECT * FROM payments WHERE id=$1", pid)
+    if not p: raise HTTPException(404)
+    if body.amount_egp is not None and body.amount_egp <= 0:
+        raise HTTPException(400, "amount must be greater than 0")
+    if body.status is not None and body.status not in ("confirmed", "pending", "cancelled"):
+        raise HTTPException(400, "status must be 'confirmed', 'pending', or 'cancelled'")
+    new_amount = body.amount_egp if body.amount_egp is not None else p["amount_egp"]
+    new_status = body.status if body.status is not None else p["status"]
+    await db.execute("UPDATE payments SET amount_egp=$1,status=$2 WHERE id=$3", new_amount, new_status, pid)
+    bal = await _recalc_billing(db, p["billing_id"])
     return {"ok":True,"balance_egp":bal}
 
 # ── dashboard ─────────────────────────────────────────────────────────────────
@@ -1117,6 +1142,7 @@ async def startup_migrate():
     try:
         await conn.execute("""
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS referral_fee_pct NUMERIC(5,2) DEFAULT 0;
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'confirmed';
             CREATE INDEX IF NOT EXISTS idx_patients_doctor ON patients(doctor_id);
             CREATE INDEX IF NOT EXISTS idx_sim_orders_patient ON sim_orders(patient_id);
             CREATE INDEX IF NOT EXISTS idx_sim_orders_doctor ON sim_orders(doctor_id);
