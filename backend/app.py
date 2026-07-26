@@ -619,6 +619,8 @@ async def create_estimate(body: EstimateCreate, db=Depends(get_db), tok=Depends(
         await db.execute("DELETE FROM cost_estimate_items WHERE estimate_id=$1", existing["id"])
         await db.execute("DELETE FROM payments WHERE billing_id IN (SELECT id FROM billing WHERE estimate_id=$1)", existing["id"])
         await db.execute("DELETE FROM billing WHERE estimate_id=$1", existing["id"])
+        await db.execute("DELETE FROM doctor_transfers WHERE earning_id IN (SELECT id FROM doctor_earnings WHERE estimate_id=$1)", existing["id"])
+        await db.execute("DELETE FROM doctor_earnings WHERE estimate_id=$1", existing["id"])
         await db.execute("DELETE FROM cost_estimates WHERE id=$1", existing["id"])
     ref = existing["order_ref"] if existing else gen_ref("EST")
     # Look up categories/codes up front so we know whether an all-inclusive SBRT/SRS
@@ -883,6 +885,8 @@ async def cleanup_duplicates(db=Depends(get_db), tok=Depends(admin_only)):
         eid = row["id"]
         await db.execute("DELETE FROM payments WHERE billing_id IN (SELECT id FROM billing WHERE estimate_id=$1)", eid)
         await db.execute("DELETE FROM billing WHERE estimate_id=$1", eid)
+        await db.execute("DELETE FROM doctor_transfers WHERE earning_id IN (SELECT id FROM doctor_earnings WHERE estimate_id=$1)", eid)
+        await db.execute("DELETE FROM doctor_earnings WHERE estimate_id=$1", eid)
         await db.execute("DELETE FROM cost_estimate_items WHERE estimate_id=$1", eid)
         await db.execute("DELETE FROM cost_estimates WHERE id=$1", eid)
     return {"ok": True, "cleaned": len(dup_estimates)}
