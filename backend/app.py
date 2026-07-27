@@ -1096,6 +1096,9 @@ async def create_earning(body: EarningCreate, db=Depends(get_db), tok=Depends(ad
         "SELECT ce.*, d.referral_fee_pct FROM cost_estimates ce JOIN doctors d ON d.id=ce.doctor_id WHERE ce.id=$1",
         body.estimate_id)
     if not est: raise HTTPException(404, "Estimate not found")
+    billing_status = await db.fetchval("SELECT status FROM billing WHERE estimate_id=$1", body.estimate_id)
+    if billing_status != "paid":
+        raise HTTPException(400, "Earnings can only be calculated once the patient's bill is fully paid")
     total = float(est["total_egp"] or 0)
     pct = float(est["referral_fee_pct"] or 0)
     ref_amount = round(total * pct / 100, 2)
@@ -1266,10 +1269,12 @@ async def startup_migrate():
 async def estimates_list(db=Depends(get_db), tok=Depends(admin_only)):
     rows = await db.fetch("""
         SELECT ce.id, ce.order_ref, ce.total_egp, ce.has_tbd, ce.doctor_id,
-               p.full_name as patient_name, d.full_name as doctor_name
+               p.full_name as patient_name, d.full_name as doctor_name,
+               b.status as billing_status
         FROM cost_estimates ce
         JOIN patients p ON p.id=ce.patient_id
         JOIN doctors d ON d.id=ce.doctor_id
+        LEFT JOIN billing b ON b.estimate_id=ce.id
         ORDER BY ce.created_at DESC
     """)
     return [dict(r) for r in rows]

@@ -213,18 +213,22 @@ function AdminEarnings() {
 
           {/* Calculate earning for patient */}
           <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'20px'}}>
-            <div style={{fontWeight:600,fontSize:14,marginBottom:16}}>Calculate Doctor Earning per Patient</div>
+            <div style={{fontWeight:600,fontSize:14,marginBottom:4}}>Calculate Doctor Earning per Patient</div>
+            <div style={{fontSize:12,color:'#8898aa',marginBottom:16}}>Only estimates whose bill has been fully paid are eligible — this confirms full payment before the doctor's earning appears.</div>
             <div style={{marginBottom:14}}>
-              <FL label="Cost estimate (patient)">
+              <FL label="Cost estimate (patient) — fully paid only">
                 <select style={inp} value={earningForm.estimate_id} onChange={e=>setEarningForm(f=>({...f,estimate_id:e.target.value}))}>
                   <option value="">Select patient estimate</option>
-                  {allEstimates.map(e=>(
+                  {allEstimates.filter(e=>e.billing_status==='paid').map(e=>(
                     <option key={e.id} value={e.id}>
                       {e.patient_name} — {e.doctor_name} — {e.total_egp ? fmtEGP(e.total_egp) : 'TBD'} ({e.order_ref})
                     </option>
                   ))}
                 </select>
               </FL>
+              {allEstimates.filter(e=>e.billing_status==='paid').length===0 && (
+                <div style={{fontSize:12,color:'#f59e0b',marginTop:6}}>No fully-paid estimates yet.</div>
+              )}
             </div>
             <div style={{marginBottom:14}}>
               <FL label="Doctor's own fees (EGP)">
