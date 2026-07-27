@@ -1163,6 +1163,10 @@ async def startup_migrate():
         await conn.execute("""
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS referral_fee_pct NUMERIC(5,2) DEFAULT 0;
             ALTER TABLE payments ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'confirmed';
+            UPDATE services SET name='Initial + Follow-up Consultation (Oncologist)',
+                notes='Covers both the initial consultation and follow-up review as one combined doctor fee.'
+                WHERE code='QA-003';
+            UPDATE services SET is_active=false WHERE code='QA-004';
             CREATE INDEX IF NOT EXISTS idx_patients_doctor ON patients(doctor_id);
             CREATE INDEX IF NOT EXISTS idx_sim_orders_patient ON sim_orders(patient_id);
             CREATE INDEX IF NOT EXISTS idx_sim_orders_doctor ON sim_orders(doctor_id);
