@@ -360,7 +360,7 @@ async def list_all_sim_orders_rtt(db=Depends(get_db), tok=Depends(rtt_or_admin))
 
 @app.patch("/api/rtt/sim-orders/{oid}")
 async def rtt_update_sim(oid: int, body: RttSimUpdate, db=Depends(get_db), tok=Depends(rtt_or_admin)):
-    row = await db.fetchrow("SELECT id FROM sim_orders WHERE id=$1", oid)
+    row = await db.fetchrow("SELECT id, patient_id FROM sim_orders WHERE id=$1", oid)
     if not row: raise HTTPException(404)
     sets, vals = [], []
     if body.scheduled_at is not None:
@@ -381,6 +381,14 @@ async def rtt_update_sim(oid: int, body: RttSimUpdate, db=Depends(get_db), tok=D
         return {"ok": True}
     vals.append(oid)
     await db.execute(f"UPDATE sim_orders SET {', '.join(sets)} WHERE id=${len(vals)}", *vals)
+    # Auto-mark the CT Simulation milestone done once the RTT completes the sim —
+    # the doctor shouldn't have to wait for an admin to flip it manually.
+    if body.status == 'done':
+        updated = await db.fetchrow(
+            "UPDATE milestones SET simulation_done=true,simulation_date=CURRENT_DATE,updated_at=NOW() WHERE patient_id=$1 AND simulation_done IS NOT TRUE RETURNING patient_id",
+            row["patient_id"])
+        if updated:
+            await send_notification(db, row["patient_id"], "simulation_done")
     return {"ok": True}
 
 # ── clinical orders ───────────────────────────────────────────────────────────
@@ -437,7 +445,7 @@ async def list_all_clinical_orders_physicist(db=Depends(get_db), tok=Depends(phy
 
 @app.patch("/api/physicist/clinical-orders/{oid}")
 async def physicist_update_clinical(oid: int, body: PhysicistPlanningUpdate, db=Depends(get_db), tok=Depends(physicist_or_admin)):
-    row = await db.fetchrow("SELECT id FROM clinical_orders WHERE id=$1", oid)
+    row = await db.fetchrow("SELECT id, patient_id FROM clinical_orders WHERE id=$1", oid)
     if not row: raise HTTPException(404)
     sets, vals = [], []
     if body.replan:
@@ -461,6 +469,14 @@ async def physicist_update_clinical(oid: int, body: PhysicistPlanningUpdate, db=
         return {"ok": True}
     vals.append(oid)
     await db.execute(f"UPDATE clinical_orders SET {', '.join(sets)} WHERE id=${len(vals)}", *vals)
+    # Auto-mark the Treatment Planning milestone done once the physicist completes
+    # planning — the doctor shouldn't have to wait for an admin to flip it manually.
+    if body.status == 'completed':
+        updated = await db.fetchrow(
+            "UPDATE milestones SET planning_done=true,planning_date=CURRENT_DATE,updated_at=NOW() WHERE patient_id=$1 AND planning_done IS NOT TRUE RETURNING patient_id",
+            row["patient_id"])
+        if updated:
+            await send_notification(db, row["patient_id"], "planning_done")
     return {"ok": True}
 
 # ── order attachments (photos / short videos / voice notes) ───────────────────
