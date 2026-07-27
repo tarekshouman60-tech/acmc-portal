@@ -870,8 +870,11 @@ async def update_estimate_status(eid: int, body: StatusUpdate, db=Depends(get_db
     if body.status not in valid:
         raise HTTPException(400, f"Invalid status. Must be one of: {valid}")
     await db.execute("UPDATE cost_estimates SET status=$1 WHERE id=$2", body.status, eid)
-    # sync billing status too
-    await db.execute("UPDATE billing SET status=$1 WHERE estimate_id=$2", body.status, eid)
+    # billing.status is NOT set here — it's derived only from actual recorded
+    # payments (see _recalc_billing). Overwriting it here would let an estimate
+    # be marked "paid" with zero payments actually recorded, which is exactly
+    # the doctor-facing bug this used to cause (Cost Estimate said Paid, Billing
+    # showed the full balance still outstanding).
     return {"ok": True}
 
 # ── update order status (admin) ───────────────────────────────────────────────

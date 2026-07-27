@@ -242,10 +242,14 @@ export default function PatientDetail({ navigate, patientId }) {
                       </>}
                       {type==='estimate' && <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70'}}>{item.total_egp?fmtEGP(item.total_egp)+(item.has_tbd?' + TBD':''):'TBD'}</td>}
                       <td style={{padding:'10px 16px'}} onClick={e=>e.stopPropagation()}>
-                        {isAdmin
-                          ? <StatusDropdown type={type} id={item.id} currentStatus={item.status}
-                              onUpdated={s=>updateOrderStatus(type,item.id,s)}/>
-                          : <StatusBadge status={item.status} doctorView={!isAdmin}/>
+                        {type==='estimate'
+                          // Payment status is derived from actual recorded payments (Billing page)
+                          // — never independently editable here, so it can't drift from reality.
+                          ? <StatusBadge status={billing?.estimate_id===item.id ? billing.status : 'unpaid'} doctorView={!isAdmin}/>
+                          : isAdmin
+                            ? <StatusDropdown type={type} id={item.id} currentStatus={item.status}
+                                onUpdated={s=>updateOrderStatus(type,item.id,s)}/>
+                            : <StatusBadge status={item.status} doctorView={!isAdmin}/>
                         }
                       </td>
                       {type==='clinical' && <>
