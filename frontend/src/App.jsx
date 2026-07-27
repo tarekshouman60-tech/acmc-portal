@@ -19,6 +19,7 @@ import RttSchedule from './pages/RttSchedule.jsx'
 import RttAccounts from './pages/RttAccounts.jsx'
 import PhysicistPlanning from './pages/PhysicistPlanning.jsx'
 import PhysicistAccounts from './pages/PhysicistAccounts.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 export const AuthCtx = createContext(null)
 export const useAuth = () => useContext(AuthCtx)
@@ -72,7 +73,9 @@ export default function App() {
 
   return (
     <AuthCtx.Provider value={{user, logout:()=>{localStorage.clear();setUser(null);setPage('dashboard');setParams({})}}}>
-      <Layout page={page} navigate={navigate}>{renderPage()}</Layout>
+      <Layout page={page} navigate={navigate}>
+        <ErrorBoundary key={page} onReset={()=>navigate('dashboard')}>{renderPage()}</ErrorBoundary>
+      </Layout>
     </AuthCtx.Provider>
   )
 }
