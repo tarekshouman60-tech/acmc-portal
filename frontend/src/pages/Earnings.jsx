@@ -217,7 +217,11 @@ function AdminEarnings() {
             <div style={{fontSize:12,color:'#8898aa',marginBottom:16}}>Only estimates whose bill has been fully paid are eligible — this confirms full payment before the doctor's earning appears.</div>
             <div style={{marginBottom:14}}>
               <FL label="Cost estimate (patient) — fully paid only">
-                <select style={inp} value={earningForm.estimate_id} onChange={e=>setEarningForm(f=>({...f,estimate_id:e.target.value}))}>
+                <select style={inp} value={earningForm.estimate_id} onChange={e=>{
+                  const id = e.target.value
+                  const est = allEstimates.find(x=>String(x.id)===id)
+                  setEarningForm(f=>({...f,estimate_id:id,doctor_fees_egp: est ? String(est.consultation_total_egp||0) : f.doctor_fees_egp}))
+                }}>
                   <option value="">Select patient estimate</option>
                   {allEstimates.filter(e=>e.billing_status==='paid').map(e=>(
                     <option key={e.id} value={e.id}>
@@ -231,7 +235,7 @@ function AdminEarnings() {
               )}
             </div>
             <div style={{marginBottom:14}}>
-              <FL label="Doctor's own fees (EGP)">
+              <FL label="Doctor's own fees (EGP) — auto-filled from consultation, editable">
                 <input style={inp} type="number" min="0" value={earningForm.doctor_fees_egp} onChange={e=>setEarningForm(f=>({...f,doctor_fees_egp:e.target.value}))} placeholder="Consultation + follow-up + MDT"/>
               </FL>
             </div>

@@ -1200,6 +1200,8 @@ async def startup_migrate():
     try:
         await conn.execute("""
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS referral_fee_pct NUMERIC(5,2) DEFAULT 0;
+            ALTER TABLE doctors ALTER COLUMN referral_fee_pct SET DEFAULT 30;
+            UPDATE doctors SET referral_fee_pct=30 WHERE referral_fee_pct=0;
             ALTER TABLE payments ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'confirmed';
             ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_egp NUMERIC(12,2) DEFAULT 0;
             ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_reason TEXT;
@@ -1270,7 +1272,10 @@ async def estimates_list(db=Depends(get_db), tok=Depends(admin_only)):
     rows = await db.fetch("""
         SELECT ce.id, ce.order_ref, ce.total_egp, ce.has_tbd, ce.doctor_id,
                p.full_name as patient_name, d.full_name as doctor_name,
-               b.status as billing_status
+               b.status as billing_status,
+               (SELECT COALESCE(SUM(i.subtotal_egp),0) FROM cost_estimate_items i
+                JOIN services s ON s.id=i.service_id
+                WHERE i.estimate_id=ce.id AND s.code IN ('QA-003','QA-004','QA-005')) as consultation_total_egp
         FROM cost_estimates ce
         JOIN patients p ON p.id=ce.patient_id
         JOIN doctors d ON d.id=ce.doctor_id
