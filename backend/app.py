@@ -292,7 +292,13 @@ async def get_patient(pid: int, db=Depends(get_db), tok=Depends(decode_token)):
     clins = await db.fetch("SELECT id,order_ref,status,technique,total_dose_gy,fractions,planning_status,planning_scheduled_at,planning_notes,replan_count,created_at FROM clinical_orders WHERE patient_id=$1 ORDER BY created_at DESC", pid)
     ests = await db.fetch("SELECT id,order_ref,status,total_egp,has_tbd,created_at FROM cost_estimates WHERE patient_id=$1 ORDER BY created_at DESC", pid)
     miles = await db.fetchrow("SELECT * FROM milestones WHERE patient_id=$1", pid)
-    billing = await db.fetchrow("SELECT b.*,ce.order_ref as estimate_ref FROM billing b JOIN cost_estimates ce ON ce.id=b.estimate_id WHERE b.patient_id=$1 ORDER BY b.created_at DESC LIMIT 1", pid)
+    billing = await db.fetchrow("""
+        SELECT b.*, ce.order_ref as estimate_ref, ce.total_egp as gross_total_egp,
+            (SELECT COALESCE(SUM(i.subtotal_egp),0) FROM cost_estimate_items i
+             JOIN services s ON s.id=i.service_id
+             WHERE i.estimate_id=ce.id AND s.code IN ('QA-003','QA-004','QA-005')) as consultation_total_egp
+        FROM billing b JOIN cost_estimates ce ON ce.id=b.estimate_id
+        WHERE b.patient_id=$1 ORDER BY b.created_at DESC LIMIT 1""", pid)
     payments = []
     if billing:
         payments = await db.fetch("SELECT * FROM payments WHERE billing_id=$1 ORDER BY payment_date", billing["id"])
@@ -758,6 +764,35 @@ async def edit_payment(pid: int, body: PaymentEdit, db=Depends(get_db), tok=Depe
     bal = await _recalc_billing(db, p["billing_id"])
     return {"ok":True,"balance_egp":bal}
 
+class DiscountUpdate(BaseModel):
+    discount_egp: float
+    reason: Optional[str] = None
+
+@app.patch("/api/billing/{bid}/discount")
+async def set_billing_discount(bid: int, body: DiscountUpdate, db=Depends(get_db), tok=Depends(admin_only)):
+    b = await db.fetchrow("SELECT * FROM billing WHERE id=$1", bid)
+    if not b: raise HTTPException(404)
+    gross_total = await db.fetchval("SELECT total_egp FROM cost_estimates WHERE id=$1", b["estimate_id"])
+    consultation_total = await db.fetchval(
+        """SELECT COALESCE(SUM(i.subtotal_egp),0) FROM cost_estimate_items i
+           JOIN services s ON s.id=i.service_id
+           WHERE i.estimate_id=$1 AND s.code IN ('QA-003','QA-004','QA-005')""", b["estimate_id"])
+    discountable = round(float(gross_total) - float(consultation_total), 2)
+    if body.discount_egp < 0:
+        raise HTTPException(400, "Discount cannot be negative")
+    if body.discount_egp > discountable:
+        raise HTTPException(400, f"Discount cannot exceed {discountable:.2f} EGP — consultation fees are excluded from the discount")
+    new_total = round(float(gross_total) - body.discount_egp, 2)
+    new_balance = round(new_total - float(b["amount_paid_egp"]), 2)
+    if new_balance <= 0:
+        new_balance = 0; status = "paid"
+    else:
+        status = "partial" if float(b["amount_paid_egp"]) > 0 else "unpaid"
+    await db.execute("""UPDATE billing SET total_amount_egp=$1,balance_egp=$2,status=$3,
+        discount_egp=$4,discount_reason=$5,discount_by=$6,discount_at=NOW(),updated_at=NOW() WHERE id=$7""",
+        new_total, new_balance, status, body.discount_egp, body.reason, int(tok["sub"]), bid)
+    return {"ok": True, "total_amount_egp": new_total, "balance_egp": new_balance}
+
 # ── dashboard ─────────────────────────────────────────────────────────────────
 @app.get("/api/dashboard")
 async def dashboard(db=Depends(get_db), tok=Depends(decode_token)):
@@ -1163,6 +1198,10 @@ async def startup_migrate():
         await conn.execute("""
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS referral_fee_pct NUMERIC(5,2) DEFAULT 0;
             ALTER TABLE payments ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'confirmed';
+            ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_egp NUMERIC(12,2) DEFAULT 0;
+            ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_reason TEXT;
+            ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_by INTEGER REFERENCES admins(id);
+            ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_at TIMESTAMP;
             UPDATE services SET name='Initial + Follow-up Consultation (Oncologist)',
                 notes='Covers both the initial consultation and follow-up review as one combined doctor fee.'
                 WHERE code='QA-003';

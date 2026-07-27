@@ -278,3 +278,11 @@ ALTER TABLE order_attachments ADD COLUMN IF NOT EXISTS message_id INTEGER REFERE
 -- pending insurance credit later confirmed, or a bounced payment cancelled).
 -- Cancelled payments are excluded from billing.amount_paid_egp/balance_egp.
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'confirmed';
+
+-- Admin can apply a discount to a patient's bill (e.g. on the referring
+-- doctor's request). The discount excludes consultation/follow-up fees
+-- (QA-003/004/005) — it only reduces the treatment/procedure cost portion.
+ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_egp NUMERIC(12,2) DEFAULT 0;
+ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_reason TEXT;
+ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_by INTEGER REFERENCES admins(id);
+ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_at TIMESTAMP;

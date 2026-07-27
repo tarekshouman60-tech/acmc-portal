@@ -113,6 +113,7 @@ export const api = {
   myOrders: () => req('GET','/my-orders'),
   addPayment: (data) => req('POST','/payments',data),
   editPayment: (id,data) => req('PATCH',`/payments/${id}`,data),
+  setBillingDiscount: (id,data) => req('PATCH',`/billing/${id}/discount`,data),
   setDoctorFee: (did, referral_fee_pct) => req('PATCH',`/doctors/${did}/fee`,{referral_fee_pct}),
   createEarning: (data) => req('POST','/earnings',data),
   listEarnings: () => req('GET','/earnings'),
