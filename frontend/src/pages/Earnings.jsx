@@ -24,19 +24,16 @@ function AdminEarnings() {
   const [selDoctor, setSelDoctor] = useState(null)
   const [feeInput, setFeeInput] = useState('')
   const [savingFee, setSavingFee] = useState(false)
-  const [earningForm, setEarningForm] = useState({estimate_id:'',doctor_fees_egp:''})
   const [transferForm, setTransferForm] = useState({earning_id:'',amount_egp:'',method:'bank_transfer',reference:'',transfer_date:''})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [tab, setTab] = useState('overview')
-  const [allEstimates, setAllEstimates] = useState([])
   const [bonusPct, setBonusPct] = useState('5')
   const [savingBonus, setSavingBonus] = useState(false)
 
   useEffect(() => {
     api.earningsSummary().then(setSummary)
     api.listEarnings().then(setEarnings)
-    api.estimatesList().then(setAllEstimates)
     api.getSetting('workers_bonus_pct').then(s => setBonusPct(s.value || '5'))
   }, [])
 
@@ -59,17 +56,6 @@ function AdminEarnings() {
     await api.setDoctorFee(selDoctor.id, parseFloat(feeInput)||0)
     const fresh = await api.earningsSummary(); setSummary(fresh)
     setSavingFee(false)
-  }
-
-  async function createEarning() {
-    if (!earningForm.estimate_id) { setError('Select an estimate'); return }
-    setSaving(true); setError('')
-    try {
-      await api.createEarning({estimate_id:parseInt(earningForm.estimate_id), doctor_fees_egp:parseFloat(earningForm.doctor_fees_egp)||0})
-      const fresh = await api.listEarnings(); setEarnings(fresh)
-      const freshSum = await api.earningsSummary(); setSummary(freshSum)
-      setEarningForm({estimate_id:'',doctor_fees_egp:''})
-    } catch(e){setError(e.message)} finally{setSaving(false)}
   }
 
   async function addTransfer() {
@@ -188,7 +174,7 @@ function AdminEarnings() {
               </button>
             </div>
           </div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+        <div style={{maxWidth:420}}>
           {/* Set fee per doctor */}
           <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'20px'}}>
             <div style={{fontWeight:600,fontSize:14,marginBottom:16}}>Set Referral Fee % per Doctor</div>
@@ -208,40 +194,6 @@ function AdminEarnings() {
             <button onClick={saveFee} disabled={savingFee||!selDoctor}
               style={{width:'100%',padding:'9px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
               {savingFee?'Saving…':'Save Fee %'}
-            </button>
-          </div>
-
-          {/* Calculate earning for patient */}
-          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'20px'}}>
-            <div style={{fontWeight:600,fontSize:14,marginBottom:4}}>Calculate Doctor Earning per Patient</div>
-            <div style={{fontSize:12,color:'#8898aa',marginBottom:16}}>Only estimates whose bill has been fully paid are eligible — this confirms full payment before the doctor's earning appears.</div>
-            <div style={{marginBottom:14}}>
-              <FL label="Cost estimate (patient) — fully paid only">
-                <select style={inp} value={earningForm.estimate_id} onChange={e=>{
-                  const id = e.target.value
-                  const est = allEstimates.find(x=>String(x.id)===id)
-                  setEarningForm(f=>({...f,estimate_id:id,doctor_fees_egp: est ? String(est.consultation_total_egp||0) : f.doctor_fees_egp}))
-                }}>
-                  <option value="">Select patient estimate</option>
-                  {allEstimates.filter(e=>e.billing_status==='paid').map(e=>(
-                    <option key={e.id} value={e.id}>
-                      {e.patient_name} — {e.doctor_name} — {e.total_egp ? fmtEGP(e.total_egp) : 'TBD'} ({e.order_ref})
-                    </option>
-                  ))}
-                </select>
-              </FL>
-              {allEstimates.filter(e=>e.billing_status==='paid').length===0 && (
-                <div style={{fontSize:12,color:'#f59e0b',marginTop:6}}>No fully-paid estimates yet.</div>
-              )}
-            </div>
-            <div style={{marginBottom:14}}>
-              <FL label="Doctor's own fees (EGP) — auto-filled from consultation, editable">
-                <input style={inp} type="number" min="0" value={earningForm.doctor_fees_egp} onChange={e=>setEarningForm(f=>({...f,doctor_fees_egp:e.target.value}))} placeholder="Consultation + follow-up + MDT"/>
-              </FL>
-            </div>
-            <button onClick={createEarning} disabled={saving}
-              style={{width:'100%',padding:'9px',borderRadius:7,border:'none',background:'#059669',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
-              {saving?'Calculating…':'Calculate & Save'}
             </button>
           </div>
         </div>

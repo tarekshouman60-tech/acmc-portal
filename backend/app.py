@@ -730,6 +730,10 @@ async def _recalc_billing(db, billing_id):
     else:
         st = "unpaid"
     await db.execute("UPDATE billing SET amount_paid_egp=$1,balance_egp=$2,status=$3,updated_at=NOW() WHERE id=$4", paid, bal, st, billing_id)
+    if st == "paid" and b["estimate_id"]:
+        # Auto-calculate the doctor's earning the moment the bill is fully paid —
+        # no manual admin step needed, and it can never appear before payment is verified.
+        await _calc_and_save_earning(db, b["estimate_id"])
     return bal
 
 @app.post("/api/payments")
@@ -791,6 +795,8 @@ async def set_billing_discount(bid: int, body: DiscountUpdate, db=Depends(get_db
     await db.execute("""UPDATE billing SET total_amount_egp=$1,balance_egp=$2,status=$3,
         discount_egp=$4,discount_reason=$5,discount_by=$6,discount_at=NOW(),updated_at=NOW() WHERE id=$7""",
         new_total, new_balance, status, body.discount_egp, body.reason, int(tok["sub"]), bid)
+    if status == "paid" and b["estimate_id"]:
+        await _calc_and_save_earning(db, b["estimate_id"])
     return {"ok": True, "total_amount_egp": new_total, "balance_egp": new_balance}
 
 # ── dashboard ─────────────────────────────────────────────────────────────────
@@ -1093,38 +1099,48 @@ async def set_doctor_fee(did: int, body: DoctorFeeUpdate, db=Depends(get_db), to
     await db.execute("UPDATE doctors SET referral_fee_pct=$1 WHERE id=$2", body.referral_fee_pct, did)
     return {"ok": True}
 
-@app.post("/api/earnings")
-async def create_earning(body: EarningCreate, db=Depends(get_db), tok=Depends(admin_only)):
+async def _calc_and_save_earning(db, estimate_id, doctor_fees_egp=None):
     est = await db.fetchrow(
         "SELECT ce.*, d.referral_fee_pct FROM cost_estimates ce JOIN doctors d ON d.id=ce.doctor_id WHERE ce.id=$1",
-        body.estimate_id)
-    if not est: raise HTTPException(404, "Estimate not found")
-    billing_status = await db.fetchval("SELECT status FROM billing WHERE estimate_id=$1", body.estimate_id)
-    if billing_status != "paid":
-        raise HTTPException(400, "Earnings can only be calculated once the patient's bill is fully paid")
+        estimate_id)
+    if not est: return None
     total = float(est["total_egp"] or 0)
     pct = float(est["referral_fee_pct"] or 0)
     ref_amount = round(total * pct / 100, 2)
-    doc_fees = float(body.doctor_fees_egp or 0)
+    if doctor_fees_egp is None:
+        doctor_fees_egp = await db.fetchval(
+            """SELECT COALESCE(SUM(i.subtotal_egp),0) FROM cost_estimate_items i
+               JOIN services s ON s.id=i.service_id
+               WHERE i.estimate_id=$1 AND s.code IN ('QA-003','QA-004','QA-005')""", estimate_id)
+    doc_fees = float(doctor_fees_egp or 0)
     bonus_setting = await db.fetchrow("SELECT value FROM portal_settings WHERE key='workers_bonus_pct'")
     bonus_pct = float(bonus_setting["value"]) if bonus_setting else 5.0
     workers_bonus = round(ref_amount * bonus_pct / 100, 2)
     total_due = round(ref_amount + doc_fees - workers_bonus, 2)
     month = datetime.now().strftime("%Y-%m")
-    existing = await db.fetchrow("SELECT id FROM doctor_earnings WHERE estimate_id=$1", body.estimate_id)
+    existing = await db.fetchrow("SELECT id FROM doctor_earnings WHERE estimate_id=$1", estimate_id)
     if existing:
         await db.execute("""UPDATE doctor_earnings SET referral_pct=$1,referral_amount_egp=$2,
             doctor_fees_egp=$3,workers_bonus_pct=$4,workers_bonus_egp=$5,total_due_egp=$6,balance_egp=$6,
             total_billed_egp=$7,updated_at=NOW() WHERE estimate_id=$8""",
-            pct, ref_amount, doc_fees, bonus_pct, workers_bonus, total_due, total, body.estimate_id)
-        return {"id": existing["id"], "total_due_egp": total_due, "workers_bonus_egp": workers_bonus}
+            pct, ref_amount, doc_fees, bonus_pct, workers_bonus, total_due, total, estimate_id)
+        return existing["id"]
     r = await db.fetchrow("""INSERT INTO doctor_earnings
         (doctor_id,patient_id,estimate_id,total_billed_egp,referral_pct,referral_amount_egp,
          doctor_fees_egp,workers_bonus_pct,workers_bonus_egp,total_due_egp,balance_egp,month)
         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$10,$11) RETURNING id""",
-        est["doctor_id"], est["patient_id"], body.estimate_id, total, pct,
+        est["doctor_id"], est["patient_id"], estimate_id, total, pct,
         ref_amount, doc_fees, bonus_pct, workers_bonus, total_due, month)
-    return {"id": r["id"], "total_due_egp": total_due, "workers_bonus_egp": workers_bonus}
+    return r["id"]
+
+@app.post("/api/earnings")
+async def create_earning(body: EarningCreate, db=Depends(get_db), tok=Depends(admin_only)):
+    billing_status = await db.fetchval("SELECT status FROM billing WHERE estimate_id=$1", body.estimate_id)
+    if billing_status != "paid":
+        raise HTTPException(400, "Earnings can only be calculated once the patient's bill is fully paid")
+    eid = await _calc_and_save_earning(db, body.estimate_id, body.doctor_fees_egp)
+    if eid is None: raise HTTPException(404, "Estimate not found")
+    return {"id": eid}
 
 @app.get("/api/earnings")
 async def list_earnings(db=Depends(get_db), tok=Depends(decode_token)):
