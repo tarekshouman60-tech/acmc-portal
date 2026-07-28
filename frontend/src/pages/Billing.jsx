@@ -17,7 +17,7 @@ export default function Billing() {
   const [editSaving, setEditSaving] = useState(false)
   const [editError, setEditError] = useState('')
   const [editingDiscount, setEditingDiscount] = useState(false)
-  const [discountAmount, setDiscountAmount] = useState('')
+  const [discountPct, setDiscountPct] = useState('')
   const [discountReason, setDiscountReason] = useState('')
   const [discountSaving, setDiscountSaving] = useState(false)
   const [discountError, setDiscountError] = useState('')
@@ -71,7 +71,7 @@ export default function Billing() {
   }
 
   function startDiscount() {
-    setDiscountAmount(detail?.billing?.discount_egp ? String(detail.billing.discount_egp) : '')
+    setDiscountPct(detail?.billing?.discount_pct ? String(detail.billing.discount_pct) : '')
     setDiscountReason(detail?.billing?.discount_reason || '')
     setDiscountError('')
     setEditingDiscount(true)
@@ -79,13 +79,13 @@ export default function Billing() {
 
   async function saveDiscount() {
     if (!detail?.billing) return
-    const amount = parseFloat(discountAmount) || 0
-    if (amount < 0) { setDiscountError('Discount cannot be negative'); return }
-    if (amount > discountableMax) { setDiscountError(`Discount cannot exceed ${fmtEGP(discountableMax)} — consultation fees are excluded`); return }
-    if (amount > 0 && !discountReason.trim()) { setDiscountError("Enter the referring doctor's request / reason for the discount"); return }
+    const pct = parseFloat(discountPct) || 0
+    if (pct < 0) { setDiscountError('Discount % cannot be negative'); return }
+    if (pct > 100) { setDiscountError('Discount % cannot exceed 100'); return }
+    if (pct > 0 && !discountReason.trim()) { setDiscountError("Enter the referring doctor's request / reason for the discount"); return }
     setDiscountSaving(true); setDiscountError('')
     try {
-      await api.setBillingDiscount(detail.billing.id, { discount_egp: amount, reason: discountReason || null })
+      await api.setBillingDiscount(detail.billing.id, { discount_pct: pct, reason: discountReason || null })
       await load(selected)
       setEditingDiscount(false)
     } catch(e) { setDiscountError(e.message) } finally { setDiscountSaving(false) }
@@ -100,7 +100,9 @@ export default function Billing() {
   const grossTotal = detail?.billing ? parseFloat(detail.billing.gross_total_egp) : 0
   const consultationTotal = detail?.billing ? parseFloat(detail.billing.consultation_total_egp) : 0
   const currentDiscount = detail?.billing ? parseFloat(detail.billing.discount_egp || 0) : 0
+  const currentDiscountPct = detail?.billing ? parseFloat(detail.billing.discount_pct || 0) : 0
   const discountableMax = Math.max(0, round2(grossTotal - consultationTotal))
+  const discountPreviewEgp = round2(discountableMax * (parseFloat(discountPct) || 0) / 100)
   const isFullyPaid = balance <= 0
   const billingStatus = isFullyPaid ? 'paid' : totalPaid > 0 ? 'partial' : 'unpaid'
 
@@ -178,7 +180,7 @@ export default function Billing() {
                   {!editingDiscount && currentDiscount > 0 && (
                     <div style={{fontSize:12.5,color:'#4a5a70'}}>
                       <div>Gross total: <strong style={{fontFamily:'monospace'}}>{fmtEGP(grossTotal)}</strong></div>
-                      <div style={{color:'#e11d48'}}>Discount: <strong style={{fontFamily:'monospace'}}>−{fmtEGP(currentDiscount)}</strong></div>
+                      <div style={{color:'#e11d48'}}>Discount: <strong style={{fontFamily:'monospace'}}>{currentDiscountPct}% = −{fmtEGP(currentDiscount)}</strong></div>
                       {detail.billing.discount_reason && <div style={{marginTop:4,fontStyle:'italic'}}>"{detail.billing.discount_reason}"</div>}
                     </div>
                   )}
@@ -189,15 +191,16 @@ export default function Billing() {
                   {editingDiscount && (
                     <div>
                       <div style={{fontSize:12,color:'#8898aa',marginBottom:10}}>
-                        Consultation fees (<strong>{fmtEGP(consultationTotal)}</strong>) are excluded — max discount available: <strong style={{color:'#155eef'}}>{fmtEGP(discountableMax)}</strong>
+                        Consultation fees (<strong>{fmtEGP(consultationTotal)}</strong>) are excluded — discount % applies only to <strong style={{color:'#155eef'}}>{fmtEGP(discountableMax)}</strong>
                       </div>
                       {discountError && <div style={{background:'#ffe4e6',color:'#e11d48',border:'1px solid #fecdd3',borderRadius:6,padding:'9px 13px',fontSize:13,marginBottom:12}}>{discountError}</div>}
                       <div style={{display:'grid',gridTemplateColumns:'1fr 2fr',gap:12,marginBottom:12}}>
                         <div>
-                          <label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>Discount (EGP)</label>
-                          <input style={inp} type="number" step="0.01" min="0" max={discountableMax}
-                            placeholder={`Max: ${fmtEGP(discountableMax)}`}
-                            value={discountAmount} onChange={e=>setDiscountAmount(e.target.value)}/>
+                          <label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>Discount (%)</label>
+                          <input style={inp} type="number" step="0.5" min="0" max="100"
+                            placeholder="e.g. 10"
+                            value={discountPct} onChange={e=>setDiscountPct(e.target.value)}/>
+                          {discountPct !== '' && <div style={{fontSize:11.5,color:'#8898aa',marginTop:4}}>= −{fmtEGP(discountPreviewEgp)}</div>}
                         </div>
                         <div>
                           <label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>Referring doctor's request / reason</label>

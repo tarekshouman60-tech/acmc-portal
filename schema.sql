@@ -283,6 +283,7 @@ ALTER TABLE payments ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'confir
 -- doctor's request). The discount excludes consultation/follow-up fees
 -- (QA-003/004/005) — it only reduces the treatment/procedure cost portion.
 ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_egp NUMERIC(12,2) DEFAULT 0;
+ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_pct NUMERIC(5,2) DEFAULT 0;
 ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_reason TEXT;
 ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_by INTEGER REFERENCES admins(id);
 ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_at TIMESTAMP;

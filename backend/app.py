@@ -769,35 +769,36 @@ async def edit_payment(pid: int, body: PaymentEdit, db=Depends(get_db), tok=Depe
     return {"ok":True,"balance_egp":bal}
 
 class DiscountUpdate(BaseModel):
-    discount_egp: float
+    discount_pct: float
     reason: Optional[str] = None
 
 @app.patch("/api/billing/{bid}/discount")
 async def set_billing_discount(bid: int, body: DiscountUpdate, db=Depends(get_db), tok=Depends(admin_only)):
     b = await db.fetchrow("SELECT * FROM billing WHERE id=$1", bid)
     if not b: raise HTTPException(404)
+    if body.discount_pct < 0 or body.discount_pct > 100:
+        raise HTTPException(400, "Discount % must be between 0 and 100")
     gross_total = await db.fetchval("SELECT total_egp FROM cost_estimates WHERE id=$1", b["estimate_id"])
     consultation_total = await db.fetchval(
         """SELECT COALESCE(SUM(i.subtotal_egp),0) FROM cost_estimate_items i
            JOIN services s ON s.id=i.service_id
            WHERE i.estimate_id=$1 AND s.code IN ('QA-003','QA-004','QA-005')""", b["estimate_id"])
+    # The discount % applies only to the treatment/procedure portion of the bill —
+    # consultation/follow-up fees are always excluded and billed in full.
     discountable = round(float(gross_total) - float(consultation_total), 2)
-    if body.discount_egp < 0:
-        raise HTTPException(400, "Discount cannot be negative")
-    if body.discount_egp > discountable:
-        raise HTTPException(400, f"Discount cannot exceed {discountable:.2f} EGP — consultation fees are excluded from the discount")
-    new_total = round(float(gross_total) - body.discount_egp, 2)
+    discount_egp = round(discountable * body.discount_pct / 100, 2)
+    new_total = round(float(gross_total) - discount_egp, 2)
     new_balance = round(new_total - float(b["amount_paid_egp"]), 2)
     if new_balance <= 0:
         new_balance = 0; status = "paid"
     else:
         status = "partial" if float(b["amount_paid_egp"]) > 0 else "unpaid"
     await db.execute("""UPDATE billing SET total_amount_egp=$1,balance_egp=$2,status=$3,
-        discount_egp=$4,discount_reason=$5,discount_by=$6,discount_at=NOW(),updated_at=NOW() WHERE id=$7""",
-        new_total, new_balance, status, body.discount_egp, body.reason, int(tok["sub"]), bid)
+        discount_pct=$4,discount_egp=$5,discount_reason=$6,discount_by=$7,discount_at=NOW(),updated_at=NOW() WHERE id=$8""",
+        new_total, new_balance, status, body.discount_pct, discount_egp, body.reason, int(tok["sub"]), bid)
     if status == "paid" and b["estimate_id"]:
         await _calc_and_save_earning(db, b["estimate_id"])
-    return {"ok": True, "total_amount_egp": new_total, "balance_egp": new_balance}
+    return {"ok": True, "discount_egp": discount_egp, "total_amount_egp": new_total, "balance_egp": new_balance}
 
 # ── dashboard ─────────────────────────────────────────────────────────────────
 @app.get("/api/dashboard")
@@ -1223,6 +1224,7 @@ async def startup_migrate():
             UPDATE doctors SET referral_fee_pct=30 WHERE referral_fee_pct=0;
             ALTER TABLE payments ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'confirmed';
             ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_egp NUMERIC(12,2) DEFAULT 0;
+            ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_pct NUMERIC(5,2) DEFAULT 0;
             ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_reason TEXT;
             ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_by INTEGER REFERENCES admins(id);
             ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_at TIMESTAMP;
