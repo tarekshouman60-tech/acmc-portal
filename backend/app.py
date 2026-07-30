@@ -1000,7 +1000,7 @@ async def send_notification(db, patient_id: int, milestone: str):
         "SELECT p.full_name, d.full_name as doctor_name, d.email as doctor_email, d.phone as doctor_phone "
         "FROM patients p JOIN doctors d ON d.id=p.doctor_id WHERE p.id=$1", patient_id)
     if not patient:
-        return
+        return {"email_sent": False, "email_reason": "Patient not found"}
 
     subject = f"ACMC Update — {patient['full_name']}"
     body = (
@@ -1011,9 +1011,18 @@ async def send_notification(db, patient_id: int, milestone: str):
         f"Log in to the portal for full details: https://acmc-portal.duckdns.org\n\n"
         f"— ACMC Portal"
     )
+    email_sent = False
+    email_reason = None
     if patient['doctor_email']:
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, _send_email_sync, patient['doctor_email'], subject, body)
+        if not SMTP_USER or not SMTP_PASS:
+            email_reason = "SMTP not configured on this server (SMTP_USER/SMTP_PASS not set) — email was not actually sent"
+        else:
+            loop = asyncio.get_event_loop()
+            email_sent = await loop.run_in_executor(None, _send_email_sync, patient['doctor_email'], subject, body)
+            if not email_sent:
+                email_reason = "Email send failed — check server logs for the SMTP error"
+    else:
+        email_reason = "Doctor has no email address on file"
 
     # WhatsApp via Twilio
     twilio_sid = os.getenv("TWILIO_SID", "")
@@ -1044,6 +1053,8 @@ async def send_notification(db, patient_id: int, milestone: str):
         except Exception as e:
             print(f"[notify] WhatsApp send failed: {e}")
 
+    return {"email_sent": email_sent, "email_reason": email_reason}
+
 # ── manual test endpoint for notifications ─────────────────────────────────────
 class NotifyTestReq(BaseModel):
     patient_id: int
@@ -1054,11 +1065,13 @@ async def notify_test(body: NotifyTestReq, db=Depends(get_db), tok=Depends(admin
     patient = await db.fetchrow(
         "SELECT p.full_name, d.full_name as doctor_name, d.email as doctor_email, d.phone as doctor_phone "
         "FROM patients p JOIN doctors d ON d.id=p.doctor_id WHERE p.id=$1", body.patient_id)
-    await send_notification(db, body.patient_id, body.milestone)
+    result = await send_notification(db, body.patient_id, body.milestone) or {}
+    email_sent = result.get("email_sent", False)
     return {"ok": True,
+            "email_sent": email_sent,
             "sending_to_email": patient["doctor_email"] if patient else "unknown",
             "sending_to_phone": patient["doctor_phone"] if patient else "unknown",
-            "message": "Notification sent — check server logs for details"}
+            "message": "Email sent" if email_sent else f"Email NOT sent — {result.get('email_reason') or 'unknown reason'}"}
 
 
 

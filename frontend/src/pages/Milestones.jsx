@@ -29,8 +29,10 @@ export default function Milestones({ navigate }) {
   async function testNotify(pid) {
     setNotifyMsg('Sending…')
     try {
-      await api.notifyTest(pid, 'simulation_done')
-      setNotifyMsg('✓ Test email sent — check the doctor\'s inbox (and spam folder).')
+      const res = await api.notifyTest(pid, 'simulation_done')
+      setNotifyMsg(res.email_sent
+        ? `✓ Email sent to ${res.sending_to_email} — check the doctor's inbox (and spam folder).`
+        : `✗ ${res.message}`)
     } catch(e) {
       setNotifyMsg('✗ Failed: ' + e.message)
     }
@@ -92,7 +94,10 @@ export default function Milestones({ navigate }) {
               </button>
               <button onClick={save} disabled={saving} style={{padding:'9px 20px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>{saving?'Saving…':'Save Milestones'}</button>
             </div>
-            {notifyMsg && <div style={{marginTop:10,fontSize:12.5,color:'#059669',background:'#d1fae5',padding:'8px 12px',borderRadius:6}}>{notifyMsg}</div>}
+            {notifyMsg && <div style={{marginTop:10,fontSize:12.5,
+              color:notifyMsg.startsWith('✗')?'#e11d48':'#059669',
+              background:notifyMsg.startsWith('✗')?'#ffe4e6':'#d1fae5',
+              padding:'8px 12px',borderRadius:6}}>{notifyMsg}</div>}
           </div>
         ) : (
           <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:40,textAlign:'center',color:'#8898aa',fontSize:13}}>
