@@ -313,7 +313,7 @@ export default function SimOrder({ navigate, patientId }) {
       <Section id="ct" label="CT Simulation" icon="🔬" color="#dce9ff" open={open.ct} onToggle={()=>tog('ct')} summary={[contrast,sliceThick?sliceThick+'mm':'',fourDct?'4D:'+fourDct:''].filter(Boolean).join(' · ')||null}>
         <div style={{marginBottom:12}}>
           <div style={{fontSize:11.5,fontWeight:600,color:'#4a5a70',marginBottom:8}}>Contrast</div>
-          <RadioGroup options={['With contrast','No contrast']} value={contrast} onChange={setContrast}/>
+          <RadioGroup options={['With contrast','Triphasic CT','No contrast']} value={contrast} onChange={setContrast}/>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:13,marginBottom:13}}>
           <FL label="Slice thickness (mm)"><input style={inp} type="number" value={sliceThick} onChange={e=>setSliceThick(e.target.value)} placeholder="e.g. 3"/></FL>
