@@ -178,6 +178,9 @@ export default function ClinicalOrder({ navigate, patientId }) {
         prescription_text: buildRx()
       })
       setSaved(res)
+      // Show the discussion thread immediately after saving, instead of only
+      // after a reload — this is now the one place to communicate with the physicist.
+      setPlanning(p => p ? {...p, id: res.id} : {id: res.id, status: 'pending', scheduledAt: null, completedAt: null, notes: null, replanCount: 0})
     } catch(e) { setError(e.message) } finally { setSaving(false) }
   }
 
@@ -365,11 +368,6 @@ export default function ClinicalOrder({ navigate, patientId }) {
           <div style={{fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:4}}>Prescription summary</div>
           <div style={{fontSize:13.5,fontWeight:600,color:'#1a2636',lineHeight:1.6}}>{buildRx()}</div>
         </div>
-      </div>
-
-      {/* Notes */}
-      <div style={card}>
-        <FL label="Notes to physics / admin team"><textarea style={{...inp,resize:'vertical',minHeight:80}} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Special setup requirements, clinical context, or instructions for the ACMC team…"/></FL>
       </div>
 
       {/* Action bar */}

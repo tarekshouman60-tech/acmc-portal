@@ -152,6 +152,9 @@ export default function SimOrder({ navigate, patientId }) {
         sim_date_requested: simDate || null
       })
       setSaved(res)
+      // Show the discussion thread immediately after saving, instead of only
+      // after a reload — this is now the one place to communicate with RTT.
+      setRttFeedback(f => f ? {...f, id: res.id} : {id: res.id, status: 'pending', scheduledAt: null, completedAt: null, notes: null})
     } catch(e) { setError(e.message) } finally { setSaving(false) }
   }
 
@@ -346,11 +349,6 @@ export default function SimOrder({ navigate, patientId }) {
       <Section id="special" label="Special Preparation Orders" icon="📋" color="#ffe4e6" open={open.special} onToggle={()=>tog('special')} summary={special.length?special.length+' orders':null}>
         <CheckGroup options={SPECIAL} values={special} onChange={setSpecial}/>
       </Section>
-      <Section id="notes" label="Notes to RTT" icon="📝" color="#f7f9fc" open={open.notes} onToggle={()=>tog('notes')} summary={notes.trim()?'Added':null}>
-        <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Special instructions, clinical context, or requests for the RTT / simulation team…"
-          style={{width:'100%',minHeight:80,border:'1px solid #dde3ec',borderRadius:7,padding:'10px 12px',fontSize:13,fontFamily:'inherit',resize:'vertical',outline:'none'}}/>
-      </Section>
-
       <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'13px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',bottom:14}}>
         <div style={{fontSize:12.5,color:'#8898aa'}}>{filled} / 8 core fields filled</div>
         <div style={{display:'flex',gap:8}}>
