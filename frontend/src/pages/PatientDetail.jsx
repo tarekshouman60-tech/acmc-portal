@@ -159,9 +159,9 @@ export default function PatientDetail({ navigate, patientId }) {
         </div>
         {!isAdmin && (
           <div style={{display:'flex',gap:8}}>
+            <button onClick={()=>navigate('cost-estimate',{patientId})} style={{padding:'8px 14px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:12.5,fontWeight:600}}>+ Cost Estimate</button>
             <button onClick={()=>navigate('sim-order',{patientId})} style={{padding:'8px 14px',borderRadius:7,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12.5,fontWeight:500}}>+ Sim Order</button>
             <button onClick={()=>navigate('clinical-order',{patientId})} style={{padding:'8px 14px',borderRadius:7,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12.5,fontWeight:500}}>+ Clinical Order</button>
-            <button onClick={()=>navigate('cost-estimate',{patientId})} style={{padding:'8px 14px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:12.5,fontWeight:600}}>+ Cost Estimate</button>
           </div>
         )}
       </div>
@@ -211,9 +211,9 @@ export default function PatientDetail({ navigate, patientId }) {
 
       {/* Orders tables */}
       {[
+        {title:'Cost Estimates',            items:cost_estimates,  type:'estimate', route:'cost-estimate',  cols:['Ref','Total (EGP)','Status','']},
         {title:'Simulation Orders',         items:sim_orders,     type:'sim',      route:'sim-order',      cols:['Ref','Sim Date','Reserved','Status','RTT Notes','']},
         {title:'Clinical Treatment Orders', items:clinical_orders, type:'clinical', route:'clinical-order', cols:['Ref','Technique','Dose','Status','Planning','Reserved','Physicist Notes','']},
-        {title:'Cost Estimates',            items:cost_estimates,  type:'estimate', route:'cost-estimate',  cols:['Ref','Total (EGP)','Status','']},
       ].map(({title,items,type,route,cols})=>(
         <div key={type} style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,marginBottom:12,overflow:'hidden'}}>
           <div style={{padding:'13px 20px',borderBottom:'1px solid #dde3ec',fontWeight:600,fontSize:13.5}}>
