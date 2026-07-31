@@ -632,9 +632,14 @@ async def unread_message_count(db=Depends(get_db), tok=Depends(decode_token)):
 # ── cost estimates ────────────────────────────────────────────────────────────
 @app.post("/api/estimates")
 async def create_estimate(body: EstimateCreate, db=Depends(get_db), tok=Depends(doctor_or_admin)):
-    did = int(tok["sub"])
-    p = await db.fetchrow("SELECT id FROM patients WHERE id=$1 AND doctor_id=$2", body.patient_id, did)
-    if not p: raise HTTPException(403,"Patient not found")
+    if tok["role"] == "admin":
+        p = await db.fetchrow("SELECT id, doctor_id FROM patients WHERE id=$1", body.patient_id)
+        if not p: raise HTTPException(404, "Patient not found")
+        did = p["doctor_id"]
+    else:
+        did = int(tok["sub"])
+        p = await db.fetchrow("SELECT id FROM patients WHERE id=$1 AND doctor_id=$2", body.patient_id, did)
+        if not p: raise HTTPException(403,"Patient not found")
     # Replace if exists — delete old items and billing, reuse same ref
     existing = await db.fetchrow("SELECT id, order_ref FROM cost_estimates WHERE patient_id=$1 AND doctor_id=$2 ORDER BY created_at DESC LIMIT 1", body.patient_id, did)
     if existing:

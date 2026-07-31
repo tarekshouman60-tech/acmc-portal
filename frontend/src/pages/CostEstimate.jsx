@@ -15,7 +15,6 @@ const CATS = [
 
 export default function CostEstimate({ navigate, patientId }) {
   const { user } = useAuth()
-  const isAdmin = user?.role === 'admin'
   const [patient, setPatient] = useState(null)
   const [services, setServices] = useState([])
   const [selected, setSelected] = useState(new Set())
@@ -56,7 +55,6 @@ export default function CostEstimate({ navigate, patientId }) {
   }
 
   function toggleSvc(id) {
-    if (isAdmin) return
     setSelected(s => { const n=new Set(s); n.has(id)?n.delete(id):n.add(id); return n })
   }
 
@@ -98,7 +96,6 @@ export default function CostEstimate({ navigate, patientId }) {
   }
 
   async function submit() {
-    if (isAdmin) return
     if (!patientId || selected.size === 0) { setError('Select at least one service'); return }
     setSaving(true); setError('')
     try {
@@ -169,8 +166,8 @@ th:last-child,td:last-child{text-align:right}
 </div>
 <div class="pbar">
   <div><div class="pfl">Patient</div><div class="pfv">${patient?.full_name||'—'}</div></div>
-  <div><div class="pfl">Referring physician</div><div class="pfv">${user?.full_name||'—'}</div></div>
-  <div><div class="pfl">Clinic</div><div class="pfv">${user?.clinic_affiliation||'—'}</div></div>
+  <div><div class="pfl">Referring physician</div><div class="pfv">${patient?.doctor_name||user?.full_name||'—'}</div></div>
+  <div><div class="pfl">Clinic</div><div class="pfv">${patient?.clinic_affiliation||user?.clinic_affiliation||'—'}</div></div>
 </div>
 <div class="body">
   <div class="sec-title">Itemised cost breakdown</div>
@@ -185,7 +182,7 @@ th:last-child,td:last-child{text-align:right}
   <div class="notice">⚠️ Preliminary cost estimate. Final pricing subject to confirmation by ACMC administration. Items marked "TBD" will be confirmed upon scheduling.</div>
   <div class="div"></div>
   <div class="sig">
-    <div class="sb"><div class="sl">Prepared by</div><div class="sn">${user?.full_name||'—'}${user?.clinic_affiliation?' · '+user.clinic_affiliation:''}</div></div>
+    <div class="sb"><div class="sl">Prepared by</div><div class="sn">${patient?.doctor_name||user?.full_name||'—'}${(patient?.clinic_affiliation||user?.clinic_affiliation)?' · '+(patient?.clinic_affiliation||user?.clinic_affiliation):''}</div></div>
     <div class="sb"><div class="sl">Confirmed by (ACMC admin)</div><div class="sn" style="color:#ccc;font-weight:400">______________________________</div></div>
   </div>
 </div>
@@ -263,7 +260,7 @@ th:last-child,td:last-child{text-align:right}
                         {svc.per_fraction && (
                           <div onClick={e=>e.stopPropagation()} style={{display:'flex',alignItems:'center',gap:5}}>
                             <span style={{fontSize:11,color:'#4a5a70'}}>Fx:</span>
-                            <input type="number" min="1" value={qty} disabled={isAdmin} onChange={e=>setQty(svc.id,e.target.value)}
+                            <input type="number" min="1" value={qty} onChange={e=>setQty(svc.id,e.target.value)}
                               style={{width:55,padding:'4px 7px',fontSize:13,border:'1px solid #dde3ec',borderRadius:5,textAlign:'center',fontFamily:'inherit',outline:'none'}}/>
                           </div>
                         )}
@@ -274,7 +271,7 @@ th:last-child,td:last-child{text-align:right}
                           ) : ['QA-003','QA-004','QA-005'].includes(svc.code) && isSel ? (
                             <div onClick={e=>e.stopPropagation()} style={{display:'flex',alignItems:'center',gap:4,justifyContent:'flex-end'}}>
                               <span style={{fontSize:11,color:'#4a5a70'}}>EGP</span>
-                              <input type="number" min="0" placeholder="Your fee" disabled={isAdmin}
+                              <input type="number" min="0" placeholder="Your fee"
                                 value={customFees[svc.code]||''}
                                 onChange={e=>setCustomFees(f=>({...f,[svc.code]:e.target.value}))}
                                 style={{width:90,padding:'4px 7px',fontSize:12,border:'1px solid #155eef',borderRadius:5,textAlign:'right',fontFamily:'monospace',outline:'none'}}/>
@@ -309,15 +306,15 @@ th:last-child,td:last-child{text-align:right}
       {/* Action bar */}
       <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'13px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',bottom:14}}>
         <div style={{fontSize:12.5,color:'#8898aa'}}>
-          {isAdmin ? 'View only — cost estimates are managed by the referring doctor.' : selected.size ? `${selected.size} service${selected.size>1?'s':''} selected` : 'Select services above'}
+          {selected.size ? `${selected.size} service${selected.size>1?'s':''} selected` : 'Select services above'}
         </div>
         <div style={{display:'flex',gap:8}}>
-          {!isAdmin && <button onClick={submit} disabled={saving||selected.size===0} style={{padding:"8px 16px",borderRadius:7,border:"1px solid #dde3ec",background:"#fff",cursor:"pointer",fontSize:13,fontWeight:500,opacity:selected.size===0?.5:1}}>💾 Save</button>}
+          <button onClick={submit} disabled={saving||selected.size===0} style={{padding:"8px 16px",borderRadius:7,border:"1px solid #dde3ec",background:"#fff",cursor:"pointer",fontSize:13,fontWeight:500,opacity:selected.size===0?.5:1}}>💾 Save</button>
           <button onClick={openPrint} style={{padding:"8px 16px",borderRadius:7,border:"1px solid #dde3ec",background:"#fff",cursor:"pointer",fontSize:13,fontWeight:500}}>🖨️ Print only</button>
-          {!isAdmin && <button onClick={async()=>{await submit();openPrint()}} disabled={saving||selected.size===0}
+          <button onClick={async()=>{await submit();openPrint()}} disabled={saving||selected.size===0}
             style={{padding:'8px 20px',borderRadius:7,border:'none',background:'#059669',color:'#fff',cursor:saving?'not-allowed':'pointer',fontSize:13,fontWeight:600,opacity:selected.size===0?.5:1}}>
             {saving?'Saving…':'💾 Save & Print'}
-          </button>}
+          </button>
         </div>
       </div>
     </div>
