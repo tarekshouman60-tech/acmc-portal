@@ -48,6 +48,7 @@ function Bubble({ msg, isMine }) {
 }
 
 export default function MessageThread({ orderType, orderId, title="Discussion" }) {
+  const otherParty = orderType === 'sim' ? 'RTT' : 'the physicist/oncologist'
   const { user } = useAuth()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
@@ -138,7 +139,7 @@ export default function MessageThread({ orderType, orderId, title="Discussion" }
         </div>
       )}
 
-      <textarea value={body} onChange={e=>setBody(e.target.value)} placeholder="Type a note to the physicist/oncologist…"
+      <textarea value={body} onChange={e=>setBody(e.target.value)} placeholder={`Type a note to ${otherParty}…`}
         style={{width:'100%',minHeight:60,border:'1px solid #dde3ec',borderRadius:7,padding:'8px 11px',fontSize:13,fontFamily:'inherit',resize:'vertical',outline:'none',marginBottom:8}}/>
 
       <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
