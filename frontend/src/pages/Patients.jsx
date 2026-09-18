@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { api, fmtDate } from '../api.js'
 import { useAuth } from '../App.jsx'
-import { ONCOTREE } from '../oncotree.js'
 
 const inp = {width:'100%',border:'1px solid #dde3ec',borderRadius:6,padding:'8px 11px',fontSize:13,fontFamily:'inherit',outline:'none'}
 const sel = {...inp}
@@ -13,7 +12,6 @@ export default function Patients({ navigate }) {
   const [loadingPatients, setLoadingPatients] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [search, setSearch] = useState('')
-  const [oncoText, setOncoText] = useState('')
   const [form, setForm] = useState({full_name:'',date_of_birth:'',gender:'',national_id:'',phone:'',diagnosis:'',icd10_code:''})
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -29,7 +27,7 @@ export default function Patients({ navigate }) {
       const fresh = await api.patients()
       setPatients(fresh)
       setShowForm(false)
-      setForm({full_name:'',date_of_birth:'',gender:'',national_id:'',phone:'',diagnosis:'',icd10_code:''}); setOncoText('')
+      setForm({full_name:'',date_of_birth:'',gender:'',national_id:'',phone:'',diagnosis:'',icd10_code:''})
     } catch(e) { setError(e.message) } finally { setSaving(false) }
   }
 
@@ -61,16 +59,7 @@ export default function Patients({ navigate }) {
             <FL label="Gender"><select style={sel} value={form.gender} onChange={e=>setForm(f=>({...f,gender:e.target.value}))}><option value="">Select</option><option>Male</option><option>Female</option></select></FL>
             <FL label="National ID"><input style={inp} value={form.national_id} onChange={e=>setForm(f=>({...f,national_id:e.target.value}))} placeholder="Optional"/></FL>
             <FL label="Phone"><input style={inp} value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="Optional"/></FL>
-            <FL label="Cancer type (OncoTree code)">
-              <input style={inp} list="oncotree-list" value={oncoText} placeholder="Search e.g. breast, LUAD, prostate"
-                onChange={e=>{
-                  const v=e.target.value; setOncoText(v)
-                  const hit=ONCOTREE.find(t=>`${t.c} — ${t.n}`===v)
-                  if(hit) setForm(f=>({...f,icd10_code:hit.c,diagnosis:f.diagnosis||hit.n}))
-                  else setForm(f=>({...f,icd10_code:''}))
-                }}/>
-              <datalist id="oncotree-list">{ONCOTREE.map(t=><option key={t.c} value={`${t.c} — ${t.n}`}>{t.m}</option>)}</datalist>
-            </FL>
+            <FL label="ICD-10 code"><input style={inp} value={form.icd10_code} onChange={e=>setForm(f=>({...f,icd10_code:e.target.value}))} placeholder="e.g. C50.9"/></FL>
           </div>
           <FL label="Diagnosis"><textarea style={{...inp,resize:'vertical',minHeight:60}} value={form.diagnosis} onChange={e=>setForm(f=>({...f,diagnosis:e.target.value}))} placeholder="e.g. Left breast cancer, conservative surgery T2N0M0, luminal disease"/></FL>
           <div style={{display:'flex',gap:8,marginTop:14,justifyContent:'flex-end'}}>
