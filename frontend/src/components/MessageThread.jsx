@@ -48,8 +48,11 @@ function Bubble({ msg, isMine }) {
 }
 
 export default function MessageThread({ orderType, orderId, title="Discussion" }) {
-  const otherParty = orderType === 'sim' ? 'RTT' : 'the physicist/oncologist'
   const { user } = useAuth()
+  // Address the note to the other side of the conversation, based on who is viewing.
+  const otherParty = user?.role === 'doctor' ? (orderType === 'sim' ? 'RTT' : 'the physicist')
+    : user?.role === 'rtt' || user?.role === 'physicist' ? 'the oncologist'
+    : (orderType === 'sim' ? 'RTT' : 'the physicist/oncologist')
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [body, setBody] = useState('')

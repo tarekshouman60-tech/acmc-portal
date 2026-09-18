@@ -17,7 +17,7 @@ export default function Login({ onLogin }) {
       const me = await api.me()
       onLogin(me)
     } catch(err) {
-      setError('Invalid email or password')
+      setError('Invalid username or password')
     } finally { setLoading(false) }
   }
 
@@ -40,10 +40,10 @@ export default function Login({ onLogin }) {
             )}
 
             <div style={{marginBottom:16}}>
-              <label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:5}}>Email</label>
-              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required
+              <label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:5}}>Username</label>
+              <input type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} value={email} onChange={e=>setEmail(e.target.value)} required
                 style={{width:'100%',border:'1.5px solid #dde3ec',borderRadius:8,padding:'10px 12px',fontSize:13,fontFamily:'inherit',outline:'none',transition:'border-color .15s,box-shadow .15s'}}
-                placeholder="doctor@clinic.com"/>
+                placeholder="Username"/>
             </div>
 
             <div style={{marginBottom:22}}>
