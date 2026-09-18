@@ -36,6 +36,8 @@ function TargetPicker({ value, onChange }) {
   const isPreset = s => TARGET_PRESETS.includes(baseOf(s))
   const options = [...TARGET_PRESETS, ...selected.filter(v=>!isPreset(v))]
   const [newTarget, setNewTarget] = useState('')
+  // Local draft keeps trailing spaces while typing; the stored value is re-parsed and trimmed on every change.
+  const [drafts, setDrafts] = useState({})
   const entryFor = opt => selected.find(s=>baseOf(s)===opt)
   const emit = arr => onChange(arr.join('; '))
 
@@ -44,6 +46,7 @@ function TargetPicker({ value, onChange }) {
     emit(e ? selected.filter(v=>v!==e) : [...selected, opt])
   }
   function setDetail(opt, text) {
+    setDrafts(d=>({...d,[opt]:text}))
     const e = entryFor(opt)
     const t = text.trim()
     const next = isMm(opt) ? (t ? `${opt} + ${t} mm` : opt) : (t ? `${opt}: ${t}` : opt)
@@ -87,10 +90,12 @@ function TargetPicker({ value, onChange }) {
               {isMm(opt)
                 ? <><span style={{fontSize:12.5,color:'#4a5a70'}}>+</span>
                     <input style={{...inp,width:90}} type="number" min="0" step="0.5" placeholder="margin"
-                      value={detailOf(opt,entryFor(opt))} onChange={e=>setDetail(opt,e.target.value)}/>
+                      value={drafts[opt] ?? detailOf(opt,entryFor(opt))} onChange={e=>setDetail(opt,e.target.value)}
+                      onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt];return n})}/>
                     <span style={{fontSize:12.5,color:'#4a5a70'}}>mm</span></>
                 : <input style={{...inp,flex:1}} placeholder="Description, e.g. prostate + seminal vesicles"
-                    value={detailOf(opt,entryFor(opt))} onChange={e=>setDetail(opt,e.target.value)}/>}
+                    value={drafts[opt] ?? detailOf(opt,entryFor(opt))} onChange={e=>setDetail(opt,e.target.value)}
+                      onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt];return n})}/>}
             </div>
           ))}
         </div>
