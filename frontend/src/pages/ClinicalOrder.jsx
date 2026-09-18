@@ -30,27 +30,42 @@ const TARGET_PRESETS = ['GTV','PTVG','CTV1','CTV2','CTV3','PTV1','PTV2','PTV3']
 function TargetPicker({ value, onChange }) {
   // Semicolon-delimited so a custom target can itself contain commas
   // (e.g. "CTVLN: level II, III, IV") without being split into multiple chips.
+  // PTVG and PTV1-3 carry a margin ("PTV1 + 5 mm") and CTV1-3 a description ("CTV1: prostate").
   const selected = value ? value.split(';').map(s=>s.trim()).filter(Boolean) : []
-  const options = [...TARGET_PRESETS, ...selected.filter(v=>!TARGET_PRESETS.includes(v))]
+  const baseOf = s => s.split(/ \+ |: /)[0]
+  const isPreset = s => TARGET_PRESETS.includes(baseOf(s))
+  const options = [...TARGET_PRESETS, ...selected.filter(v=>!isPreset(v))]
   const [newTarget, setNewTarget] = useState('')
+  const entryFor = opt => selected.find(s=>baseOf(s)===opt)
+  const emit = arr => onChange(arr.join('; '))
 
   function toggle(opt) {
-    const next = selected.includes(opt) ? selected.filter(v=>v!==opt) : [...selected, opt]
-    onChange(next.join('; '))
+    const e = entryFor(opt) || (selected.includes(opt) ? opt : null)
+    emit(e ? selected.filter(v=>v!==e) : [...selected, opt])
   }
+  function setDetail(opt, text) {
+    const e = entryFor(opt)
+    const t = text.trim()
+    const next = isMm(opt) ? (t ? `${opt} + ${t} mm` : opt) : (t ? `${opt}: ${t}` : opt)
+    emit(selected.map(v=>v===e ? next : v))
+  }
+  const isMm = o => /^PTV(G|[123])$/.test(o)
+  const detailOf = (opt, e) => isMm(opt) ? (e.match(/ \+ (.*?) mm$/)||[])[1]||'' : e.slice(opt.length+2)
 
   function addCustom() {
     const t = newTarget.trim()
     if (!t || selected.includes(t)) { setNewTarget(''); return }
-    onChange([...selected, t].join('; '))
+    emit([...selected, t])
     setNewTarget('')
   }
+
+  const withDetail = TARGET_PRESETS.filter(o=>(isMm(o)||/^CTV[123]$/.test(o)) && entryFor(o))
 
   return (
     <div>
       <div style={{display:'flex',flexWrap:'wrap',gap:7,marginBottom:10}}>
         {options.map(opt => {
-          const on = selected.includes(opt)
+          const on = isPreset(opt) ? !!entryFor(opt) : selected.includes(opt)
           return (
             <button key={opt} type="button" onClick={()=>toggle(opt)}
               style={{padding:'7px 13px',borderRadius:7,border:on?'1.5px solid #155eef':'1px solid #dde3ec',
@@ -64,6 +79,22 @@ function TargetPicker({ value, onChange }) {
           )
         })}
       </div>
+      {withDetail.length>0 && (
+        <div style={{display:'flex',flexDirection:'column',gap:7,marginBottom:10}}>
+          {withDetail.map(opt => (
+            <div key={opt} style={{display:'flex',alignItems:'center',gap:8}}>
+              <span style={{width:52,fontSize:12.5,fontWeight:600,color:'#155eef'}}>{opt}</span>
+              {isMm(opt)
+                ? <><span style={{fontSize:12.5,color:'#4a5a70'}}>+</span>
+                    <input style={{...inp,width:90}} type="number" min="0" step="0.5" placeholder="margin"
+                      value={detailOf(opt,entryFor(opt))} onChange={e=>setDetail(opt,e.target.value)}/>
+                    <span style={{fontSize:12.5,color:'#4a5a70'}}>mm</span></>
+                : <input style={{...inp,flex:1}} placeholder="Description, e.g. prostate + seminal vesicles"
+                    value={detailOf(opt,entryFor(opt))} onChange={e=>setDetail(opt,e.target.value)}/>}
+            </div>
+          ))}
+        </div>
+      )}
       <div style={{display:'flex',gap:7}}>
         <input style={{...inp,flex:1}} value={newTarget} onChange={e=>setNewTarget(e.target.value)}
           onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addCustom()}}}
