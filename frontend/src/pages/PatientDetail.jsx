@@ -168,7 +168,7 @@ export default function PatientDetail({ navigate, patientId }) {
 
       {/* Patient info */}
       <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'18px 22px',marginBottom:12,display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:14}}>
-        {[['DOB',fmtDate(patient.date_of_birth)],['Gender',patient.gender||'—'],['National ID',patient.national_id||'—'],['Phone',patient.phone||'—'],['ICD-10',patient.icd10_code||'—'],[isAdmin?'Referring Dr':'Registered',isAdmin?(patient.doctor_name||'—'):fmtDate(patient.created_at)]].map(([l,v])=>(
+        {[['DOB',fmtDate(patient.date_of_birth)],['Gender',patient.gender||'—'],['National ID',patient.national_id||'—'],['Phone',patient.phone||'—'],['OncoTree',patient.icd10_code||'—'],[isAdmin?'Referring Dr':'Registered',isAdmin?(patient.doctor_name||'—'):fmtDate(patient.created_at)]].map(([l,v])=>(
           <div key={l}><div style={{fontSize:10.5,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:3}}>{l}</div><div style={{fontSize:13,fontWeight:500}}>{v}</div></div>
         ))}
       </div>
