@@ -68,6 +68,9 @@ ROLE_TABLE = {"admin":"admins","doctor":"doctors","rtt":"rtts","physicist":"phys
 class LoginReq(BaseModel):
     email: str; password: str
 
+class ForgotReq(BaseModel):
+    email: str
+
 class DoctorCreate(BaseModel):
     full_name: str; email: EmailStr; phone: Optional[str]=None
     specialty: Optional[str]=None; clinic_affiliation: Optional[str]=None; password: str
@@ -179,6 +182,25 @@ async def me(tok=Depends(decode_token), db=Depends(get_db)):
     else:
         r = await db.fetchrow("SELECT id,full_name,email,specialty,clinic_affiliation,phone FROM doctors WHERE id=$1", int(tok["sub"]))
     return dict(r)|{"role":tok["role"]}
+
+@app.post("/api/auth/forgot")
+async def forgot_credentials(req: ForgotReq, db=Depends(get_db)):
+    """Email the username and a new temporary password to the address on file.
+    Always returns the same message so it can't be used to discover accounts."""
+    addr = req.email.strip()
+    for role, table in ROLE_TABLE.items():
+        row = await db.fetchrow(f"SELECT id,full_name,email FROM {table} WHERE lower(email)=lower($1) AND is_active=true", addr)
+        if not row: continue
+        new_pw = gen_password()
+        h = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt()).decode()
+        await db.execute(f"UPDATE {table} SET password_hash=$1 WHERE id=$2", h, row["id"])
+        body = (f"Dear {row['full_name']},\n\nYou asked for your ACMC Portal login details.\n\n"
+                f"Username: {row['email']}\nTemporary password: {new_pw}\n\n"
+                "Please sign in and keep this password safe. If you did not ask for this, contact the ACMC administrator.")
+        import asyncio
+        await asyncio.get_running_loop().run_in_executor(None, _send_email_sync, row["email"], "ACMC Portal - your login details", body)
+        break
+    return {"ok": True}
 
 # ── services ──────────────────────────────────────────────────────────────────
 @app.get("/api/services")

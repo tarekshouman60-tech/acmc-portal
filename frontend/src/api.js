@@ -59,6 +59,7 @@ async function fetchAttachmentBlobUrl(id) {
 }
 
 export const api = {
+  forgot: (email) => req('POST','/auth/forgot',{email}),
   login: (email,password) => req('POST','/auth/login',{email,password}),
   me: () => req('GET','/auth/me'),
   dashboard: () => req('GET','/dashboard'),
