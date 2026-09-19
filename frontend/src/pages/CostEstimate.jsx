@@ -309,6 +309,7 @@ th:last-child,td:last-child{text-align:right}
           {selected.size ? `${selected.size} service${selected.size>1?'s':''} selected` : 'Select services above'}
         </div>
         <div style={{display:'flex',gap:8}}>
+          <button onClick={()=>navigate(patientId?'patient-detail':'patients',{patientId})} style={{padding:"8px 16px",borderRadius:7,border:"1px solid #dde3ec",background:"#fff",cursor:"pointer",fontSize:13,fontWeight:500,color:'#e11d48'}}>Cancel</button>
           <button onClick={submit} disabled={saving||selected.size===0} style={{padding:"8px 16px",borderRadius:7,border:"1px solid #dde3ec",background:"#fff",cursor:"pointer",fontSize:13,fontWeight:500,opacity:selected.size===0?.5:1}}>💾 Save</button>
           <button onClick={openPrint} style={{padding:"8px 16px",borderRadius:7,border:"1px solid #dde3ec",background:"#fff",cursor:"pointer",fontSize:13,fontWeight:500}}>🖨️ Print only</button>
           <button onClick={async()=>{await submit();openPrint()}} disabled={saving||selected.size===0}
