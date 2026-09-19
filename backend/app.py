@@ -141,6 +141,16 @@ class PaymentCreate(BaseModel):
 class ServicePriceUpdate(BaseModel):
     price_egp: float
 
+class ServiceNameUpdate(BaseModel):
+    name: str
+
+class ServiceCreate(BaseModel):
+    name: str
+    category: str
+    unit: str = "session"
+    price_egp: Optional[float] = None
+    per_fraction: bool = False
+
 # ── auth ──────────────────────────────────────────────────────────────────────
 @app.post("/api/auth/login")
 async def login(req: LoginReq, db=Depends(get_db)):
@@ -180,6 +190,25 @@ async def list_services(db=Depends(get_db), tok=Depends(decode_token)):
 async def update_price(sid: int, body: ServicePriceUpdate, db=Depends(get_db), tok=Depends(admin_only)):
     await db.execute("UPDATE services SET price_egp=$1 WHERE id=$2", body.price_egp, sid)
     return {"ok":True}
+
+@app.patch("/api/services/{sid}/name")
+async def update_service_name(sid: int, body: ServiceNameUpdate, db=Depends(get_db), tok=Depends(admin_only)):
+    name = body.name.strip()
+    if not name: raise HTTPException(400, "Name cannot be empty")
+    await db.execute("UPDATE services SET name=$1 WHERE id=$2", name, sid)
+    return {"ok":True}
+
+@app.post("/api/services")
+async def create_service(body: ServiceCreate, db=Depends(get_db), tok=Depends(admin_only)):
+    name = body.name.strip()
+    if not name: raise HTTPException(400, "Name cannot be empty")
+    n = await db.fetchval("SELECT COALESCE(MAX(id),0)+1 FROM services")
+    code = f"S{n}"
+    while await db.fetchval("SELECT 1 FROM services WHERE code=$1", code):
+        n += 1; code = f"S{n}"
+    r = await db.fetchrow("INSERT INTO services(code,name,category,unit,per_fraction,price_egp) VALUES($1,$2,$3,$4,$5,$6) RETURNING *",
+        code, name, body.category, body.unit.strip() or "session", body.per_fraction, body.price_egp)
+    return dict(r)
 
 # ── doctors (admin) ───────────────────────────────────────────────────────────
 @app.get("/api/doctors")

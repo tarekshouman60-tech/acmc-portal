@@ -13,6 +13,9 @@ export default function Services() {
   const [saving, setSaving] = useState({})
   const [saved, setSaved] = useState({})
   const [error, setError] = useState('')
+  const [nameEdit, setNameEdit] = useState({})
+  const [adding, setAdding] = useState(false)
+  const [nw, setNw] = useState({name:'',category:CATS[0],unit:'session',price_egp:''})
   const isAdmin = user?.role === 'admin'
 
   useEffect(() => {
@@ -37,6 +40,26 @@ export default function Services() {
     }
   }
 
+  async function saveName(svc) {
+    const name = (nameEdit[svc.id] ?? '').trim()
+    if (!name) { setError('Service name cannot be empty'); return }
+    try {
+      await api.updateServiceName(svc.id, name)
+      setServices(svcs => svcs.map(s => s.id === svc.id ? {...s, name} : s))
+      setNameEdit(e => ({...e, [svc.id]: undefined})); setError('')
+    } catch(e) { setError('Failed to save name: ' + e.message) }
+  }
+
+  async function addService() {
+    if (!nw.name.trim()) { setError('Enter a service name'); return }
+    try {
+      const price = nw.price_egp === '' ? null : parseFloat(nw.price_egp)
+      const r = await api.createService({...nw, price_egp: price})
+      setServices(svcs => [...svcs, r]); setAdding(false); setError('')
+      setNw({name:'',category:CATS[0],unit:'session',price_egp:''})
+    } catch(e) { setError('Failed to add: ' + e.message) }
+  }
+
   function handleKey(e, svc) {
     if (e.key === 'Enter') savePrice(svc)
     if (e.key === 'Escape') setEditing(ed => ({...ed, [svc.id]: undefined}))
@@ -50,6 +73,21 @@ export default function Services() {
           {isAdmin ? 'Edit prices per service. Press Enter or click Save to confirm each change.' : 'Current ACMC service price list.'}
         </p>
       </div>
+
+      {isAdmin && (
+        <div style={{marginBottom:14}}>
+          {!adding ? <button onClick={()=>setAdding(true)} style={{padding:'8px 16px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>+ Add service</button> : (
+            <div style={{background:'#fff',border:'1px solid #e7ebf1',borderRadius:12,padding:14,display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
+              <input placeholder="Service name" value={nw.name} onChange={e=>setNw({...nw,name:e.target.value})} style={{flex:'1 1 220px',border:'1px solid #dde3ec',borderRadius:6,padding:'7px 10px',fontSize:13}}/>
+              <select value={nw.category} onChange={e=>setNw({...nw,category:e.target.value})} style={{border:'1px solid #dde3ec',borderRadius:6,padding:'7px 10px',fontSize:13}}>{CATS.map(c=><option key={c}>{c}</option>)}</select>
+              <input placeholder="Unit" value={nw.unit} onChange={e=>setNw({...nw,unit:e.target.value})} style={{width:90,border:'1px solid #dde3ec',borderRadius:6,padding:'7px 10px',fontSize:13}}/>
+              <input type="number" min="0" placeholder="Price" value={nw.price_egp} onChange={e=>setNw({...nw,price_egp:e.target.value})} style={{width:100,border:'1px solid #dde3ec',borderRadius:6,padding:'7px 10px',fontSize:13}}/>
+              <button onClick={addService} style={{padding:'7px 14px',borderRadius:6,border:'none',background:'#059669',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>Add</button>
+              <button onClick={()=>setAdding(false)} style={{padding:'7px 12px',borderRadius:6,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:13}}>Cancel</button>
+            </div>
+          )}
+        </div>
+      )}
 
       {error && <div style={{background:'#ffe4e6',color:'#e11d48',border:'1px solid #fecdd3',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:14}}>{error}</div>}
 
@@ -78,7 +116,17 @@ export default function Services() {
                   <tr key={svc.id} style={{borderBottom:'1px solid #f0f4f8'}}>
                     <td style={{padding:'10px 16px',fontSize:11.5,fontFamily:'monospace',color:'#8898aa'}}>{svc.code}</td>
                     <td style={{padding:'10px 16px',fontSize:13}}>
-                      {svc.name}
+                      {isAdmin && nameEdit[svc.id] !== undefined ? (
+                        <span style={{display:'flex',gap:6}}>
+                          <input autoFocus value={nameEdit[svc.id]} onChange={e=>setNameEdit(n=>({...n,[svc.id]:e.target.value}))}
+                            onKeyDown={e=>{ if(e.key==='Enter') saveName(svc); if(e.key==='Escape') setNameEdit(n=>({...n,[svc.id]:undefined})) }}
+                            style={{flex:1,border:'1px solid #155eef',borderRadius:5,padding:'4px 8px',fontSize:13}}/>
+                          <button onClick={()=>saveName(svc)} style={{padding:'4px 10px',borderRadius:5,border:'none',background:'#059669',color:'#fff',cursor:'pointer',fontSize:12}}>Save</button>
+                        </span>
+                      ) : (<>
+                        {svc.name}
+                        {isAdmin && <button title="Rename" onClick={()=>setNameEdit(n=>({...n,[svc.id]:svc.name}))} style={{marginLeft:8,border:'none',background:'transparent',cursor:'pointer',fontSize:12,color:'#8898aa'}}>✏️</button>}
+                      </>)}
                       {svc.notes && <div style={{fontSize:11,color:'#8898aa',marginTop:1}}>{svc.notes}</div>}
                     </td>
                     <td style={{padding:'10px 16px',fontSize:12,color:'#8898aa'}}>

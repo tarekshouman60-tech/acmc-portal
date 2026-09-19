@@ -64,6 +64,8 @@ export const api = {
   dashboard: () => req('GET','/dashboard'),
 
   services: () => req('GET','/services'),
+  updateServiceName: (id,name) => req('PATCH',`/services/${id}/name`,{name}),
+  createService: (d) => req('POST','/services',d),
   updateServicePrice: (id,price_egp) => req('PATCH',`/services/${id}/price`,{price_egp}),
 
   doctors: () => req('GET','/doctors'),
