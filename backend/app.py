@@ -74,9 +74,17 @@ class ForgotReq(BaseModel):
 class DoctorCreate(BaseModel):
     full_name: str; email: EmailStr; phone: Optional[str]=None
     specialty: Optional[str]=None; clinic_affiliation: Optional[str]=None; password: str
+    username: Optional[str]=None
 
 class RttCreate(BaseModel):
     full_name: str; email: EmailStr; password: str
+    username: Optional[str]=None; phone: Optional[str]=None
+
+class AccountUpdate(BaseModel):
+    full_name: Optional[str]=None; email: Optional[EmailStr]=None
+    username: Optional[str]=None; phone: Optional[str]=None
+    specialty: Optional[str]=None; clinic_affiliation: Optional[str]=None
+    password: Optional[str]=None
 
 class RttSimUpdate(BaseModel):
     scheduled_at: Optional[datetime]=None
@@ -85,6 +93,7 @@ class RttSimUpdate(BaseModel):
 
 class PhysicistCreate(BaseModel):
     full_name: str; email: EmailStr; password: str
+    username: Optional[str]=None; phone: Optional[str]=None
 
 class PhysicistPlanningUpdate(BaseModel):
     planning_scheduled_at: Optional[datetime]=None
@@ -157,16 +166,16 @@ class ServiceCreate(BaseModel):
 # ── auth ──────────────────────────────────────────────────────────────────────
 @app.post("/api/auth/login")
 async def login(req: LoginReq, db=Depends(get_db)):
-    row = await db.fetchrow("SELECT id,password_hash FROM admins WHERE email=$1 AND is_active=true", req.email)
+    row = await db.fetchrow("SELECT id,password_hash FROM admins WHERE (lower(email)=lower($1) OR lower(username)=lower($1)) AND is_active=true", req.email)
     if row and bcrypt.checkpw(req.password.encode(), row["password_hash"].encode()):
         return {"token": make_token(row["id"],"admin"), "role":"admin"}
-    row = await db.fetchrow("SELECT id,password_hash FROM doctors WHERE email=$1 AND is_active=true", req.email)
+    row = await db.fetchrow("SELECT id,password_hash FROM doctors WHERE (lower(email)=lower($1) OR lower(username)=lower($1)) AND is_active=true", req.email)
     if row and bcrypt.checkpw(req.password.encode(), row["password_hash"].encode()):
         return {"token": make_token(row["id"],"doctor"), "role":"doctor"}
-    row = await db.fetchrow("SELECT id,password_hash FROM rtts WHERE email=$1 AND is_active=true", req.email)
+    row = await db.fetchrow("SELECT id,password_hash FROM rtts WHERE (lower(email)=lower($1) OR lower(username)=lower($1)) AND is_active=true", req.email)
     if row and bcrypt.checkpw(req.password.encode(), row["password_hash"].encode()):
         return {"token": make_token(row["id"],"rtt"), "role":"rtt"}
-    row = await db.fetchrow("SELECT id,password_hash FROM physicists WHERE email=$1 AND is_active=true", req.email)
+    row = await db.fetchrow("SELECT id,password_hash FROM physicists WHERE (lower(email)=lower($1) OR lower(username)=lower($1)) AND is_active=true", req.email)
     if row and bcrypt.checkpw(req.password.encode(), row["password_hash"].encode()):
         return {"token": make_token(row["id"],"physicist"), "role":"physicist"}
     raise HTTPException(401, "Invalid credentials")
@@ -189,13 +198,13 @@ async def forgot_credentials(req: ForgotReq, db=Depends(get_db)):
     Always returns the same message so it can't be used to discover accounts."""
     addr = req.email.strip()
     for role, table in ROLE_TABLE.items():
-        row = await db.fetchrow(f"SELECT id,full_name,email FROM {table} WHERE lower(email)=lower($1) AND is_active=true", addr)
+        row = await db.fetchrow(f"SELECT id,full_name,email,username FROM {table} WHERE lower(email)=lower($1) AND is_active=true", addr)
         if not row: continue
         new_pw = gen_password()
         h = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt()).decode()
         await db.execute(f"UPDATE {table} SET password_hash=$1 WHERE id=$2", h, row["id"])
         body = (f"Dear {row['full_name']},\n\nYou asked for your ACMC Portal login details.\n\n"
-                f"Username: {row['email']}\nTemporary password: {new_pw}\n\n"
+                f"Username: {row['username'] or row['email']}\nTemporary password: {new_pw}\n\n"
                 "Please sign in and keep this password safe. If you did not ask for this, contact the ACMC administrator.")
         import asyncio
         await asyncio.get_running_loop().run_in_executor(None, _send_email_sync, row["email"], "ACMC Portal - your login details", body)
@@ -232,18 +241,60 @@ async def create_service(body: ServiceCreate, db=Depends(get_db), tok=Depends(ad
         code, name, body.category, body.unit.strip() or "session", body.per_fraction, body.price_egp)
     return dict(r)
 
+async def _username_taken(db, username: str, skip_table=None, skip_id=None):
+    for t in ROLE_TABLE.values():
+        q = f"SELECT id FROM {t} WHERE lower(username)=lower($1) OR lower(email)=lower($1)"
+        for r in await db.fetch(q, username):
+            if not (t == skip_table and r["id"] == skip_id): return True
+    return False
+
+async def _update_account(db, table: str, aid: int, body: AccountUpdate, cols):
+    sets, vals = [], []
+    data = body.model_dump(exclude_unset=True) if hasattr(body, "model_dump") else body.dict(exclude_unset=True)
+    if "username" in data:
+        u = (data["username"] or "").strip()
+        data["username"] = u or None
+        if u and await _username_taken(db, u, table, aid): raise HTTPException(400, "That username is already in use")
+    if "email" in data and data["email"]:
+        if await db.fetchval(f"SELECT 1 FROM {table} WHERE lower(email)=lower($1) AND id<>$2", data["email"], aid):
+            raise HTTPException(400, "That email is already in use")
+    for c in cols:
+        if c in data and (data[c] is not None or c in ("phone","specialty","clinic_affiliation","username")):
+            vals.append(data[c]); sets.append(f"{c}=${len(vals)}")
+    if data.get("password"):
+        vals.append(bcrypt.hashpw(data["password"].encode(), bcrypt.gensalt()).decode()); sets.append(f"password_hash=${len(vals)}")
+    if not sets: return {"ok": True}
+    vals.append(aid)
+    row = await db.fetchrow(f"UPDATE {table} SET {','.join(sets)} WHERE id=${len(vals)} RETURNING id", *vals)
+    if not row: raise HTTPException(404, "Account not found")
+    return {"ok": True}
+
+@app.patch("/api/doctors/{did}")
+async def update_doctor(did: int, body: AccountUpdate, db=Depends(get_db), tok=Depends(admin_only)):
+    return await _update_account(db, "doctors", did, body, ["full_name","email","phone","specialty","clinic_affiliation","username"])
+
+@app.patch("/api/rtts/{rid}")
+async def update_rtt(rid: int, body: AccountUpdate, db=Depends(get_db), tok=Depends(admin_only)):
+    return await _update_account(db, "rtts", rid, body, ["full_name","email","phone","username"])
+
+@app.patch("/api/physicists/{pid}")
+async def update_physicist(pid: int, body: AccountUpdate, db=Depends(get_db), tok=Depends(admin_only)):
+    return await _update_account(db, "physicists", pid, body, ["full_name","email","phone","username"])
+
 # ── doctors (admin) ───────────────────────────────────────────────────────────
 @app.get("/api/doctors")
 async def list_doctors(db=Depends(get_db), tok=Depends(admin_only)):
-    rows = await db.fetch("SELECT id,full_name,email,phone,specialty,clinic_affiliation,is_active,created_at FROM doctors ORDER BY full_name")
+    rows = await db.fetch("SELECT id,full_name,email,username,phone,specialty,clinic_affiliation,is_active,created_at FROM doctors ORDER BY full_name")
     return [dict(r) for r in rows]
 
 @app.post("/api/doctors")
 async def create_doctor(body: DoctorCreate, db=Depends(get_db), tok=Depends(admin_only)):
+    uname = (body.username or "").strip() or None
+    if uname and await _username_taken(db, uname): raise HTTPException(400, "That username is already in use")
     pw = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
     r = await db.fetchrow(
-        "INSERT INTO doctors(full_name,email,phone,specialty,clinic_affiliation,password_hash) VALUES($1,$2,$3,$4,$5,$6) RETURNING id",
-        body.full_name, body.email, body.phone, body.specialty, body.clinic_affiliation, pw)
+        "INSERT INTO doctors(full_name,email,phone,specialty,clinic_affiliation,password_hash,username) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id",
+        body.full_name, body.email, body.phone, body.specialty, body.clinic_affiliation, pw, uname)
     return {"id":r["id"]}
 
 @app.patch("/api/doctors/{did}/toggle")
@@ -262,15 +313,17 @@ async def reset_doctor_password(did: int, db=Depends(get_db), tok=Depends(admin_
 # ── RTT accounts (admin) ─────────────────────────────────────────────────────
 @app.get("/api/rtts")
 async def list_rtts(db=Depends(get_db), tok=Depends(admin_only)):
-    rows = await db.fetch("SELECT id,full_name,email,is_active,created_at FROM rtts ORDER BY full_name")
+    rows = await db.fetch("SELECT id,full_name,email,username,phone,is_active,created_at FROM rtts ORDER BY full_name")
     return [dict(r) for r in rows]
 
 @app.post("/api/rtts")
 async def create_rtt(body: RttCreate, db=Depends(get_db), tok=Depends(admin_only)):
+    uname = (body.username or "").strip() or None
+    if uname and await _username_taken(db, uname): raise HTTPException(400, "That username is already in use")
     pw = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
     r = await db.fetchrow(
-        "INSERT INTO rtts(full_name,email,password_hash) VALUES($1,$2,$3) RETURNING id",
-        body.full_name, body.email, pw)
+        "INSERT INTO rtts(full_name,email,password_hash,username,phone) VALUES($1,$2,$3,$4,$5) RETURNING id",
+        body.full_name, body.email, pw, uname, body.phone)
     return {"id":r["id"]}
 
 @app.patch("/api/rtts/{rid}/toggle")
@@ -289,15 +342,17 @@ async def reset_rtt_password(rid: int, db=Depends(get_db), tok=Depends(admin_onl
 # ── Medical Physicist accounts (admin) ───────────────────────────────────────
 @app.get("/api/physicists")
 async def list_physicists(db=Depends(get_db), tok=Depends(admin_only)):
-    rows = await db.fetch("SELECT id,full_name,email,is_active,created_at FROM physicists ORDER BY full_name")
+    rows = await db.fetch("SELECT id,full_name,email,username,phone,is_active,created_at FROM physicists ORDER BY full_name")
     return [dict(r) for r in rows]
 
 @app.post("/api/physicists")
 async def create_physicist(body: PhysicistCreate, db=Depends(get_db), tok=Depends(admin_only)):
+    uname = (body.username or "").strip() or None
+    if uname and await _username_taken(db, uname): raise HTTPException(400, "That username is already in use")
     pw = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
     r = await db.fetchrow(
-        "INSERT INTO physicists(full_name,email,password_hash) VALUES($1,$2,$3) RETURNING id",
-        body.full_name, body.email, pw)
+        "INSERT INTO physicists(full_name,email,password_hash,username,phone) VALUES($1,$2,$3,$4,$5) RETURNING id",
+        body.full_name, body.email, pw, uname, body.phone)
     return {"id":r["id"]}
 
 @app.patch("/api/physicists/{pid}/toggle")
@@ -1288,6 +1343,12 @@ async def startup_migrate():
     conn = await asyncpg.connect(DB_URL)
     try:
         await conn.execute("""
+            ALTER TABLE doctors ADD COLUMN IF NOT EXISTS username VARCHAR(60);
+            ALTER TABLE rtts ADD COLUMN IF NOT EXISTS username VARCHAR(60);
+            ALTER TABLE physicists ADD COLUMN IF NOT EXISTS username VARCHAR(60);
+            ALTER TABLE admins ADD COLUMN IF NOT EXISTS username VARCHAR(60);
+            ALTER TABLE rtts ADD COLUMN IF NOT EXISTS phone VARCHAR(30);
+            ALTER TABLE physicists ADD COLUMN IF NOT EXISTS phone VARCHAR(30);
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS referral_fee_pct NUMERIC(5,2) DEFAULT 0;
             ALTER TABLE doctors ALTER COLUMN referral_fee_pct SET DEFAULT 30;
             UPDATE doctors SET referral_fee_pct=30 WHERE referral_fee_pct=0;
