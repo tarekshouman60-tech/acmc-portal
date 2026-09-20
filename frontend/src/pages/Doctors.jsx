@@ -7,11 +7,11 @@ const FL = ({label,children}) => <div><label style={{display:'block',fontSize:11
 export default function Doctors() {
   const [doctors, setDoctors] = useState([])
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({full_name:'',email:'',username:'',phone:'',specialty:'',clinic_affiliation:'',password:''})
+  const [form, setForm] = useState({full_name:'',email:'',username:'',phone:'',specialty:'',clinic_affiliation:'',bank_name:'',bank_account_name:'',bank_account_number:'',bank_iban:'',bank_swift:'',password:''})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [editId, setEditId] = useState(null)
-  const EMPTY = {full_name:'',email:'',username:'',phone:'',specialty:'',clinic_affiliation:'',password:''}
+  const EMPTY = {full_name:'',email:'',username:'',phone:'',specialty:'',clinic_affiliation:'',bank_name:'',bank_account_name:'',bank_account_number:'',bank_iban:'',bank_swift:'',password:''}
 
   useEffect(() => { api.doctors().then(setDoctors) }, [])
 
@@ -22,7 +22,7 @@ export default function Doctors() {
       if (editId) { const d={...form}; if (!d.password) delete d.password; await api.updateDoctor(editId, d) } else await api.createDoctor(form)
       const fresh = await api.doctors(); setDoctors(fresh)
       setShowForm(false); setEditId(null)
-      setForm({full_name:'',email:'',username:'',phone:'',specialty:'',clinic_affiliation:'',password:''})
+      setForm({full_name:'',email:'',username:'',phone:'',specialty:'',clinic_affiliation:'',bank_name:'',bank_account_name:'',bank_account_number:'',bank_iban:'',bank_swift:'',password:''})
     } catch(e) { setError(e.message) } finally { setSaving(false) }
   }
 
@@ -54,6 +54,14 @@ export default function Doctors() {
             <FL label="Clinic / affiliation"><input style={inp} value={form.clinic_affiliation} onChange={e=>setForm(f=>({...f,clinic_affiliation:e.target.value}))}/></FL>
             <FL label={editId?"New password (leave blank to keep)":"Password *"}><input style={inp} type="password" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder="Temporary password"/></FL>
           </div>
+          <div style={{fontSize:11,fontWeight:700,color:'#8898aa',textTransform:'uppercase',letterSpacing:'.05em',margin:'4px 0 10px'}}>Bank account (for transfers)</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:13,marginBottom:13}}>
+            <FL label="Bank name"><input style={inp} value={form.bank_name} onChange={e=>setForm(f=>({...f,bank_name:e.target.value}))}/></FL>
+            <FL label="Account holder"><input style={inp} value={form.bank_account_name} onChange={e=>setForm(f=>({...f,bank_account_name:e.target.value}))}/></FL>
+            <FL label="Account number"><input style={inp} value={form.bank_account_number} onChange={e=>setForm(f=>({...f,bank_account_number:e.target.value}))}/></FL>
+            <FL label="IBAN"><input style={inp} value={form.bank_iban} onChange={e=>setForm(f=>({...f,bank_iban:e.target.value}))}/></FL>
+            <FL label="SWIFT / BIC"><input style={inp} value={form.bank_swift} onChange={e=>setForm(f=>({...f,bank_swift:e.target.value}))}/></FL>
+          </div>
           <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
             <button onClick={()=>{setShowForm(false);setEditId(null)}} style={{padding:'8px 16px',borderRadius:6,border:'1px solid #dde3ec',background:'transparent',cursor:'pointer',fontSize:13}}>Cancel</button>
             <button onClick={save} disabled={saving} style={{padding:'8px 18px',borderRadius:6,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>{saving?'Saving…':(editId?'Save changes':'Create Account')}</button>
@@ -82,7 +90,7 @@ export default function Doctors() {
                   <span style={{background:d.is_active?'#d1fae5':'#ffe4e6',color:d.is_active?'#059669':'#e11d48',fontSize:11,fontWeight:600,padding:'2px 9px',borderRadius:20}}>{d.is_active?'ACTIVE':'INACTIVE'}</span>
                 </td>
                 <td style={{padding:'11px 16px',borderBottom:'1px solid #f0f4f8'}}>
-                  <button onClick={()=>{setEditId(d.id);setForm({full_name:d.full_name||'',email:d.email||'',username:d.username||'',phone:d.phone||'',specialty:d.specialty||'',clinic_affiliation:d.clinic_affiliation||'',password:''});setError('');setShowForm(true);window.scrollTo(0,0)}} style={{padding:'5px 12px',borderRadius:5,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12,fontWeight:500,marginRight:6}}>Edit</button>
+                  <button onClick={()=>{setEditId(d.id);setForm({full_name:d.full_name||'',email:d.email||'',username:d.username||'',phone:d.phone||'',specialty:d.specialty||'',clinic_affiliation:d.clinic_affiliation||'',bank_name:d.bank_name||'',bank_account_name:d.bank_account_name||'',bank_account_number:d.bank_account_number||'',bank_iban:d.bank_iban||'',bank_swift:d.bank_swift||'',password:''});setError('');setShowForm(true);window.scrollTo(0,0)}} style={{padding:'5px 12px',borderRadius:5,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12,fontWeight:500,marginRight:6}}>Edit</button>
                       <button onClick={()=>toggle(d.id)} style={{padding:'5px 12px',borderRadius:5,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12,fontWeight:500,color:d.is_active?'#e11d48':'#059669'}}>
                     {d.is_active?'Deactivate':'Activate'}
                   </button>

@@ -24,8 +24,21 @@ function AdminEarnings() {
   const [selDoctor, setSelDoctor] = useState(null)
   const [feeInput, setFeeInput] = useState('')
   const [savingFee, setSavingFee] = useState(false)
-  const [transferForm, setTransferForm] = useState({earning_id:'',amount_egp:'',method:'bank_transfer',reference:'',transfer_date:''})
+  const [transferForm, setTransferForm] = useState({earning_id:'',amount_egp:'',method:'bank_transfer',reference:'',transfer_date:'',transfer_time:''})
   const [saving, setSaving] = useState(false)
+  const [transfers, setTransfers] = useState([])
+  const [doctors, setDoctors] = useState([])
+  const [editT, setEditT] = useState(null)
+  function loadTransfers() { api.listTransfers().then(setTransfers).catch(()=>{}) }
+  useEffect(() => { loadTransfers(); api.doctors().then(setDoctors).catch(()=>{}) }, [])
+  async function saveEditT() {
+    setSaving(true); setError('')
+    try {
+      await api.updateTransfer(editT.id, {amount_egp:parseFloat(editT.amount_egp), transfer_date:editT.transfer_date||null, transfer_time:editT.transfer_time||null, method:editT.method, reference:editT.reference||null})
+      setEditT(null); loadTransfers()
+      api.listEarnings().then(setEarnings); api.earningsSummary().then(setSummary)
+    } catch(e){ setError(e.message) } finally { setSaving(false) }
+  }
   const [error, setError] = useState('')
   const [tab, setTab] = useState('overview')
   const [bonusPct, setBonusPct] = useState('5')
@@ -62,10 +75,11 @@ function AdminEarnings() {
     if (!transferForm.earning_id||!transferForm.amount_egp) {setError('Fill earning and amount'); return}
     setSaving(true); setError('')
     try {
-      await api.addTransfer({earning_id:parseInt(transferForm.earning_id), amount_egp:parseFloat(transferForm.amount_egp), method:transferForm.method, reference:transferForm.reference, transfer_date:transferForm.transfer_date||null})
+      await api.addTransfer({earning_id:parseInt(transferForm.earning_id), amount_egp:parseFloat(transferForm.amount_egp), method:transferForm.method, reference:transferForm.reference, transfer_date:transferForm.transfer_date||null, transfer_time:transferForm.transfer_time||null})
       const fresh = await api.listEarnings(); setEarnings(fresh)
       const freshS = await api.earningsSummary(); setSummary(freshS)
-      setTransferForm({earning_id:'',amount_egp:'',method:'bank_transfer',reference:'',transfer_date:''})
+      loadTransfers()
+      setTransferForm({earning_id:'',amount_egp:'',method:'bank_transfer',reference:'',transfer_date:'',transfer_time:''})
     } catch(e){setError(e.message)} finally{setSaving(false)}
   }
 
@@ -201,7 +215,7 @@ function AdminEarnings() {
       )}
 
       {/* Transfer tab */}
-      {tab==='transfer' && (
+      {tab==='transfer' && (<>
         <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'20px',maxWidth:600}}>
           <div style={{fontWeight:600,fontSize:14,marginBottom:16}}>Record Transfer to Doctor</div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:13,marginBottom:13}}>
@@ -226,18 +240,60 @@ function AdminEarnings() {
             <FL label="Date">
               <input style={inp} type="date" value={transferForm.transfer_date} onChange={e=>setTransferForm(f=>({...f,transfer_date:e.target.value}))}/>
             </FL>
+            <FL label="Time of transfer">
+              <input style={inp} type="time" value={transferForm.transfer_time} onChange={e=>setTransferForm(f=>({...f,transfer_time:e.target.value}))}/>
+            </FL>
           </div>
           <div style={{marginBottom:14}}>
             <FL label="Reference / notes">
               <input style={inp} value={transferForm.reference} onChange={e=>setTransferForm(f=>({...f,reference:e.target.value}))} placeholder="Transaction reference or notes"/>
             </FL>
           </div>
+          {(() => { const er = earnings.find(x=>String(x.id)===String(transferForm.earning_id)); const dr = er && doctors.find(x=>x.id===er.doctor_id)
+            return dr && (dr.bank_name||dr.bank_account_number||dr.bank_iban) ? (
+              <div style={{background:'#f0f6ff',border:'1px solid #c5d8f5',borderRadius:8,padding:'10px 13px',fontSize:12.5,marginBottom:14,lineHeight:1.6}}>
+                <strong>Dr. {dr.full_name} — bank details</strong><br/>
+                {dr.bank_name} {dr.bank_account_name && `· ${dr.bank_account_name}`}<br/>
+                {dr.bank_account_number && <>Account: {dr.bank_account_number}<br/></>}
+                {dr.bank_iban && <>IBAN: {dr.bank_iban}<br/></>}
+                {dr.bank_swift && <>SWIFT: {dr.bank_swift}</>}
+              </div>) : null })()}
           <button onClick={addTransfer} disabled={saving||!transferForm.earning_id||!transferForm.amount_egp}
             style={{width:'100%',padding:'9px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
             {saving?'Saving…':'Record Transfer'}
           </button>
         </div>
-      )}
+        <div style={{background:'#fff',border:'1px solid #e7ebf1',borderRadius:14,padding:20,marginTop:16,overflowX:'auto'}}>
+          <div style={{fontWeight:600,fontSize:14,marginBottom:12}}>Transfer history</div>
+          {error && <div style={{background:'#ffe4e6',color:'#e11d48',borderRadius:6,padding:'8px 12px',fontSize:12.5,marginBottom:10}}>{error}</div>}
+          {transfers.length===0 ? <div style={{color:'#8898aa',fontSize:13}}>No transfers recorded yet.</div> : (
+          <table style={{width:'100%',borderCollapse:'collapse',fontSize:12.5}}>
+            <thead><tr>{['Doctor','Patient','Amount','Method','Date','Time','Reference',''].map(h=><th key={h} style={{textAlign:'left',padding:'7px 10px',fontSize:10.5,color:'#8898aa',textTransform:'uppercase',borderBottom:'1px solid #dde3ec'}}>{h}</th>)}</tr></thead>
+            <tbody>{transfers.map(t => editT?.id===t.id ? (
+              <tr key={t.id} style={{background:'#f7f9fc'}}>
+                <td style={{padding:'7px 10px'}}>{t.doctor_name}</td><td style={{padding:'7px 10px'}}>{t.patient_name}</td>
+                <td><input style={{...inp,width:100}} type="number" value={editT.amount_egp} onChange={e=>setEditT({...editT,amount_egp:e.target.value})}/></td>
+                <td><select style={inp} value={editT.method||''} onChange={e=>setEditT({...editT,method:e.target.value})}><option value="bank_transfer">Bank Transfer</option><option value="cash">Cash</option><option value="check">Cheque</option></select></td>
+                <td><input style={inp} type="date" value={editT.transfer_date||''} onChange={e=>setEditT({...editT,transfer_date:e.target.value})}/></td>
+                <td><input style={inp} type="time" value={editT.transfer_time||''} onChange={e=>setEditT({...editT,transfer_time:e.target.value})}/></td>
+                <td><input style={inp} value={editT.reference||''} onChange={e=>setEditT({...editT,reference:e.target.value})}/></td>
+                <td style={{whiteSpace:'nowrap',padding:'7px 10px'}}>
+                  <button onClick={saveEditT} disabled={saving} style={{padding:'4px 10px',borderRadius:5,border:'none',background:'#059669',color:'#fff',cursor:'pointer',fontSize:12,marginRight:5}}>Save</button>
+                  <button onClick={()=>setEditT(null)} style={{padding:'4px 10px',borderRadius:5,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12}}>Cancel</button>
+                </td>
+              </tr>
+            ) : (
+              <tr key={t.id} style={{borderBottom:'1px solid #f0f4f8'}}>
+                <td style={{padding:'8px 10px'}}>{t.doctor_name}</td><td style={{padding:'8px 10px'}}>{t.patient_name||'—'}</td>
+                <td style={{padding:'8px 10px',fontFamily:'monospace',color:'#059669'}}>{fmtEGP(t.amount_egp)}</td>
+                <td style={{padding:'8px 10px'}}>{t.method}</td><td style={{padding:'8px 10px'}}>{t.transfer_date||'—'}</td>
+                <td style={{padding:'8px 10px'}}>{t.transfer_time||'—'}</td><td style={{padding:'8px 10px'}}>{t.reference||'—'}</td>
+                <td style={{padding:'8px 10px'}}><button onClick={()=>{setError('');setEditT({...t})}} style={{padding:'4px 10px',borderRadius:5,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12}}>Edit</button></td>
+              </tr>
+            ))}</tbody>
+          </table>)}
+        </div>
+      </>)}
     </div>
   )
 }

@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 import asyncpg, jwt, bcrypt, os, random, string, asyncio, uuid, pathlib
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, time as dtime, timedelta
 
 app = FastAPI(title="ACMC Radiotherapy Portal")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"], max_age=600)
@@ -75,6 +75,8 @@ class DoctorCreate(BaseModel):
     full_name: str; email: EmailStr; phone: Optional[str]=None
     specialty: Optional[str]=None; clinic_affiliation: Optional[str]=None; password: str
     username: Optional[str]=None
+    bank_name: Optional[str]=None; bank_account_name: Optional[str]=None
+    bank_account_number: Optional[str]=None; bank_iban: Optional[str]=None; bank_swift: Optional[str]=None
 
 class RttCreate(BaseModel):
     full_name: str; email: EmailStr; password: str
@@ -85,6 +87,8 @@ class AccountUpdate(BaseModel):
     username: Optional[str]=None; phone: Optional[str]=None
     specialty: Optional[str]=None; clinic_affiliation: Optional[str]=None
     password: Optional[str]=None
+    bank_name: Optional[str]=None; bank_account_name: Optional[str]=None
+    bank_account_number: Optional[str]=None; bank_iban: Optional[str]=None; bank_swift: Optional[str]=None
 
 class RttSimUpdate(BaseModel):
     scheduled_at: Optional[datetime]=None
@@ -189,7 +193,7 @@ async def me(tok=Depends(decode_token), db=Depends(get_db)):
     elif tok["role"]=="physicist":
         r = await db.fetchrow("SELECT id,full_name,email FROM physicists WHERE id=$1", int(tok["sub"]))
     else:
-        r = await db.fetchrow("SELECT id,full_name,email,specialty,clinic_affiliation,phone FROM doctors WHERE id=$1", int(tok["sub"]))
+        r = await db.fetchrow("SELECT id,full_name,email,specialty,clinic_affiliation,phone,bank_name,bank_account_name,bank_account_number,bank_iban,bank_swift FROM doctors WHERE id=$1", int(tok["sub"]))
     return dict(r)|{"role":tok["role"]}
 
 @app.post("/api/auth/forgot")
@@ -259,7 +263,7 @@ async def _update_account(db, table: str, aid: int, body: AccountUpdate, cols):
         if await db.fetchval(f"SELECT 1 FROM {table} WHERE lower(email)=lower($1) AND id<>$2", data["email"], aid):
             raise HTTPException(400, "That email is already in use")
     for c in cols:
-        if c in data and (data[c] is not None or c in ("phone","specialty","clinic_affiliation","username")):
+        if c in data and (data[c] is not None or c in ("phone","specialty","clinic_affiliation","username","bank_name","bank_account_name","bank_account_number","bank_iban","bank_swift")):
             vals.append(data[c]); sets.append(f"{c}=${len(vals)}")
     if data.get("password"):
         vals.append(bcrypt.hashpw(data["password"].encode(), bcrypt.gensalt()).decode()); sets.append(f"password_hash=${len(vals)}")
@@ -271,7 +275,7 @@ async def _update_account(db, table: str, aid: int, body: AccountUpdate, cols):
 
 @app.patch("/api/doctors/{did}")
 async def update_doctor(did: int, body: AccountUpdate, db=Depends(get_db), tok=Depends(admin_only)):
-    return await _update_account(db, "doctors", did, body, ["full_name","email","phone","specialty","clinic_affiliation","username"])
+    return await _update_account(db, "doctors", did, body, ["full_name","email","phone","specialty","clinic_affiliation","username","bank_name","bank_account_name","bank_account_number","bank_iban","bank_swift"])
 
 @app.patch("/api/rtts/{rid}")
 async def update_rtt(rid: int, body: AccountUpdate, db=Depends(get_db), tok=Depends(admin_only)):
@@ -284,7 +288,7 @@ async def update_physicist(pid: int, body: AccountUpdate, db=Depends(get_db), to
 # ── doctors (admin) ───────────────────────────────────────────────────────────
 @app.get("/api/doctors")
 async def list_doctors(db=Depends(get_db), tok=Depends(admin_only)):
-    rows = await db.fetch("SELECT id,full_name,email,username,phone,specialty,clinic_affiliation,is_active,created_at FROM doctors ORDER BY full_name")
+    rows = await db.fetch("SELECT id,full_name,email,username,phone,specialty,clinic_affiliation,bank_name,bank_account_name,bank_account_number,bank_iban,bank_swift,is_active,created_at FROM doctors ORDER BY full_name")
     return [dict(r) for r in rows]
 
 @app.post("/api/doctors")
@@ -293,8 +297,8 @@ async def create_doctor(body: DoctorCreate, db=Depends(get_db), tok=Depends(admi
     if uname and await _username_taken(db, uname): raise HTTPException(400, "That username is already in use")
     pw = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
     r = await db.fetchrow(
-        "INSERT INTO doctors(full_name,email,phone,specialty,clinic_affiliation,password_hash,username) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id",
-        body.full_name, body.email, body.phone, body.specialty, body.clinic_affiliation, pw, uname)
+        "INSERT INTO doctors(full_name,email,phone,specialty,clinic_affiliation,password_hash,username,bank_name,bank_account_name,bank_account_number,bank_iban,bank_swift) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id",
+        body.full_name, body.email, body.phone, body.specialty, body.clinic_affiliation, pw, uname, body.bank_name, body.bank_account_name, body.bank_account_number, body.bank_iban, body.bank_swift)
     return {"id":r["id"]}
 
 @app.patch("/api/doctors/{did}/toggle")
@@ -1215,7 +1219,16 @@ class TransferCreate(BaseModel):
     earning_id: int
     amount_egp: float
     transfer_date: Optional[date] = None
+    transfer_time: Optional[dtime] = None
     method: str
+    reference: Optional[str] = None
+    notes: Optional[str] = None
+
+class TransferUpdate(BaseModel):
+    amount_egp: Optional[float] = None
+    transfer_date: Optional[date] = None
+    transfer_time: Optional[dtime] = None
+    method: Optional[str] = None
     reference: Optional[str] = None
     notes: Optional[str] = None
 
@@ -1319,22 +1332,56 @@ async def earnings_summary(db=Depends(get_db), tok=Depends(decode_token)):
             GROUP BY month ORDER BY month DESC LIMIT 12""", did)
         return {"summary": dict(total), "monthly": [dict(r) for r in monthly]}
 
+async def _recalc_earning_transfers(db, earning_id: int):
+    earning = await db.fetchrow("SELECT * FROM doctor_earnings WHERE id=$1", earning_id)
+    transferred = await db.fetchval(
+        "SELECT COALESCE(SUM(amount_egp),0) FROM doctor_transfers WHERE earning_id=$1", earning_id)
+    balance = round(float(earning["total_due_egp"]) - float(transferred), 2)
+    status = "transferred" if balance <= 0 else ("partial" if transferred > 0 else "pending")
+    await db.execute("""UPDATE doctor_earnings SET transferred_egp=$1,balance_egp=$2,
+        status=$3,updated_at=NOW() WHERE id=$4""", transferred, balance, status, earning_id)
+    return balance
+
 @app.post("/api/transfers")
 async def add_transfer(body: TransferCreate, db=Depends(get_db), tok=Depends(admin_only)):
     earning = await db.fetchrow("SELECT * FROM doctor_earnings WHERE id=$1", body.earning_id)
     if not earning: raise HTTPException(404)
     await db.execute("""INSERT INTO doctor_transfers
-        (doctor_id,earning_id,amount_egp,transfer_date,method,reference,recorded_by,notes)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8)""",
+        (doctor_id,earning_id,amount_egp,transfer_date,transfer_time,method,reference,recorded_by,notes)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)""",
         earning["doctor_id"], body.earning_id, body.amount_egp,
-        body.transfer_date or date.today(), body.method, body.reference,
+        body.transfer_date or date.today(), body.transfer_time, body.method, body.reference,
         int(tok["sub"]), body.notes)
-    transferred = await db.fetchval(
-        "SELECT COALESCE(SUM(amount_egp),0) FROM doctor_transfers WHERE earning_id=$1", body.earning_id)
-    balance = round(float(earning["total_due_egp"]) - float(transferred), 2)
-    status = "transferred" if balance <= 0 else ("partial" if transferred > 0 else "pending")
-    await db.execute("""UPDATE doctor_earnings SET transferred_egp=$1,balance_egp=$2,
-        status=$3,updated_at=NOW() WHERE id=$4""", transferred, balance, status, body.earning_id)
+    balance = await _recalc_earning_transfers(db, body.earning_id)
+    return {"ok": True, "balance_egp": balance}
+
+@app.get("/api/transfers")
+async def list_transfers(db=Depends(get_db), tok=Depends(admin_only)):
+    rows = await db.fetch("""
+        SELECT t.*, d.full_name AS doctor_name, p.full_name AS patient_name
+        FROM doctor_transfers t
+        JOIN doctors d ON d.id=t.doctor_id
+        LEFT JOIN doctor_earnings de ON de.id=t.earning_id
+        LEFT JOIN patients p ON p.id=de.patient_id
+        ORDER BY t.transfer_date DESC, t.transfer_time DESC NULLS LAST, t.id DESC""")
+    return [{**dict(r), "amount_egp": float(r["amount_egp"] or 0),
+             "transfer_date": r["transfer_date"].isoformat() if r["transfer_date"] else None,
+             "transfer_time": r["transfer_time"].strftime("%H:%M") if r["transfer_time"] else None,
+             "created_at": r["created_at"].isoformat() if r["created_at"] else None} for r in rows]
+
+@app.patch("/api/transfers/{tid}")
+async def update_transfer(tid: int, body: TransferUpdate, db=Depends(get_db), tok=Depends(admin_only)):
+    t = await db.fetchrow("SELECT earning_id FROM doctor_transfers WHERE id=$1", tid)
+    if not t: raise HTTPException(404, "Transfer not found")
+    data = body.model_dump(exclude_unset=True)
+    sets, vals = [], []
+    for c in ("amount_egp","transfer_date","transfer_time","method","reference","notes"):
+        if c in data and (data[c] is not None or c in ("transfer_time","reference","notes")):
+            vals.append(data[c]); sets.append(f"{c}=${len(vals)}")
+    if sets:
+        vals.append(tid)
+        await db.execute(f"UPDATE doctor_transfers SET {','.join(sets)} WHERE id=${len(vals)}", *vals)
+    balance = await _recalc_earning_transfers(db, t["earning_id"])
     return {"ok": True, "balance_egp": balance}
 
 # ── DB migration on startup (adds new tables if not exist) ────────────────────
@@ -1344,6 +1391,11 @@ async def startup_migrate():
     try:
         await conn.execute("""
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS username VARCHAR(60);
+            ALTER TABLE doctors ADD COLUMN IF NOT EXISTS bank_name VARCHAR(120);
+            ALTER TABLE doctors ADD COLUMN IF NOT EXISTS bank_account_name VARCHAR(150);
+            ALTER TABLE doctors ADD COLUMN IF NOT EXISTS bank_account_number VARCHAR(60);
+            ALTER TABLE doctors ADD COLUMN IF NOT EXISTS bank_iban VARCHAR(60);
+            ALTER TABLE doctors ADD COLUMN IF NOT EXISTS bank_swift VARCHAR(30);
             ALTER TABLE rtts ADD COLUMN IF NOT EXISTS username VARCHAR(60);
             ALTER TABLE physicists ADD COLUMN IF NOT EXISTS username VARCHAR(60);
             ALTER TABLE admins ADD COLUMN IF NOT EXISTS username VARCHAR(60);
@@ -1401,12 +1453,14 @@ async def startup_migrate():
             );
             ALTER TABLE doctor_earnings ADD COLUMN IF NOT EXISTS workers_bonus_pct NUMERIC(5,2) DEFAULT 0;
             ALTER TABLE doctor_earnings ADD COLUMN IF NOT EXISTS workers_bonus_egp NUMERIC(12,2) DEFAULT 0;
+            ALTER TABLE IF EXISTS doctor_transfers ADD COLUMN IF NOT EXISTS transfer_time TIME;
             CREATE TABLE IF NOT EXISTS doctor_transfers (
                 id SERIAL PRIMARY KEY,
                 doctor_id INTEGER REFERENCES doctors(id),
                 earning_id INTEGER REFERENCES doctor_earnings(id),
                 amount_egp NUMERIC(12,2),
                 transfer_date DATE DEFAULT CURRENT_DATE,
+                transfer_time TIME,
                 method VARCHAR(50),
                 reference VARCHAR(100),
                 recorded_by INTEGER REFERENCES admins(id),
