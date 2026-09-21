@@ -1431,6 +1431,9 @@ async def startup_migrate():
     conn = await asyncpg.connect(DB_URL)
     try:
         await conn.execute("""
+            INSERT INTO services(code,name,category,unit,per_fraction,price_egp)
+              SELECT 'DEL-002A','Treatment Delivery- IGRT (Hypersight)','Treatment Delivery','Per fraction',true,4000
+              WHERE NOT EXISTS (SELECT 1 FROM services WHERE code='DEL-002A');
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS username VARCHAR(60);
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS bank_name VARCHAR(120);
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS bank_account_name VARCHAR(150);
