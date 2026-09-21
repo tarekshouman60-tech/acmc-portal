@@ -1442,6 +1442,7 @@ async def startup_migrate():
                 UPDATE services s SET code='DEL-00'||o.n FROM _del_order o WHERE s.id=o.id;
               END IF;
             END $$;
+            UPDATE services SET unit='Within package' WHERE code='PLAN-002' AND unit<>'Within package';
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS username VARCHAR(60);
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS bank_name VARCHAR(120);
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS bank_account_name VARCHAR(150);
