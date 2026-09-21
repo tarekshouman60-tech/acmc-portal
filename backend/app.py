@@ -1433,7 +1433,15 @@ async def startup_migrate():
         await conn.execute("""
             INSERT INTO services(code,name,category,unit,per_fraction,price_egp)
               SELECT 'DEL-002A','Treatment Delivery- IGRT (Hypersight)','Treatment Delivery','Per fraction',true,4000
-              WHERE NOT EXISTS (SELECT 1 FROM services WHERE code='DEL-002A');
+              WHERE NOT EXISTS (SELECT 1 FROM services WHERE name='Treatment Delivery- IGRT (Hypersight)');
+            DO $$ BEGIN
+              IF EXISTS (SELECT 1 FROM services WHERE code='DEL-002A') THEN
+                CREATE TEMP TABLE _del_order ON COMMIT DROP AS
+                  SELECT id, row_number() OVER (ORDER BY code) AS n FROM services WHERE category='Treatment Delivery';
+                UPDATE services SET code='TMP-'||id WHERE category='Treatment Delivery';
+                UPDATE services s SET code='DEL-00'||o.n FROM _del_order o WHERE s.id=o.id;
+              END IF;
+            END $$;
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS username VARCHAR(60);
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS bank_name VARCHAR(120);
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS bank_account_name VARCHAR(150);
