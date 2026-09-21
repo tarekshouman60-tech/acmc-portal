@@ -40,6 +40,16 @@ export default function Services() {
     }
   }
 
+  async function downloadList() {
+    try {
+      const res = await fetch('/api/services/export', {headers:{Authorization:`Bearer ${localStorage.getItem('acmc_token')}`}})
+      if (!res.ok) throw new Error('Download failed')
+      const url = URL.createObjectURL(await res.blob())
+      const a = document.createElement('a'); a.href = url; a.download = 'ACMC_Price_List.xlsx'; a.click()
+      URL.revokeObjectURL(url)
+    } catch(e) { setError(e.message) }
+  }
+
   async function saveName(svc) {
     const name = (nameEdit[svc.id] ?? '').trim()
     if (!name) { setError('Service name cannot be empty'); return }
@@ -72,6 +82,10 @@ export default function Services() {
         <p style={{color:'#4a5a70',fontSize:13,marginTop:3}}>
           {isAdmin ? 'Edit prices per service. Press Enter or click Save to confirm each change.' : 'Current ACMC service price list.'}
         </p>
+      </div>
+
+      <div style={{marginBottom:14}}>
+        <button onClick={downloadList} style={{padding:'8px 16px',borderRadius:7,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>⬇ Download price list (Excel)</button>
       </div>
 
       {isAdmin && (

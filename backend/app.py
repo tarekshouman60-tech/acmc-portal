@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 import asyncpg, jwt, bcrypt, os, random, string, asyncio, uuid, pathlib
@@ -220,6 +220,47 @@ async def forgot_credentials(req: ForgotReq, db=Depends(get_db)):
 async def list_services(db=Depends(get_db), tok=Depends(decode_token)):
     rows = await db.fetch("SELECT * FROM services WHERE is_active=true ORDER BY category,code")
     return [dict(r) for r in rows]
+
+@app.get("/api/services/export")
+async def export_services(db=Depends(get_db), tok=Depends(decode_token)):
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    d = [dict(r) for r in await db.fetch("SELECT * FROM services WHERE is_active=true ORDER BY category,code")]
+    cats = ['Simulation','Immobilization','Special Technique','Planning','Treatment Delivery','SBRT/SRS Package','Special Procedure','Quality & Review']
+    wb = Workbook(); ws = wb.active; ws.title = 'Price List'
+    ws.merge_cells('A1:E1'); ws['A1'] = 'ACMC — Advanced Cancer Management Center'
+    ws['A1'].font = Font(bold=True, size=16, color='155EEF'); ws['A1'].alignment = Alignment(horizontal='center')
+    ws.merge_cells('A2:E2'); ws['A2'] = 'Service Price List'
+    ws['A2'].font = Font(bold=True, size=12); ws['A2'].alignment = Alignment(horizontal='center')
+    ws.merge_cells('A3:E3'); ws['A3'] = f"Date: {date.today():%d %b %Y}   Prices in EGP"
+    ws['A3'].alignment = Alignment(horizontal='center'); ws['A3'].font = Font(italic=True, color='666666')
+    thin = Side(style='thin', color='BBBBBB'); bd = Border(left=thin, right=thin, top=thin, bottom=thin)
+    r = 5
+    for cat in cats + sorted({x['category'] for x in d} - set(cats)):
+        rows = [x for x in d if x['category'] == cat]
+        if not rows: continue
+        ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=5)
+        c = ws.cell(r, 1, cat); c.font = Font(bold=True, color='FFFFFF'); c.fill = PatternFill('solid', fgColor='155EEF'); r += 1
+        for i, h in enumerate(['Code','Service','Unit','Per fraction','Price (EGP)'], 1):
+            c = ws.cell(r, i, h); c.font = Font(bold=True); c.fill = PatternFill('solid', fgColor='E8EEF9'); c.border = bd
+        r += 1
+        for x in rows:
+            vals = [x['code'], x['name'], x['unit'], 'Yes' if x['per_fraction'] else '', float(x['price_egp']) if x['price_egp'] is not None else None]
+            for i, v in enumerate(vals, 1):
+                c = ws.cell(r, i, v); c.border = bd
+                if i == 5: c.number_format = '#,##0.00'; c.alignment = Alignment(horizontal='right')
+                if i == 2: c.alignment = Alignment(wrap_text=True, vertical='top')
+            r += 1
+        r += 1
+    for col, w in zip('ABCDE', [12, 58, 16, 13, 16]): ws.column_dimensions[col].width = w
+    ws.page_setup.orientation = 'portrait'; ws.page_setup.paperSize = ws.PAPERSIZE_A4
+    ws.page_setup.fitToWidth = 1; ws.page_setup.fitToHeight = 0; ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.print_options.horizontalCentered = True
+    ws.oddFooter.center.text = 'ACMC Price List — Page &P of &N'
+    buf = io.BytesIO(); wb.save(buf)
+    return Response(buf.getvalue(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": 'attachment; filename="ACMC_Price_List.xlsx"'})
 
 @app.patch("/api/services/{sid}/price")
 async def update_price(sid: int, body: ServicePriceUpdate, db=Depends(get_db), tok=Depends(admin_only)):
