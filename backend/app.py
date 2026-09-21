@@ -1442,6 +1442,17 @@ async def startup_migrate():
                 UPDATE services s SET code='DEL-00'||o.n FROM _del_order o WHERE s.id=o.id;
               END IF;
             END $$;
+            INSERT INTO services(code,name,category,unit,per_fraction,price_egp,notes)
+              SELECT 'DEL-003A','Hyperarc/Hypersight/SRS/SBRT','Treatment Delivery','1-5 Fractions',false,0,'Within package'
+              WHERE NOT EXISTS (SELECT 1 FROM services WHERE name='Hyperarc/Hypersight/SRS/SBRT');
+            DO $$ BEGIN
+              IF EXISTS (SELECT 1 FROM services WHERE code='DEL-003A') THEN
+                CREATE TEMP TABLE _del_order2 ON COMMIT DROP AS
+                  SELECT id, row_number() OVER (ORDER BY code) AS n FROM services WHERE category='Treatment Delivery';
+                UPDATE services SET code='TMP-'||id WHERE category='Treatment Delivery';
+                UPDATE services s SET code='DEL-00'||o.n FROM _del_order2 o WHERE s.id=o.id;
+              END IF;
+            END $$;
             UPDATE services SET unit='Within package' WHERE code='PLAN-002' AND unit<>'Within package';
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS username VARCHAR(60);
             ALTER TABLE doctors ADD COLUMN IF NOT EXISTS bank_name VARCHAR(120);
