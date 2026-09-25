@@ -16,7 +16,7 @@ export default function Doctors() {
   useEffect(() => { api.doctors().then(setDoctors) }, [])
 
   async function save() {
-    if (!form.full_name || !form.email || !form.username || (!editId && !form.password)) { setError('Name, email, username'+(editId?'':' and password')+' are required'); return }
+    if (!form.full_name || !form.email || (!editId && (!form.username || !form.password))) { setError('Name, email'+(editId?'':', username and password')+' are required'); return }
     setSaving(true); setError('')
     try {
       if (editId) { const d={...form}; if (!d.password) delete d.password; await api.updateDoctor(editId, d) } else await api.createDoctor(form)
