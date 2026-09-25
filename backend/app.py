@@ -1302,10 +1302,14 @@ async def _calc_and_save_earning(db, estimate_id, doctor_fees_egp=None):
     month = datetime.now().strftime("%Y-%m")
     existing = await db.fetchrow("SELECT id FROM doctor_earnings WHERE estimate_id=$1", estimate_id)
     if existing:
+        # Recompute totals only — do NOT touch balance/status here. Any amount already
+        # transferred to the doctor must stay accounted for; _recalc_earning_transfers
+        # below derives the correct balance/status from total_due minus real transfers.
         await db.execute("""UPDATE doctor_earnings SET referral_pct=$1,referral_amount_egp=$2,
-            doctor_fees_egp=$3,workers_bonus_pct=$4,workers_bonus_egp=$5,total_due_egp=$6,balance_egp=$6,
+            doctor_fees_egp=$3,workers_bonus_pct=$4,workers_bonus_egp=$5,total_due_egp=$6,
             total_billed_egp=$7,updated_at=NOW() WHERE estimate_id=$8""",
             pct, ref_amount, doc_fees, bonus_pct, workers_bonus, total_due, total, estimate_id)
+        await _recalc_earning_transfers(db, existing["id"])
         return existing["id"]
     r = await db.fetchrow("""INSERT INTO doctor_earnings
         (doctor_id,patient_id,estimate_id,total_billed_egp,referral_pct,referral_amount_egp,
