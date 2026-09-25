@@ -1326,16 +1326,21 @@ async def create_earning(body: EarningCreate, db=Depends(get_db), tok=Depends(ad
 
 @app.get("/api/earnings")
 async def list_earnings(db=Depends(get_db), tok=Depends(decode_token)):
+    # How the patient actually paid the clinic (cash vs. credit/insurance) — shown on
+    # each row so "transferred" can read as Paid or Credit instead of one generic word.
+    pay_method_sql = """(SELECT pay.method FROM payments pay JOIN billing bl ON bl.id=pay.billing_id
+                          WHERE bl.estimate_id=de.estimate_id AND pay.status<>'cancelled'
+                          ORDER BY pay.payment_date DESC, pay.id DESC LIMIT 1) as payment_method"""
     if tok["role"] == "admin":
-        rows = await db.fetch("""
-            SELECT de.*,p.full_name as patient_name,d.full_name as doctor_name
+        rows = await db.fetch(f"""
+            SELECT de.*,p.full_name as patient_name,d.full_name as doctor_name,{pay_method_sql}
             FROM doctor_earnings de
             JOIN patients p ON p.id=de.patient_id
             JOIN doctors d ON d.id=de.doctor_id
             ORDER BY de.created_at DESC""")
     else:
-        rows = await db.fetch("""
-            SELECT de.*,p.full_name as patient_name
+        rows = await db.fetch(f"""
+            SELECT de.*,p.full_name as patient_name,{pay_method_sql}
             FROM doctor_earnings de
             JOIN patients p ON p.id=de.patient_id
             WHERE de.doctor_id=$1

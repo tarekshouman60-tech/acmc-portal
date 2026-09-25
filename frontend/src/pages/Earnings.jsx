@@ -5,14 +5,18 @@ import { useAuth } from '../App.jsx'
 const inp = {border:'1px solid #dde3ec',borderRadius:6,padding:'8px 11px',fontSize:13,fontFamily:'inherit',outline:'none',width:'100%'}
 const FL = ({label,children}) => <div><label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>{label}</label>{children}</div>
 
-function Badge({status}) {
+function Badge({status, paymentMethod}) {
   const map = {
     pending:{bg:'#fef3c7',color:'#f59e0b'},
     partial:{bg:'#eef2ff',color:'#4338ca'},
-    transferred:{bg:'#d1fae5',color:'#059669'}
+    transferred:{bg:'#d1fae5',color:'#059669'},
+    credit:{bg:'#dce9ff',color:'#155eef'}
   }
-  const s = map[status]||{bg:'#f0f4f8',color:'#8898aa'}
-  return <span style={{background:s.bg,color:s.color,fontSize:11,fontWeight:600,padding:'2px 9px',borderRadius:20}}>{status?.replace('_',' ').toUpperCase()}</span>
+  // Once fully transferred, show how the patient actually paid rather than the generic word.
+  const isCredit = status === 'transferred' && paymentMethod === 'credit'
+  const label = isCredit ? 'credit' : status === 'transferred' ? 'paid' : status
+  const s = map[isCredit ? 'credit' : status]||{bg:'#f0f4f8',color:'#8898aa'}
+  return <span style={{background:s.bg,color:s.color,fontSize:11,fontWeight:600,padding:'2px 9px',borderRadius:20}}>{label?.replace('_',' ').toUpperCase()}</span>
 }
 
 // ── Admin view ────────────────────────────────────────────────────────────────
@@ -159,7 +163,7 @@ function AdminEarnings() {
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',fontWeight:600}}>{fmtEGP(e.total_due_egp)}</td>
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',color:'#059669'}}>{fmtEGP(e.transferred_egp)}</td>
                           <td style={{padding:'9px 12px',fontSize:12,fontFamily:'monospace',color:parseFloat(e.balance_egp)>0?'#e11d48':'#059669',fontWeight:600}}>{fmtEGP(e.balance_egp)}</td>
-                          <td style={{padding:'9px 12px'}}><Badge status={e.status}/></td>
+                          <td style={{padding:'9px 12px'}}><Badge status={e.status} paymentMethod={e.payment_method}/></td>
                         </tr>
                       ))}
                     </tbody>
@@ -370,7 +374,7 @@ function DoctorEarnings() {
                     <td style={{padding:'10px 12px',fontSize:13,fontFamily:'monospace',fontWeight:700}}>{fmtEGP(e.total_due_egp)}</td>
                     <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace',color:'#059669'}}>{fmtEGP(e.transferred_egp)}</td>
                     <td style={{padding:'10px 12px',fontSize:12,fontFamily:'monospace',color:parseFloat(e.balance_egp)>0?'#e11d48':'#059669',fontWeight:600}}>{fmtEGP(e.balance_egp)}</td>
-                    <td style={{padding:'10px 12px'}}><Badge status={e.status}/></td>
+                    <td style={{padding:'10px 12px'}}><Badge status={e.status} paymentMethod={e.payment_method}/></td>
                   </tr>
                 ))}
               </tbody>
