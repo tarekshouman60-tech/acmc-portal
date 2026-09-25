@@ -1535,6 +1535,11 @@ async def startup_migrate():
                 created_at TIMESTAMP DEFAULT NOW()
             );
         """)
+        # One-time fix-up: recompute every existing doctor-earnings row so it reflects
+        # the billed (post-discount) total instead of the estimate's original total.
+        estimate_ids = await conn.fetch("SELECT estimate_id FROM doctor_earnings")
+        for row in estimate_ids:
+            await _calc_and_save_earning(conn, row["estimate_id"])
     finally:
         await conn.close()
 
