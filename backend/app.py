@@ -1283,7 +1283,10 @@ async def _calc_and_save_earning(db, estimate_id, doctor_fees_egp=None):
         "SELECT ce.*, d.referral_fee_pct FROM cost_estimates ce JOIN doctors d ON d.id=ce.doctor_id WHERE ce.id=$1",
         estimate_id)
     if not est: return None
-    total = float(est["total_egp"] or 0)
+    # Referral fees are computed on what the patient was actually billed (after any
+    # admin discount), not the estimate's original gross total.
+    billed_total = await db.fetchval("SELECT total_amount_egp FROM billing WHERE estimate_id=$1", estimate_id)
+    total = float(billed_total) if billed_total is not None else float(est["total_egp"] or 0)
     pct = float(est["referral_fee_pct"] or 0)
     ref_amount = round(total * pct / 100, 2)
     if doctor_fees_egp is None:
