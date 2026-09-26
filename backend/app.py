@@ -868,7 +868,8 @@ async def update_milestones(pid: int, body: MilestoneUpdate, db=Depends(get_db),
     if result == "UPDATE 0":
         # Older patients from before milestones rows were auto-created on patient creation
         # have no row to update — the UPDATE above silently affects nothing. Create it and retry.
-        await db.execute("INSERT INTO milestones(patient_id) VALUES($1)", pid)
+        # ON CONFLICT guards against two concurrent saves both hitting this fallback at once.
+        await db.execute("INSERT INTO milestones(patient_id) VALUES($1) ON CONFLICT (patient_id) DO NOTHING", pid)
         await db.execute(f"UPDATE milestones SET {','.join(fields)},updated_by=${idx},updated_at=NOW() WHERE patient_id=${idx+1}", *vals)
     # Notification emails happen in the background, not on the request — sending several
     # (e.g. all four milestones marked done at once) can take longer than the browser's
@@ -1571,6 +1572,36 @@ async def startup_migrate():
         estimate_ids = await conn.fetch("SELECT estimate_id FROM doctor_earnings")
         for row in estimate_ids:
             await _calc_and_save_earning(conn, row["estimate_id"])
+
+        # Merge any duplicate milestones rows per patient (can happen if two saves raced
+        # to create a missing row) so a save can never appear to "lose" earlier progress,
+        # then lock it down with a uniqueness constraint so it can't happen again.
+        dup_groups = await conn.fetch(
+            "SELECT patient_id, array_agg(id ORDER BY id) AS ids FROM milestones GROUP BY patient_id HAVING COUNT(*) > 1")
+        for g in dup_groups:
+            ids = g["ids"]
+            rows = await conn.fetch("SELECT * FROM milestones WHERE id = ANY($1::int[]) ORDER BY id", ids)
+            merged = {}
+            for col in ("simulation_done","simulation_date","planning_done","planning_date",
+                        "treatment_started","treatment_start_date","treatment_completed",
+                        "treatment_end_date","notes"):
+                vals = [r[col] for r in rows if r[col]]
+                merged[col] = vals[-1] if vals else None
+            keep_id = ids[0]
+            await conn.execute("""UPDATE milestones SET simulation_done=$1,simulation_date=$2,
+                planning_done=$3,planning_date=$4,treatment_started=$5,treatment_start_date=$6,
+                treatment_completed=$7,treatment_end_date=$8,notes=$9,updated_at=NOW() WHERE id=$10""",
+                bool(merged["simulation_done"]), merged["simulation_date"], bool(merged["planning_done"]),
+                merged["planning_date"], bool(merged["treatment_started"]), merged["treatment_start_date"],
+                bool(merged["treatment_completed"]), merged["treatment_end_date"], merged["notes"], keep_id)
+            await conn.execute("DELETE FROM milestones WHERE patient_id=$1 AND id<>$2", g["patient_id"], keep_id)
+        await conn.execute("""
+            DO $$ BEGIN
+              IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='milestones_patient_id_key') THEN
+                ALTER TABLE milestones ADD CONSTRAINT milestones_patient_id_key UNIQUE (patient_id);
+              END IF;
+            END $$;
+        """)
     finally:
         await conn.close()
 
