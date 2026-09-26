@@ -21,7 +21,8 @@ export default function CostEstimate({ navigate, patientId }) {
   const [quantities, setQuantities] = useState({})
   const [openCats, setOpenCats] = useState(new Set())
   const [saving, setSaving] = useState(false)
-  const [customFees, setCustomFees] = useState({'QA-003':0,'QA-004':0,'QA-005':0})
+  // '' means "not entered yet" (shows as TBD); an explicit '0' is a real waived fee, not the same thing.
+  const [customFees, setCustomFees] = useState({'QA-003':'','QA-004':'','QA-005':''})
   const [saved, setSaved] = useState(null)
   const [error, setError] = useState('')
 
@@ -41,7 +42,7 @@ export default function CostEstimate({ navigate, patientId }) {
           })
           setCustomFees(f => {
             const n = {...f}
-            items.forEach(i => { if (['QA-003','QA-004','QA-005'].includes(i.code)) n[i.code] = i.unit_price_egp || 0 })
+            items.forEach(i => { if (['QA-003','QA-004','QA-005'].includes(i.code)) n[i.code] = i.unit_price_egp != null ? String(i.unit_price_egp) : '' })
             return n
           })
           setOpenCats(c => new Set([...c, ...items.map(i => i.category)]))
@@ -85,8 +86,7 @@ export default function CostEstimate({ navigate, patientId }) {
       if (pkg && isExcludedByPackage(svc)) return
       const qty = svc.per_fraction ? getQty(sid) : 1
       if (['QA-003','QA-004','QA-005'].includes(svc.code)) {
-        const custom = parseFloat(customFees[svc.code]) || 0
-        if (custom > 0) total += custom
+        if (customFees[svc.code] !== '') total += parseFloat(customFees[svc.code]) || 0
         else hasTbd = true
       } else if (svc.price_egp != null) {
         total += svc.price_egp * qty
@@ -105,9 +105,8 @@ export default function CostEstimate({ navigate, patientId }) {
           service_id: sid,
           quantity: svc?.per_fraction ? getQty(sid) : 1
         }
-        if (svc && ['QA-003','QA-004','QA-005'].includes(svc.code)) {
-          const custom = parseFloat(customFees[svc.code])
-          if (custom > 0) item.unit_price = custom
+        if (svc && ['QA-003','QA-004','QA-005'].includes(svc.code) && customFees[svc.code] !== '') {
+          item.unit_price = parseFloat(customFees[svc.code]) || 0
         }
         return item
       })
@@ -124,8 +123,7 @@ export default function CostEstimate({ navigate, patientId }) {
       const excluded = isExcludedByPackage(svc)
       let sub = null
       if (['QA-003','QA-004','QA-005'].includes(svc?.code)) {
-        const cf = parseFloat(customFees[svc.code]) || 0
-        sub = cf > 0 ? cf : null
+        sub = customFees[svc.code] !== '' ? (parseFloat(customFees[svc.code]) || 0) : null
       } else {
         sub = svc?.price_egp != null ? svc.price_egp * qty : null
       }
@@ -272,7 +270,7 @@ th:last-child,td:last-child{text-align:right}
                             <div onClick={e=>e.stopPropagation()} style={{display:'flex',alignItems:'center',gap:4,justifyContent:'flex-end'}}>
                               <span style={{fontSize:11,color:'#4a5a70'}}>EGP</span>
                               <input type="number" min="0" placeholder="Your fee"
-                                value={customFees[svc.code]||''}
+                                value={customFees[svc.code]}
                                 onChange={e=>setCustomFees(f=>({...f,[svc.code]:e.target.value}))}
                                 style={{width:90,padding:'4px 7px',fontSize:12,border:'1px solid #155eef',borderRadius:5,textAlign:'right',fontFamily:'monospace',outline:'none'}}/>
                             </div>
@@ -299,7 +297,7 @@ th:last-child,td:last-child{text-align:right}
           <div style={{color:'rgba(255,255,255,.45)',fontSize:11.5,marginTop:3}}>{selected.size} service{selected.size!==1?'s':''} selected</div>
         </div>
         <div style={{color:'#fff',fontSize:22,fontWeight:700,fontFamily:'monospace'}}>
-          {selected.size ? (total ? fmtEGP(total)+(hasTbd?' + TBD':'') : 'TBD') : 'EGP —'}
+          {selected.size ? (hasTbd ? (total ? fmtEGP(total)+' + TBD' : 'TBD') : fmtEGP(total)) : 'EGP —'}
         </div>
       </div>
 

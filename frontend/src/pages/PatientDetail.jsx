@@ -244,7 +244,7 @@ export default function PatientDetail({ navigate, patientId }) {
                         <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70'}}>{item.technique||'—'}</td>
                         <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70'}}>{item.total_dose_gy?item.total_dose_gy+'Gy/'+item.fractions+'F':'—'}</td>
                       </>}
-                      {type==='estimate' && <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70'}}>{item.total_egp?fmtEGP(item.total_egp)+(item.has_tbd?' + TBD':''):'TBD'}</td>}
+                      {type==='estimate' && <td style={{padding:'10px 16px',fontSize:12.5,color:'#4a5a70'}}>{item.has_tbd?(item.total_egp?fmtEGP(item.total_egp)+' + TBD':'TBD'):fmtEGP(item.total_egp)}</td>}
                       <td style={{padding:'10px 16px'}} onClick={e=>e.stopPropagation()}>
                         {type==='estimate'
                           // Payment status is derived from actual recorded payments (Billing page)

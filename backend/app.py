@@ -520,8 +520,12 @@ async def rtt_update_sim(oid: int, body: RttSimUpdate, db=Depends(get_db), tok=D
     row = await db.fetchrow("SELECT id, patient_id FROM sim_orders WHERE id=$1", oid)
     if not row: raise HTTPException(404)
     sets, vals = [], []
-    if body.scheduled_at is not None:
-        scheduled_naive = body.scheduled_at.replace(tzinfo=None) if body.scheduled_at.tzinfo else body.scheduled_at
+    # exclude_unset (not "is not None"): the RTT scheduling UI sends an explicit null to clear
+    # a reserved time, which "is not None" would otherwise silently ignore.
+    sent_fields = body.dict(exclude_unset=True)
+    if 'scheduled_at' in sent_fields:
+        sa = body.scheduled_at
+        scheduled_naive = sa.replace(tzinfo=None) if (sa and sa.tzinfo) else sa
         sets.append(f"scheduled_at=${len(vals)+1}"); vals.append(scheduled_naive)
     if body.status is not None:
         valid = ['pending','scheduled','done','cancelled']
@@ -616,7 +620,9 @@ async def physicist_update_clinical(oid: int, body: PhysicistPlanningUpdate, db=
         sets.append(f"planning_status=${len(vals)+1}"); vals.append(body.status)
         if body.status == 'completed':
             sets.append("planning_completed_at=NOW()")
-    if body.planning_scheduled_at is not None:
+    # exclude_unset (not "is not None"): lets an explicit null clear a scheduled time instead
+    # of being silently ignored — same fix as rtt_update_sim above.
+    if 'planning_scheduled_at' in body.dict(exclude_unset=True):
         sets.append(f"planning_scheduled_at=${len(vals)+1}"); vals.append(body.planning_scheduled_at)
     if body.planning_notes is not None:
         sets.append(f"planning_notes=${len(vals)+1}"); vals.append(body.planning_notes)
@@ -791,13 +797,31 @@ async def create_estimate(body: EstimateCreate, db=Depends(get_db), tok=Depends(
         did = int(tok["sub"])
         p = await db.fetchrow("SELECT id FROM patients WHERE id=$1 AND doctor_id=$2", body.patient_id, did)
         if not p: raise HTTPException(403,"Patient not found")
-    # Replace if exists — delete old items and billing, reuse same ref
+    # Validate every service_id BEFORE touching anything — this used to run after the old
+    # estimate (and its billing/payment/transfer history) had already been deleted below, so
+    # a single invalid service_id would 404 having already wiped out the previous estimate.
+    svc_rows = {}
+    for item in body.items:
+        svc = await db.fetchrow("SELECT price_egp,per_fraction,category,code FROM services WHERE id=$1", item.service_id)
+        if not svc: raise HTTPException(404,f"Service {item.service_id} not found")
+        svc_rows[item.service_id] = svc
+
+    # Replace if exists — delete old items and billing, reuse same ref. But never do this once
+    # real money has moved against the old estimate (a payment recorded, or a referral transfer
+    # already paid to the doctor) — that history must never be silently destroyed. Admins should
+    # start a new estimate for the patient instead in that case.
     existing = await db.fetchrow("SELECT id, order_ref FROM cost_estimates WHERE patient_id=$1 AND doctor_id=$2 ORDER BY created_at DESC LIMIT 1", body.patient_id, did)
     if existing:
+        has_payment = await db.fetchval(
+            "SELECT EXISTS(SELECT 1 FROM payments WHERE billing_id IN (SELECT id FROM billing WHERE estimate_id=$1))", existing["id"])
+        has_transfer = await db.fetchval(
+            "SELECT EXISTS(SELECT 1 FROM doctor_transfers WHERE earning_id IN (SELECT id FROM doctor_earnings WHERE estimate_id=$1))", existing["id"])
+        if has_payment or has_transfer:
+            raise HTTPException(400,
+                "This patient's existing estimate already has a payment or a doctor transfer recorded against it, "
+                "so it can't be replaced. Create a new cost estimate for this patient instead.")
         await db.execute("DELETE FROM cost_estimate_items WHERE estimate_id=$1", existing["id"])
-        await db.execute("DELETE FROM payments WHERE billing_id IN (SELECT id FROM billing WHERE estimate_id=$1)", existing["id"])
         await db.execute("DELETE FROM billing WHERE estimate_id=$1", existing["id"])
-        await db.execute("DELETE FROM doctor_transfers WHERE earning_id IN (SELECT id FROM doctor_earnings WHERE estimate_id=$1)", existing["id"])
         await db.execute("DELETE FROM doctor_earnings WHERE estimate_id=$1", existing["id"])
         await db.execute("DELETE FROM cost_estimates WHERE id=$1", existing["id"])
     ref = existing["order_ref"] if existing else gen_ref("EST")
@@ -806,11 +830,6 @@ async def create_estimate(body: EstimateCreate, db=Depends(get_db), tok=Depends(
     # consultation fees (custom-fee codes) count toward the total; every other
     # selected service is already bundled into the package price.
     CUSTOM_FEE_CODES = ("QA-003","QA-004","QA-005")
-    svc_rows = {}
-    for item in body.items:
-        svc = await db.fetchrow("SELECT price_egp,per_fraction,category,code FROM services WHERE id=$1", item.service_id)
-        if not svc: raise HTTPException(404,f"Service {item.service_id} not found")
-        svc_rows[item.service_id] = svc
     has_package = any(s["category"] == "SBRT/SRS Package" for s in svc_rows.values())
 
     total = 0.0; has_tbd = False
@@ -820,7 +839,9 @@ async def create_estimate(body: EstimateCreate, db=Depends(get_db), tok=Depends(
         qty = item.quantity if svc["per_fraction"] else 1
         excluded = has_package and svc["category"] != "SBRT/SRS Package" and svc["code"] not in CUSTOM_FEE_CODES
         if svc["code"] in CUSTOM_FEE_CODES:
-            if item.unit_price is not None and item.unit_price > 0:
+            if item.unit_price is not None:
+                if item.unit_price < 0: raise HTTPException(400, "Fee cannot be negative")
+                # A genuine 0 (a waived fee) must count as entered, not fall through to TBD.
                 sub = float(item.unit_price)
                 unit_price_egp = item.unit_price
                 if not excluded: total += sub
@@ -921,8 +942,12 @@ async def add_payment(body: PaymentCreate, db=Depends(get_db), tok=Depends(admin
         raise HTTPException(400, "method must be 'cash' or 'credit'")
     if body.method == "credit" and not (body.reference or "").strip():
         raise HTTPException(400, "reference (insurance / company name) is required for credit payments")
+    if body.amount_egp <= 0:
+        raise HTTPException(400, "amount must be greater than 0")
     b = await db.fetchrow("SELECT * FROM billing WHERE id=$1", body.billing_id)
     if not b: raise HTTPException(404)
+    if body.amount_egp > float(b["balance_egp"]):
+        raise HTTPException(400, f"Amount exceeds balance due ({b['balance_egp']})")
     await db.execute(
         "INSERT INTO payments(billing_id,amount_egp,payment_date,method,reference,recorded_by,notes) VALUES($1,$2,$3,$4,$5,$6,$7)",
         body.billing_id, body.amount_egp, body.payment_date or date.today(), body.method, body.reference, int(tok["sub"]), body.notes)
@@ -1115,21 +1140,31 @@ async def cleanup_duplicates(db=Depends(get_db), tok=Depends(admin_only)):
             SELECT DISTINCT ON (patient_id) id FROM clinical_orders ORDER BY patient_id, created_at DESC
         )
     """)
-    # Keep only the latest estimate per patient (cascade deletes items/billing/payments)
+    # Keep only the latest estimate per patient (cascade deletes items/billing) — but never an
+    # older one that already has a payment or a doctor transfer recorded against it: that's very
+    # likely a real second treatment course, not an accidental duplicate, and its financial
+    # history must never be silently destroyed by a maintenance cleanup.
     dup_estimates = await db.fetch("""
         SELECT id FROM cost_estimates WHERE id NOT IN (
             SELECT DISTINCT ON (patient_id) id FROM cost_estimates ORDER BY patient_id, created_at DESC
         )
     """)
+    cleaned, skipped = 0, 0
     for row in dup_estimates:
         eid = row["id"]
-        await db.execute("DELETE FROM payments WHERE billing_id IN (SELECT id FROM billing WHERE estimate_id=$1)", eid)
+        has_payment = await db.fetchval(
+            "SELECT EXISTS(SELECT 1 FROM payments WHERE billing_id IN (SELECT id FROM billing WHERE estimate_id=$1))", eid)
+        has_transfer = await db.fetchval(
+            "SELECT EXISTS(SELECT 1 FROM doctor_transfers WHERE earning_id IN (SELECT id FROM doctor_earnings WHERE estimate_id=$1))", eid)
+        if has_payment or has_transfer:
+            skipped += 1
+            continue
         await db.execute("DELETE FROM billing WHERE estimate_id=$1", eid)
-        await db.execute("DELETE FROM doctor_transfers WHERE earning_id IN (SELECT id FROM doctor_earnings WHERE estimate_id=$1)", eid)
         await db.execute("DELETE FROM doctor_earnings WHERE estimate_id=$1", eid)
         await db.execute("DELETE FROM cost_estimate_items WHERE estimate_id=$1", eid)
         await db.execute("DELETE FROM cost_estimates WHERE id=$1", eid)
-    return {"ok": True, "cleaned": len(dup_estimates)}
+        cleaned += 1
+    return {"ok": True, "cleaned": cleaned, "skipped_had_payment_or_transfer": skipped}
 
 # ── notifications: email (live) + whatsapp (stub until center account ready) ──
 import smtplib
