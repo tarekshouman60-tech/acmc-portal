@@ -9,6 +9,7 @@ export default function Milestones({ navigate }) {
   const [saving, setSaving] = useState(false)
   const [notifyMsg, setNotifyMsg] = useState('')
   const [search, setSearch] = useState('')
+  const [error, setError] = useState('')
 
   useEffect(() => { api.patients().then(setPatients) }, [])
 
@@ -20,10 +21,19 @@ export default function Milestones({ navigate }) {
   }
 
   async function save() {
-    setSaving(true)
-    await api.updateMilestones(selected, form)
-    await load(selected)
-    setSaving(false)
+    setSaving(true); setError('')
+    try {
+      // Blank date fields arrive as '' from the inputs — send them as null, not ''
+      // (the backend rejects '' as an invalid date and the save would otherwise fail silently).
+      const payload = {}
+      for (const [k, v] of Object.entries(form)) payload[k] = v === '' ? null : v
+      await api.updateMilestones(selected, payload)
+      await load(selected)
+    } catch(e) {
+      setError('Failed to save: ' + e.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function testNotify(pid) {
@@ -94,6 +104,7 @@ export default function Milestones({ navigate }) {
               </button>
               <button onClick={save} disabled={saving} style={{padding:'9px 20px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>{saving?'Saving…':'Save Milestones'}</button>
             </div>
+            {error && <div style={{marginTop:10,fontSize:12.5,color:'#e11d48',background:'#ffe4e6',padding:'8px 12px',borderRadius:6}}>{error}</div>}
             {notifyMsg && <div style={{marginTop:10,fontSize:12.5,
               color:notifyMsg.startsWith('✗')?'#e11d48':'#059669',
               background:notifyMsg.startsWith('✗')?'#ffe4e6':'#d1fae5',
