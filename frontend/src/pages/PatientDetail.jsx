@@ -87,9 +87,13 @@ function MilestoneEditor({ patientId, milestones, onSaved }) {
   async function save() {
     setSaving(true)
     try {
-      await api.updateMilestones(patientId, form)
-      onSaved(form)
-    } catch(e) { alert(e.message) } finally { setSaving(false) }
+      // Blank date fields arrive as '' from the inputs — send them as null, not ''
+      // (the backend rejects '' as an invalid date and the save would otherwise fail).
+      const payload = {}
+      for (const [k, v] of Object.entries(form)) payload[k] = v === '' ? null : v
+      await api.updateMilestones(patientId, payload)
+      onSaved(payload)
+    } catch(e) { alert('Failed to save: ' + e.message) } finally { setSaving(false) }
   }
 
   return (
