@@ -865,11 +865,25 @@ async def update_milestones(pid: int, body: MilestoneUpdate, db=Depends(get_db),
     if not fields: return {"ok":True}
     vals += [int(tok["sub"]), pid]
     await db.execute(f"UPDATE milestones SET {','.join(fields)},updated_by=${idx},updated_at=NOW() WHERE patient_id=${idx+1}", *vals)
-    # Trigger notification if a "done" flag was newly set to true
-    for milestone_key in ['simulation_done','planning_done','treatment_started','treatment_completed']:
-        if updates.get(milestone_key) is True:
-            await send_notification(db, pid, milestone_key)
+    # Notification emails happen in the background, not on the request — sending several
+    # (e.g. all four milestones marked done at once) can take longer than the browser's
+    # request timeout, which used to make a successful save look like it had failed.
+    newly_done = [k for k in ('simulation_done','planning_done','treatment_started','treatment_completed')
+                  if updates.get(k) is True]
+    if newly_done:
+        asyncio.create_task(_send_milestone_notifications_bg(pid, newly_done))
     return {"ok":True}
+
+async def _send_milestone_notifications_bg(patient_id: int, milestone_keys: list):
+    conn = await asyncpg.connect(DB_URL)
+    try:
+        for key in milestone_keys:
+            try:
+                await send_notification(conn, patient_id, key)
+            except Exception as e:
+                print(f"[notify] background milestone notification failed ({key}): {e}")
+    finally:
+        await conn.close()
 
 # ── payments (admin) ──────────────────────────────────────────────────────────
 async def _recalc_billing(db, billing_id):
