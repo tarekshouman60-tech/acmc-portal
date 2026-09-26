@@ -76,11 +76,11 @@ export default function Milestones({ navigate }) {
             <div style={{fontWeight:600,fontSize:14,marginBottom:4}}>{detail.patient.full_name}</div>
             <div style={{fontSize:12.5,color:'#4a5a70',marginBottom:18}}>{detail.patient.diagnosis}</div>
             {[
-              {key:'simulation',label:'CT Simulation',dateKey:'simulation_date'},
-              {key:'planning',label:'Treatment Planning',dateKey:'planning_date'},
-              {key:'treatment_started',label:'Treatment Started',dateKey:'treatment_start_date'},
-              {key:'treatment_completed',label:'Treatment Completed',dateKey:'treatment_end_date'},
-            ].map(({key,label,dateKey})=>(
+              {key:'simulation',doneKey:'simulation_done',label:'CT Simulation',dateKey:'simulation_date'},
+              {key:'planning',doneKey:'planning_done',label:'Treatment Planning',dateKey:'planning_date'},
+              {key:'treatment_started',doneKey:'treatment_started',label:'Treatment Started',dateKey:'treatment_start_date'},
+              {key:'treatment_completed',doneKey:'treatment_completed',label:'Treatment Completed',dateKey:'treatment_end_date'},
+            ].map(({key,doneKey,label,dateKey})=>(
               <div key={key} style={{display:'grid',gridTemplateColumns:'1fr auto auto',alignItems:'center',gap:14,padding:'12px 0',borderBottom:'1px solid #f0f4f8'}}>
                 <div>
                   <div style={{fontSize:13,fontWeight:500}}>{label}</div>
@@ -88,7 +88,7 @@ export default function Milestones({ navigate }) {
                 </div>
                 <input type="date" style={inp} value={form[dateKey]||''} onChange={e=>setForm(f=>({...f,[dateKey]:e.target.value}))}/>
                 <label style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',fontSize:13}}>
-                  <input type="checkbox" checked={!!form[key+'_done']} onChange={e=>setForm(f=>({...f,[key+'_done']:e.target.checked}))} style={{width:16,height:16,cursor:'pointer'}}/>
+                  <input type="checkbox" checked={!!form[doneKey]} onChange={e=>setForm(f=>({...f,[doneKey]:e.target.checked}))} style={{width:16,height:16,cursor:'pointer'}}/>
                   Done
                 </label>
               </div>
