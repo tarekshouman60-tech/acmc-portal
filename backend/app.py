@@ -858,7 +858,10 @@ async def get_estimate(eid: int, db=Depends(get_db), tok=Depends(decode_token)):
 # ── milestones (admin) ────────────────────────────────────────────────────────
 @app.patch("/api/patients/{pid}/milestones")
 async def update_milestones(pid: int, body: MilestoneUpdate, db=Depends(get_db), tok=Depends(admin_only)):
-    updates = body.dict(exclude_none=True)
+    # exclude_unset (not exclude_none): the frontend now sends an explicit null to CLEAR a
+    # date/notes field (after the earlier "blank date rejected as invalid" fix). exclude_none
+    # would silently drop that null and leave the old value in place instead of clearing it.
+    updates = body.dict(exclude_unset=True)
     fields, vals, idx = [], [], 1
     for f, v in updates.items():
         fields.append(f"{f}=${idx}"); vals.append(v); idx+=1
@@ -1320,23 +1323,24 @@ async def _calc_and_save_earning(db, estimate_id, doctor_fees_egp=None):
     workers_bonus = round(ref_amount * bonus_pct / 100, 2)
     total_due = round(ref_amount + doc_fees - workers_bonus, 2)
     month = datetime.now().strftime("%Y-%m")
-    existing = await db.fetchrow("SELECT id FROM doctor_earnings WHERE estimate_id=$1", estimate_id)
-    if existing:
-        # Recompute totals only — do NOT touch balance/status here. Any amount already
-        # transferred to the doctor must stay accounted for; _recalc_earning_transfers
-        # below derives the correct balance/status from total_due minus real transfers.
-        await db.execute("""UPDATE doctor_earnings SET referral_pct=$1,referral_amount_egp=$2,
-            doctor_fees_egp=$3,workers_bonus_pct=$4,workers_bonus_egp=$5,total_due_egp=$6,
-            total_billed_egp=$7,updated_at=NOW() WHERE estimate_id=$8""",
-            pct, ref_amount, doc_fees, bonus_pct, workers_bonus, total_due, total, estimate_id)
-        await _recalc_earning_transfers(db, existing["id"])
-        return existing["id"]
+    # A single atomic upsert (not check-then-insert-or-update) — two saves racing for the
+    # same estimate (a payment and a discount landing together, say) can no longer create
+    # two earnings rows for it. balance_egp is deliberately left out of the conflict update:
+    # any amount already transferred to the doctor must stay accounted for, which
+    # _recalc_earning_transfers below derives from total_due minus the real transfers.
     r = await db.fetchrow("""INSERT INTO doctor_earnings
         (doctor_id,patient_id,estimate_id,total_billed_egp,referral_pct,referral_amount_egp,
          doctor_fees_egp,workers_bonus_pct,workers_bonus_egp,total_due_egp,balance_egp,month)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$10,$11) RETURNING id""",
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$10,$11)
+        ON CONFLICT (estimate_id) DO UPDATE SET
+            referral_pct=EXCLUDED.referral_pct, referral_amount_egp=EXCLUDED.referral_amount_egp,
+            doctor_fees_egp=EXCLUDED.doctor_fees_egp, workers_bonus_pct=EXCLUDED.workers_bonus_pct,
+            workers_bonus_egp=EXCLUDED.workers_bonus_egp, total_due_egp=EXCLUDED.total_due_egp,
+            total_billed_egp=EXCLUDED.total_billed_egp, updated_at=NOW()
+        RETURNING id""",
         est["doctor_id"], est["patient_id"], estimate_id, total, pct,
         ref_amount, doc_fees, bonus_pct, workers_bonus, total_due, month)
+    await _recalc_earning_transfers(db, r["id"])
     return r["id"]
 
 @app.post("/api/earnings")
@@ -1567,6 +1571,27 @@ async def startup_migrate():
                 created_at TIMESTAMP DEFAULT NOW()
             );
         """)
+        # Merge any duplicate doctor_earnings rows per estimate (two saves racing — a payment
+        # and a discount landing together, say — could each create their own earnings row for
+        # the same estimate, silently splitting/duplicating a doctor's referral payout) and add
+        # a uniqueness constraint so it can't happen again. This MUST run, and the constraint
+        # MUST exist, before the recompute loop below: that loop's upsert relies on it.
+        earn_dups = await conn.fetch(
+            "SELECT estimate_id, array_agg(id ORDER BY id) AS ids FROM doctor_earnings GROUP BY estimate_id HAVING COUNT(*) > 1")
+        for g in earn_dups:
+            ids = g["ids"]
+            keep_id, other_ids = ids[0], ids[1:]
+            # Re-point any real recorded transfers onto the row being kept — never delete them.
+            await conn.execute("UPDATE doctor_transfers SET earning_id=$1 WHERE earning_id = ANY($2::int[])", keep_id, other_ids)
+            await conn.execute("DELETE FROM doctor_earnings WHERE id = ANY($1::int[])", other_ids)
+        await conn.execute("""
+            DO $$ BEGIN
+              IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='doctor_earnings_estimate_id_key') THEN
+                ALTER TABLE doctor_earnings ADD CONSTRAINT doctor_earnings_estimate_id_key UNIQUE (estimate_id);
+              END IF;
+            END $$;
+        """)
+
         # One-time fix-up: recompute every existing doctor-earnings row so it reflects
         # the billed (post-discount) total instead of the estimate's original total.
         estimate_ids = await conn.fetch("SELECT estimate_id FROM doctor_earnings")
