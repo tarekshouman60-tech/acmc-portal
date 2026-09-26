@@ -864,7 +864,12 @@ async def update_milestones(pid: int, body: MilestoneUpdate, db=Depends(get_db),
         fields.append(f"{f}=${idx}"); vals.append(v); idx+=1
     if not fields: return {"ok":True}
     vals += [int(tok["sub"]), pid]
-    await db.execute(f"UPDATE milestones SET {','.join(fields)},updated_by=${idx},updated_at=NOW() WHERE patient_id=${idx+1}", *vals)
+    result = await db.execute(f"UPDATE milestones SET {','.join(fields)},updated_by=${idx},updated_at=NOW() WHERE patient_id=${idx+1}", *vals)
+    if result == "UPDATE 0":
+        # Older patients from before milestones rows were auto-created on patient creation
+        # have no row to update — the UPDATE above silently affects nothing. Create it and retry.
+        await db.execute("INSERT INTO milestones(patient_id) VALUES($1)", pid)
+        await db.execute(f"UPDATE milestones SET {','.join(fields)},updated_by=${idx},updated_at=NOW() WHERE patient_id=${idx+1}", *vals)
     # Notification emails happen in the background, not on the request — sending several
     # (e.g. all four milestones marked done at once) can take longer than the browser's
     # request timeout, which used to make a successful save look like it had failed.
@@ -1512,6 +1517,9 @@ async def startup_migrate():
             CREATE INDEX IF NOT EXISTS idx_cost_estimates_patient ON cost_estimates(patient_id);
             CREATE INDEX IF NOT EXISTS idx_cost_estimates_doctor ON cost_estimates(doctor_id);
             CREATE INDEX IF NOT EXISTS idx_milestones_patient ON milestones(patient_id);
+            INSERT INTO milestones(patient_id)
+              SELECT p.id FROM patients p
+              WHERE NOT EXISTS (SELECT 1 FROM milestones m WHERE m.patient_id=p.id);
             CREATE INDEX IF NOT EXISTS idx_billing_patient ON billing(patient_id);
             CREATE INDEX IF NOT EXISTS idx_payments_billing ON payments(billing_id);
             CREATE INDEX IF NOT EXISTS idx_doctor_earnings_doctor ON doctor_earnings(doctor_id);
