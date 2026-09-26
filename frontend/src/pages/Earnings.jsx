@@ -12,8 +12,9 @@ function Badge({status, paymentMethod}) {
     transferred:{bg:'#d1fae5',color:'#059669'},
     credit:{bg:'#dce9ff',color:'#155eef'}
   }
-  // Once fully transferred, show how the patient actually paid rather than the generic word.
-  const isCredit = status === 'transferred' && paymentMethod === 'credit'
+  // Credit-paid patients show "Credit" right away, regardless of transfer progress.
+  // Cash-paid patients show "Paid" once the referral fee has actually been transferred.
+  const isCredit = paymentMethod === 'credit'
   const label = isCredit ? 'credit' : status === 'transferred' ? 'paid' : status
   const s = map[isCredit ? 'credit' : status]||{bg:'#f0f4f8',color:'#8898aa'}
   return <span style={{background:s.bg,color:s.color,fontSize:11,fontWeight:600,padding:'2px 9px',borderRadius:20}}>{label?.replace('_',' ').toUpperCase()}</span>
