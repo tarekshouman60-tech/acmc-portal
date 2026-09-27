@@ -16,6 +16,9 @@ export default function Patients({ navigate }) {
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [tab, setTab] = useState('active') // doctors only: 'active' | 'archived'
+  const [archiveView, setArchiveView] = useState('all') // 'all' | 'month' | 'year'
+  const [archivePeriod, setArchivePeriod] = useState('')
 
   useEffect(() => { api.patients().then(setPatients).catch(e => console.error(e)).finally(() => setLoadingPatients(false)) }, [])
 
@@ -31,7 +34,16 @@ export default function Patients({ navigate }) {
     } catch(e) { setError(e.message) } finally { setSaving(false) }
   }
 
-  const filtered = patients.filter(p => [p.full_name, p.diagnosis, p.phone, p.icd10_code, p.national_id].some(v => (v||'').toLowerCase().includes(search.toLowerCase())))
+  const isDoctor = user?.role !== 'admin'
+  const searched = patients.filter(p => [p.full_name, p.diagnosis, p.phone, p.icd10_code, p.national_id].some(v => (v||'').toLowerCase().includes(search.toLowerCase())))
+  const active = searched.filter(p => !p.archived)
+  const archived = searched.filter(p => p.archived)
+  const archiveMonths = [...new Set(archived.map(p => p.archived_at?.slice(0,7)).filter(Boolean))].sort().reverse()
+  const archiveYears = [...new Set(archived.map(p => p.archived_at?.slice(0,4)).filter(Boolean))].sort().reverse()
+  const archivedFiltered = archiveView === 'all' ? archived
+    : archiveView === 'month' ? archived.filter(p => p.archived_at?.slice(0,7) === archivePeriod)
+    : archived.filter(p => p.archived_at?.slice(0,4) === archivePeriod)
+  const filtered = !isDoctor ? searched : (tab === 'archived' ? archivedFiltered : active)
 
   return (
     <div>
@@ -69,6 +81,40 @@ export default function Patients({ navigate }) {
         </div>
       )}
 
+      {/* Active / Archived (doctors only) — a patient moves to Archived once every referral
+          fee earned on them has actually been transferred; otherwise they stay Active. */}
+      {isDoctor && (
+        <div style={{display:'flex',gap:8,marginBottom:12}}>
+          {[['active',`Active (${active.length})`],['archived',`Archived (${archived.length})`]].map(([t,label])=>(
+            <button key={t} onClick={()=>setTab(t)}
+              style={{padding:'7px 16px',borderRadius:20,border:'1px solid #dde3ec',fontSize:12.5,fontWeight:600,cursor:'pointer',
+                background:tab===t?'#155eef':'#fff',color:tab===t?'#fff':'#4a5a70'}}>{label}</button>
+          ))}
+        </div>
+      )}
+
+      {isDoctor && tab==='archived' && (
+        <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap',alignItems:'center'}}>
+          {[['all','All'],['month','By month'],['year','By year']].map(([v,label])=>(
+            <button key={v} onClick={()=>{setArchiveView(v);setArchivePeriod('')}}
+              style={{padding:'5px 13px',borderRadius:20,border:'1px solid #dde3ec',fontSize:12,fontWeight:500,cursor:'pointer',
+                background:archiveView===v?'#eef2ff':'#fff',color:archiveView===v?'#4338ca':'#4a5a70'}}>{label}</button>
+          ))}
+          {archiveView==='month' && (
+            <select style={{...sel,width:'auto',padding:'5px 10px',fontSize:12}} value={archivePeriod} onChange={e=>setArchivePeriod(e.target.value)}>
+              <option value="">Select month…</option>
+              {archiveMonths.map(m=><option key={m} value={m}>{m}</option>)}
+            </select>
+          )}
+          {archiveView==='year' && (
+            <select style={{...sel,width:'auto',padding:'5px 10px',fontSize:12}} value={archivePeriod} onChange={e=>setArchivePeriod(e.target.value)}>
+              <option value="">Select year…</option>
+              {archiveYears.map(y=><option key={y} value={y}>{y}</option>)}
+            </select>
+          )}
+        </div>
+      )}
+
       {/* Search */}
       <div style={{marginBottom:12}}>
         <input style={{...inp,maxWidth:340}} placeholder="Search by name or diagnosis…" value={search} onChange={e=>setSearch(e.target.value)}/>
@@ -78,7 +124,9 @@ export default function Patients({ navigate }) {
       <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,overflow:'hidden'}}>
         {loadingPatients ? <div style={{padding:32,textAlign:'center'}}><div style={{width:28,height:28,border:'3px solid #dde3ec',borderTopColor:'#155eef',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div> : filtered.length === 0
           ? <div style={{padding:40,textAlign:'center',color:'#8898aa',fontSize:13}}>
-              {patients.length===0 ? 'No patients yet. Create your first patient above.' : 'No patients match your search.'}
+              {patients.length===0 ? 'No patients yet. Create your first patient above.'
+                : isDoctor && tab==='archived' ? 'No archived patients for this filter yet — patients move here once every referral fee for them has been transferred.'
+                : 'No patients match your search.'}
             </div>
           : <table style={{width:'100%',borderCollapse:'collapse'}}>
               <thead><tr style={{background:'#f7f9fc'}}>

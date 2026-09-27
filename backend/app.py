@@ -416,10 +416,31 @@ async def reset_physicist_password(pid: int, db=Depends(get_db), tok=Depends(adm
 # ── patients ──────────────────────────────────────────────────────────────────
 @app.get("/api/patients")
 async def list_patients(db=Depends(get_db), tok=Depends(decode_token)):
+    # A patient is "archived" once every referral fee earned on them has actually been
+    # transferred to the doctor (and only once at least one exists) — a patient with no
+    # completed billing yet, or with any outstanding balance, stays active.
     if tok["role"]=="admin":
-        rows = await db.fetch("SELECT p.*,d.full_name as doctor_name FROM patients p JOIN doctors d ON d.id=p.doctor_id ORDER BY p.created_at DESC")
+        rows = await db.fetch("""
+            SELECT p.*, d.full_name as doctor_name,
+                COALESCE(bool_and(de.status='transferred'), false) AS archived,
+                MAX(t.transfer_date) AS archived_at
+            FROM patients p
+            JOIN doctors d ON d.id=p.doctor_id
+            LEFT JOIN doctor_earnings de ON de.patient_id=p.id
+            LEFT JOIN doctor_transfers t ON t.earning_id=de.id
+            GROUP BY p.id, d.full_name
+            ORDER BY p.created_at DESC""")
     else:
-        rows = await db.fetch("SELECT * FROM patients WHERE doctor_id=$1 ORDER BY created_at DESC", int(tok["sub"]))
+        rows = await db.fetch("""
+            SELECT p.*,
+                COALESCE(bool_and(de.status='transferred'), false) AS archived,
+                MAX(t.transfer_date) AS archived_at
+            FROM patients p
+            LEFT JOIN doctor_earnings de ON de.patient_id=p.id
+            LEFT JOIN doctor_transfers t ON t.earning_id=de.id
+            WHERE p.doctor_id=$1
+            GROUP BY p.id
+            ORDER BY p.created_at DESC""", int(tok["sub"]))
     return [dict(r) for r in rows]
 
 @app.post("/api/patients")
