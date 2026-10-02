@@ -31,8 +31,10 @@ function TargetPicker({ value, onChange }) {
   // Semicolon-delimited so a custom target can itself contain commas
   // (e.g. "CTVLN: level II, III, IV") without being split into multiple chips.
   // PTVG and PTV1-3 carry a margin AND, optionally, a description ("PTV1 + 5 mm: prostate bed"
-  // or just "PTV1 + 5 mm", or just "PTV1: prostate bed" with no margin yet). CTV1-3 carry only
-  // a description ("CTV1: prostate").
+  // or just "PTV1 + 5 mm", or just "PTV1: prostate bed" with no margin yet). The margin can be a
+  // single uniform number ("5") or an asymmetric X/Y/Z triple ("5/5/7"). GTV carries a free-text
+  // prescription ("GTV: 70 Gy / 35# SIB") and CTV1-3 a description ("CTV1: prostate") — both
+  // using the same single free-text field.
   const selected = value ? value.split(';').map(s=>s.trim()).filter(Boolean) : []
   const baseOf = s => s.split(/ \+ |: /)[0]
   const isPreset = s => TARGET_PRESETS.includes(baseOf(s))
@@ -40,16 +42,31 @@ function TargetPicker({ value, onChange }) {
   const [newTarget, setNewTarget] = useState('')
   // Local drafts keep trailing spaces while typing; the stored value is re-parsed and trimmed on every change.
   const [drafts, setDrafts] = useState({})
+  const [asymMargin, setAsymMargin] = useState({}) // opt -> explicitly toggled symmetric/asymmetric
   const entryFor = opt => selected.find(s=>baseOf(s)===opt)
   const emit = arr => onChange(arr.join('; '))
   const isMm = o => /^PTV(G|[123])$/.test(o)
+  const AXES = ['x','y','z']
 
   function toggle(opt) {
     const e = entryFor(opt) || (selected.includes(opt) ? opt : null)
     emit(e ? selected.filter(v=>v!==e) : [...selected, opt])
   }
 
-  const marginOf = e => (e.match(/\+\s*([\d.]+)\s*mm/) || [])[1] || ''
+  const marginOf = e => (e.match(/\+\s*([\d./]+)\s*mm/) || [])[1] || ''
+  const marginParts = raw => { if (!raw) return ['','','']; const p = raw.split('/'); return p.length===3 ? p : [p[0],p[0],p[0]] }
+  const composeMargin = (x,y,z) => { x=(x||'').trim(); y=(y||'').trim(); z=(z||'').trim()
+    if (!x && !y && !z) return ''
+    return (x===y && y===z) ? x : `${x||0}/${y||0}/${z||0}` }
+  const isAsym = opt => opt in asymMargin ? asymMargin[opt] : marginOf(entryFor(opt)).includes('/')
+  function toggleAsym(opt) {
+    const makingAsym = !isAsym(opt)
+    if (makingAsym) {
+      const [x,y,z] = marginParts(drafts[opt] ?? marginOf(entryFor(opt)))
+      setDrafts(d=>({...d,[opt+'_x']:x,[opt+'_y']:y,[opt+'_z']:z}))
+    }
+    setAsymMargin(a=>({...a,[opt]:makingAsym}))
+  }
   const descOf = (opt, e) => isMm(opt) ? (e.match(/:\s*(.*)$/) || [])[1] || '' : e.slice(opt.length+2)
   function composeEntry(opt, margin, desc) {
     let s = opt
@@ -57,25 +74,34 @@ function TargetPicker({ value, onChange }) {
     if (desc) s += `: ${desc}`
     return s
   }
-  // Non-PTV (CTV) targets keep their single description field, unchanged.
+  // Non-PTV (GTV/CTV) targets keep their single free-text field (prescription for GTV,
+  // description for CTV1-3), unchanged.
   function setDetail(opt, text) {
     setDrafts(d=>({...d,[opt]:text}))
     const e = entryFor(opt)
     const t = text.trim()
     emit(selected.map(v=>v===e ? (t ? `${opt}: ${t}` : opt) : v))
   }
-  // PTV-type targets have two independent fields (margin, description) composed together.
+  // PTV-type targets have independent margin field(s) and a description, composed together.
   function setMargin(opt, text) {
     setDrafts(d=>({...d,[opt]:text}))
     const e = entryFor(opt)
     const desc = drafts[opt+'__desc'] ?? descOf(opt, e)
     emit(selected.map(v=>v===e ? composeEntry(opt, text.trim(), desc.trim()) : v))
   }
+  function setMarginAxis(opt, axis, text) {
+    setDrafts(d=>({...d,[opt+'_'+axis]:text}))
+    const e = entryFor(opt)
+    const [cx,cy,cz] = marginParts(marginOf(e))
+    const vals = {x: drafts[opt+'_x'] ?? cx, y: drafts[opt+'_y'] ?? cy, z: drafts[opt+'_z'] ?? cz, [axis]: text}
+    const desc = drafts[opt+'__desc'] ?? descOf(opt, e)
+    emit(selected.map(v=>v===e ? composeEntry(opt, composeMargin(vals.x,vals.y,vals.z), desc.trim()) : v))
+  }
   function setDesc(opt, text) {
     setDrafts(d=>({...d,[opt+'__desc']:text}))
     const e = entryFor(opt)
-    const margin = drafts[opt] ?? marginOf(e)
-    emit(selected.map(v=>v===e ? composeEntry(opt, margin.trim(), text.trim()) : v))
+    const margin = marginOf(e)
+    emit(selected.map(v=>v===e ? composeEntry(opt, margin, text.trim()) : v))
   }
 
   function addCustom() {
@@ -85,7 +111,7 @@ function TargetPicker({ value, onChange }) {
     setNewTarget('')
   }
 
-  const withDetail = TARGET_PRESETS.filter(o=>(isMm(o)||/^CTV[123]$/.test(o)) && entryFor(o))
+  const withDetail = TARGET_PRESETS.filter(o=>(isMm(o)||o==='GTV'||/^CTV[123]$/.test(o)) && entryFor(o))
 
   return (
     <div>
@@ -108,20 +134,36 @@ function TargetPicker({ value, onChange }) {
       {withDetail.length>0 && (
         <div style={{display:'flex',flexDirection:'column',gap:7,marginBottom:10}}>
           {withDetail.map(opt => (
-            <div key={opt} style={{display:'flex',alignItems:'center',gap:8}}>
+            <div key={opt} style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
               <span style={{width:52,fontSize:12.5,fontWeight:600,color:'#155eef'}}>{opt}</span>
               {isMm(opt)
                 ? <>
                     <span style={{fontSize:12.5,color:'#4a5a70'}}>+</span>
-                    <input style={{...inp,width:90}} type="number" min="0" step="0.5" placeholder="margin"
-                      value={drafts[opt] ?? marginOf(entryFor(opt))} onChange={e=>setMargin(opt,e.target.value)}
-                      onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt];return n})}/>
+                    {isAsym(opt) ? (
+                      AXES.map((axis,i) => (
+                        <span key={axis} style={{display:'flex',alignItems:'center',gap:3}}>
+                          <span style={{fontSize:11,color:'#8898aa',textTransform:'uppercase'}}>{axis}</span>
+                          <input style={{...inp,width:58}} type="number" min="0" step="0.5" placeholder="0"
+                            value={drafts[opt+'_'+axis] ?? marginParts(marginOf(entryFor(opt)))[i]}
+                            onChange={e=>setMarginAxis(opt,axis,e.target.value)}
+                            onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt+'_'+axis];return n})}/>
+                        </span>
+                      ))
+                    ) : (
+                      <input style={{...inp,width:90}} type="number" min="0" step="0.5" placeholder="margin"
+                        value={drafts[opt] ?? marginParts(marginOf(entryFor(opt)))[0]} onChange={e=>setMargin(opt,e.target.value)}
+                        onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt];return n})}/>
+                    )}
                     <span style={{fontSize:12.5,color:'#4a5a70'}}>mm</span>
-                    <input style={{...inp,flex:1}} placeholder="Description (optional), e.g. prostate + seminal vesicles"
+                    <button type="button" onClick={()=>toggleAsym(opt)}
+                      style={{border:'none',background:'none',color:'#155eef',fontSize:11.5,cursor:'pointer',padding:0,textDecoration:'underline'}}>
+                      {isAsym(opt) ? 'Use one value' : 'Asymmetric X/Y/Z'}
+                    </button>
+                    <input style={{...inp,flex:1,minWidth:160}} placeholder="Description (optional), e.g. prostate + seminal vesicles"
                       value={drafts[opt+'__desc'] ?? descOf(opt,entryFor(opt))} onChange={e=>setDesc(opt,e.target.value)}
                       onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt+'__desc'];return n})}/>
                   </>
-                : <input style={{...inp,flex:1}} placeholder="Description, e.g. prostate + seminal vesicles"
+                : <input style={{...inp,flex:1}} placeholder={opt==='GTV' ? 'Prescription, e.g. 70 Gy / 35# (SIB)' : 'Description, e.g. prostate + seminal vesicles'}
                     value={drafts[opt] ?? descOf(opt,entryFor(opt))} onChange={e=>setDetail(opt,e.target.value)}
                       onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt];return n})}/>}
             </div>
