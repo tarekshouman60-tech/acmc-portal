@@ -30,30 +30,53 @@ const TARGET_PRESETS = ['GTV','PTVG','CTV1','CTV2','CTV3','PTV1','PTV2','PTV3']
 function TargetPicker({ value, onChange }) {
   // Semicolon-delimited so a custom target can itself contain commas
   // (e.g. "CTVLN: level II, III, IV") without being split into multiple chips.
-  // PTVG and PTV1-3 carry a margin ("PTV1 + 5 mm") and CTV1-3 a description ("CTV1: prostate").
+  // PTVG and PTV1-3 carry a margin AND, optionally, a description ("PTV1 + 5 mm: prostate bed"
+  // or just "PTV1 + 5 mm", or just "PTV1: prostate bed" with no margin yet). CTV1-3 carry only
+  // a description ("CTV1: prostate").
   const selected = value ? value.split(';').map(s=>s.trim()).filter(Boolean) : []
   const baseOf = s => s.split(/ \+ |: /)[0]
   const isPreset = s => TARGET_PRESETS.includes(baseOf(s))
   const options = [...TARGET_PRESETS, ...selected.filter(v=>!isPreset(v))]
   const [newTarget, setNewTarget] = useState('')
-  // Local draft keeps trailing spaces while typing; the stored value is re-parsed and trimmed on every change.
+  // Local drafts keep trailing spaces while typing; the stored value is re-parsed and trimmed on every change.
   const [drafts, setDrafts] = useState({})
   const entryFor = opt => selected.find(s=>baseOf(s)===opt)
   const emit = arr => onChange(arr.join('; '))
+  const isMm = o => /^PTV(G|[123])$/.test(o)
 
   function toggle(opt) {
     const e = entryFor(opt) || (selected.includes(opt) ? opt : null)
     emit(e ? selected.filter(v=>v!==e) : [...selected, opt])
   }
+
+  const marginOf = e => (e.match(/\+\s*([\d.]+)\s*mm/) || [])[1] || ''
+  const descOf = (opt, e) => isMm(opt) ? (e.match(/:\s*(.*)$/) || [])[1] || '' : e.slice(opt.length+2)
+  function composeEntry(opt, margin, desc) {
+    let s = opt
+    if (margin) s += ` + ${margin} mm`
+    if (desc) s += `: ${desc}`
+    return s
+  }
+  // Non-PTV (CTV) targets keep their single description field, unchanged.
   function setDetail(opt, text) {
     setDrafts(d=>({...d,[opt]:text}))
     const e = entryFor(opt)
     const t = text.trim()
-    const next = isMm(opt) ? (t ? `${opt} + ${t} mm` : opt) : (t ? `${opt}: ${t}` : opt)
-    emit(selected.map(v=>v===e ? next : v))
+    emit(selected.map(v=>v===e ? (t ? `${opt}: ${t}` : opt) : v))
   }
-  const isMm = o => /^PTV(G|[123])$/.test(o)
-  const detailOf = (opt, e) => isMm(opt) ? (e.match(/ \+ (.*?) mm$/)||[])[1]||'' : e.slice(opt.length+2)
+  // PTV-type targets have two independent fields (margin, description) composed together.
+  function setMargin(opt, text) {
+    setDrafts(d=>({...d,[opt]:text}))
+    const e = entryFor(opt)
+    const desc = drafts[opt+'__desc'] ?? descOf(opt, e)
+    emit(selected.map(v=>v===e ? composeEntry(opt, text.trim(), desc.trim()) : v))
+  }
+  function setDesc(opt, text) {
+    setDrafts(d=>({...d,[opt+'__desc']:text}))
+    const e = entryFor(opt)
+    const margin = drafts[opt] ?? marginOf(e)
+    emit(selected.map(v=>v===e ? composeEntry(opt, margin.trim(), text.trim()) : v))
+  }
 
   function addCustom() {
     const t = newTarget.trim()
@@ -88,13 +111,18 @@ function TargetPicker({ value, onChange }) {
             <div key={opt} style={{display:'flex',alignItems:'center',gap:8}}>
               <span style={{width:52,fontSize:12.5,fontWeight:600,color:'#155eef'}}>{opt}</span>
               {isMm(opt)
-                ? <><span style={{fontSize:12.5,color:'#4a5a70'}}>+</span>
+                ? <>
+                    <span style={{fontSize:12.5,color:'#4a5a70'}}>+</span>
                     <input style={{...inp,width:90}} type="number" min="0" step="0.5" placeholder="margin"
-                      value={drafts[opt] ?? detailOf(opt,entryFor(opt))} onChange={e=>setDetail(opt,e.target.value)}
+                      value={drafts[opt] ?? marginOf(entryFor(opt))} onChange={e=>setMargin(opt,e.target.value)}
                       onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt];return n})}/>
-                    <span style={{fontSize:12.5,color:'#4a5a70'}}>mm</span></>
+                    <span style={{fontSize:12.5,color:'#4a5a70'}}>mm</span>
+                    <input style={{...inp,flex:1}} placeholder="Description (optional), e.g. prostate + seminal vesicles"
+                      value={drafts[opt+'__desc'] ?? descOf(opt,entryFor(opt))} onChange={e=>setDesc(opt,e.target.value)}
+                      onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt+'__desc'];return n})}/>
+                  </>
                 : <input style={{...inp,flex:1}} placeholder="Description, e.g. prostate + seminal vesicles"
-                    value={drafts[opt] ?? detailOf(opt,entryFor(opt))} onChange={e=>setDetail(opt,e.target.value)}
+                    value={drafts[opt] ?? descOf(opt,entryFor(opt))} onChange={e=>setDetail(opt,e.target.value)}
                       onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt];return n})}/>}
             </div>
           ))}
