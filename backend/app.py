@@ -1517,6 +1517,54 @@ async def update_transfer(tid: int, body: TransferUpdate, db=Depends(get_db), to
     balance = await _recalc_earning_transfers(db, t["earning_id"])
     return {"ok": True, "balance_egp": balance}
 
+@app.get("/api/earnings/ready-for-transfer")
+async def earnings_ready_for_transfer(cutoff: date, db=Depends(get_db), tok=Depends(admin_only)):
+    """Patients who finished paying (their bill is fully paid) on or before the given cutoff
+    date and whose referral fee hasn't been fully transferred to the doctor yet — the list an
+    admin works from to batch-order several transfers at once (e.g. on the 15th of each month)."""
+    rows = await db.fetch("""
+        SELECT de.id AS earning_id, de.doctor_id, de.patient_id, de.balance_egp, de.status,
+               d.full_name AS doctor_name, p.full_name AS patient_name,
+               (SELECT MAX(pay.payment_date) FROM payments pay
+                JOIN billing bl ON bl.id=pay.billing_id WHERE bl.estimate_id=de.estimate_id) AS paid_on
+        FROM doctor_earnings de
+        JOIN doctors d ON d.id=de.doctor_id
+        JOIN patients p ON p.id=de.patient_id
+        WHERE de.status != 'transferred'
+        ORDER BY d.full_name, p.full_name""")
+    out = []
+    for r in rows:
+        if r["paid_on"] and r["paid_on"] <= cutoff:
+            out.append({**dict(r), "balance_egp": float(r["balance_egp"] or 0),
+                        "paid_on": r["paid_on"].isoformat()})
+    return out
+
+class BatchTransferCreate(BaseModel):
+    earning_ids: List[int]
+    transfer_date: Optional[date] = None
+    transfer_time: Optional[dtime] = None
+    method: str
+    reference: Optional[str] = None
+    notes: Optional[str] = None
+
+@app.post("/api/transfers/batch")
+async def add_transfers_batch(body: BatchTransferCreate, db=Depends(get_db), tok=Depends(admin_only)):
+    if not body.earning_ids: raise HTTPException(400, "No patients selected")
+    results = []
+    for eid in body.earning_ids:
+        earning = await db.fetchrow("SELECT * FROM doctor_earnings WHERE id=$1", eid)
+        if not earning or float(earning["balance_egp"] or 0) <= 0:
+            continue
+        await db.execute("""INSERT INTO doctor_transfers
+            (doctor_id,earning_id,amount_egp,transfer_date,transfer_time,method,reference,recorded_by,notes)
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)""",
+            earning["doctor_id"], eid, earning["balance_egp"],
+            body.transfer_date or date.today(), body.transfer_time, body.method, body.reference,
+            int(tok["sub"]), body.notes)
+        balance = await _recalc_earning_transfers(db, eid)
+        results.append({"earning_id": eid, "balance_egp": balance})
+    return {"ok": True, "transferred": len(results), "results": results}
+
 # ── DB migration on startup (adds new tables if not exist) ────────────────────
 @app.on_event("startup")
 async def startup_migrate():

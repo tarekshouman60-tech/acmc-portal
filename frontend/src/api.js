@@ -127,6 +127,8 @@ export const api = {
   listTransfers: () => req('GET','/transfers'),
   updateTransfer: (id,data) => req('PATCH',`/transfers/${id}`,data),
   addTransfer: (data) => req('POST','/transfers',data),
+  readyForTransfer: (cutoff) => req('GET',`/earnings/ready-for-transfer?cutoff=${cutoff}`),
+  addTransfersBatch: (data) => req('POST','/transfers/batch',data),
   estimatesList: () => req('GET','/estimates-list'),
   getSetting: (key) => req('GET',`/settings/${key}`),
   updateSetting: (key, value) => req('PATCH',`/settings/${key}`,{value}),

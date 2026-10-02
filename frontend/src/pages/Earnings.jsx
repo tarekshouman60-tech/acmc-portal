@@ -49,6 +49,65 @@ function AdminEarnings() {
   const [bonusPct, setBonusPct] = useState('5')
   const [savingBonus, setSavingBonus] = useState(false)
 
+  // Batch transfer: pick a monthly cutoff day (e.g. the 15th), list every patient across all
+  // doctors who finished paying on or before that date this month and hasn't been paid out yet,
+  // and record all the selected transfers in one action instead of one at a time.
+  const [cutoffDay, setCutoffDay] = useState('15')
+  const [savingCutoffDay, setSavingCutoffDay] = useState(false)
+  const [cutoffDate, setCutoffDate] = useState('')
+  const [readyList, setReadyList] = useState(null)
+  const [loadingReady, setLoadingReady] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [batchForm, setBatchForm] = useState({transfer_date:'',transfer_time:'',method:'bank_transfer',reference:''})
+  const [batchSaving, setBatchSaving] = useState(false)
+  const [batchMsg, setBatchMsg] = useState('')
+
+  useEffect(() => {
+    api.getSetting('transfer_cutoff_day').then(s => {
+      const d = s.value || '15'
+      setCutoffDay(d)
+      setCutoffDate(defaultCutoffDate(d))
+    })
+  }, [])
+
+  function defaultCutoffDate(day) {
+    const now = new Date()
+    const d = String(Math.min(parseInt(day)||15, 28)).padStart(2,'0')
+    return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${d}`
+  }
+  async function saveCutoffDay() {
+    setSavingCutoffDay(true)
+    try { await api.updateSetting('transfer_cutoff_day', cutoffDay); setCutoffDate(defaultCutoffDate(cutoffDay)) }
+    finally { setSavingCutoffDay(false) }
+  }
+  async function loadReady() {
+    if (!cutoffDate) return
+    setLoadingReady(true); setError(''); setBatchMsg('')
+    try {
+      const list = await api.readyForTransfer(cutoffDate)
+      setReadyList(list)
+      setSelectedIds(new Set(list.map(r=>r.earning_id)))
+    } catch(e) { setError(e.message) } finally { setLoadingReady(false) }
+  }
+  function toggleSelected(id) {
+    setSelectedIds(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+  function toggleSelectAll() {
+    setSelectedIds(s => s.size === (readyList||[]).length ? new Set() : new Set((readyList||[]).map(r=>r.earning_id)))
+  }
+  async function submitBatch() {
+    setBatchSaving(true); setError(''); setBatchMsg('')
+    try {
+      const res = await api.addTransfersBatch({
+        earning_ids: [...selectedIds], transfer_date: batchForm.transfer_date||null,
+        transfer_time: batchForm.transfer_time||null, method: batchForm.method, reference: batchForm.reference||null})
+      setBatchMsg(`✓ Recorded transfers for ${res.transferred} patient${res.transferred!==1?'s':''}.`)
+      setReadyList(null); setSelectedIds(new Set())
+      loadTransfers(); api.listEarnings().then(setEarnings); api.earningsSummary().then(setSummary)
+    } catch(e) { setError(e.message) } finally { setBatchSaving(false) }
+  }
+  const selectedTotal = (readyList||[]).filter(r=>selectedIds.has(r.earning_id)).reduce((s,r)=>s+parseFloat(r.balance_egp||0),0)
+
   useEffect(() => {
     api.earningsSummary().then(setSummary)
     api.listEarnings().then(setEarnings)
@@ -99,11 +158,11 @@ function AdminEarnings() {
 
       {/* Tabs */}
       <div style={{display:'flex',gap:8,marginBottom:16}}>
-        {['overview','calculate','transfer'].map(t=>(
+        {['overview','calculate','transfer','batch'].map(t=>(
           <button key={t} onClick={()=>setTab(t)}
             style={{padding:'7px 16px',borderRadius:20,border:'1px solid #dde3ec',fontSize:13,fontWeight:500,cursor:'pointer',
               background:tab===t?'#155eef':'#fff',color:tab===t?'#fff':'#4a5a70'}}>
-            {t==='overview'?'Overview':t==='calculate'?'Set Fee & Calculate':'Record Transfer'}
+            {t==='overview'?'Overview':t==='calculate'?'Set Fee & Calculate':t==='transfer'?'Record Transfer':'Batch Transfer'}
           </button>
         ))}
       </div>
@@ -299,6 +358,95 @@ function AdminEarnings() {
           </table>)}
         </div>
       </>)}
+
+      {/* Batch Transfer tab */}
+      {tab==='batch' && (
+        <div>
+          <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'20px',marginBottom:16}}>
+            <div style={{fontWeight:600,fontSize:14,marginBottom:4}}>Monthly transfer cutoff</div>
+            <p style={{fontSize:12.5,color:'#4a5a70',marginTop:0,marginBottom:14}}>
+              Patients across all doctors who fully paid on or before this date — and haven't been paid out yet — are listed below, so you can order several transfers at once.
+            </p>
+            <div style={{display:'flex',gap:13,alignItems:'flex-end',flexWrap:'wrap'}}>
+              <FL label="Cutoff day of month">
+                <input style={{...inp,width:80}} type="number" min="1" max="28" value={cutoffDay} onChange={e=>setCutoffDay(e.target.value)}/>
+              </FL>
+              <button onClick={saveCutoffDay} disabled={savingCutoffDay}
+                style={{padding:'8px 14px',borderRadius:7,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12.5,fontWeight:600}}>
+                {savingCutoffDay?'Saving…':'Save as default'}
+              </button>
+              <FL label="Cutoff date to use now">
+                <input style={inp} type="date" value={cutoffDate} onChange={e=>setCutoffDate(e.target.value)}/>
+              </FL>
+              <button onClick={loadReady} disabled={loadingReady||!cutoffDate}
+                style={{padding:'9px 18px',borderRadius:7,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
+                {loadingReady?'Loading…':'Find patients ready for transfer'}
+              </button>
+            </div>
+          </div>
+
+          {error && <div style={{background:'#ffe4e6',color:'#e11d48',border:'1px solid #fecdd3',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>{error}</div>}
+          {batchMsg && <div style={{background:'#d1fae5',color:'#059669',border:'1px solid #a7f3d0',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>{batchMsg}</div>}
+
+          {readyList && (
+            <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:20}}>
+              <div style={{fontWeight:600,fontSize:14,marginBottom:12}}>
+                Ready for transfer, paid by {cutoffDate} ({readyList.length})
+              </div>
+              {readyList.length===0 ? (
+                <div style={{color:'#8898aa',fontSize:13}}>No outstanding patients finished paying by this date.</div>
+              ) : (
+                <>
+                  <div style={{overflowX:'auto',marginBottom:16}}>
+                    <table style={{width:'100%',borderCollapse:'collapse',fontSize:12.5}}>
+                      <thead><tr>
+                        <th style={{padding:'7px 10px',borderBottom:'1px solid #dde3ec'}}>
+                          <input type="checkbox" checked={selectedIds.size===readyList.length} onChange={toggleSelectAll}/>
+                        </th>
+                        {['Doctor','Patient','Paid on','Balance due'].map(h=><th key={h} style={{textAlign:'left',padding:'7px 10px',fontSize:10.5,color:'#8898aa',textTransform:'uppercase',borderBottom:'1px solid #dde3ec'}}>{h}</th>)}
+                      </tr></thead>
+                      <tbody>{readyList.map(r=>(
+                        <tr key={r.earning_id} style={{borderBottom:'1px solid #f0f4f8'}}>
+                          <td style={{padding:'8px 10px'}}><input type="checkbox" checked={selectedIds.has(r.earning_id)} onChange={()=>toggleSelected(r.earning_id)}/></td>
+                          <td style={{padding:'8px 10px'}}>{r.doctor_name}</td>
+                          <td style={{padding:'8px 10px'}}>{r.patient_name}</td>
+                          <td style={{padding:'8px 10px'}}>{r.paid_on}</td>
+                          <td style={{padding:'8px 10px',fontFamily:'monospace',color:'#059669'}}>{fmtEGP(r.balance_egp)}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+                  <div style={{background:'#f7f9fc',borderRadius:8,padding:'12px 16px',marginBottom:16,fontSize:13,fontWeight:600}}>
+                    {selectedIds.size} selected — total EGP {fmtEGP(selectedTotal)}
+                  </div>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:13,marginBottom:14}}>
+                    <FL label="Transfer date">
+                      <input style={inp} type="date" value={batchForm.transfer_date} onChange={e=>setBatchForm(f=>({...f,transfer_date:e.target.value}))}/>
+                    </FL>
+                    <FL label="Time">
+                      <input style={inp} type="time" value={batchForm.transfer_time} onChange={e=>setBatchForm(f=>({...f,transfer_time:e.target.value}))}/>
+                    </FL>
+                    <FL label="Method">
+                      <select style={inp} value={batchForm.method} onChange={e=>setBatchForm(f=>({...f,method:e.target.value}))}>
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="cash">Cash</option>
+                        <option value="check">Cheque</option>
+                      </select>
+                    </FL>
+                    <FL label="Reference / notes">
+                      <input style={inp} value={batchForm.reference} onChange={e=>setBatchForm(f=>({...f,reference:e.target.value}))} placeholder="e.g. Batch run #1"/>
+                    </FL>
+                  </div>
+                  <button onClick={submitBatch} disabled={batchSaving||selectedIds.size===0}
+                    style={{padding:'10px 20px',borderRadius:7,border:'none',background:'#059669',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600,opacity:selectedIds.size===0?.6:1}}>
+                    {batchSaving?'Recording…':`Record Transfers for ${selectedIds.size} Patient${selectedIds.size!==1?'s':''}`}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
