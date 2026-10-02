@@ -32,9 +32,9 @@ function TargetPicker({ value, onChange }) {
   // (e.g. "CTVLN: level II, III, IV") without being split into multiple chips.
   // PTVG and PTV1-3 carry a margin AND, optionally, a description ("PTV1 + 5 mm: prostate bed"
   // or just "PTV1 + 5 mm", or just "PTV1: prostate bed" with no margin yet). The margin can be a
-  // single uniform number ("5") or an asymmetric X/Y/Z triple ("5/5/7"). GTV carries a free-text
-  // prescription ("GTV: 70 Gy / 35# SIB") and CTV1-3 a description ("CTV1: prostate") — both
-  // using the same single free-text field.
+  // single uniform number ("5") or an asymmetric 6-direction expansion, sup/inf/ant/post/rt/lt
+  // ("5/5/7/7/8/8"). GTV carries a free-text prescription ("GTV: 70 Gy / 35# SIB") and CTV1-3 a
+  // description ("CTV1: prostate") — both using the same single free-text field.
   const selected = value ? value.split(';').map(s=>s.trim()).filter(Boolean) : []
   const baseOf = s => s.split(/ \+ |: /)[0]
   const isPreset = s => TARGET_PRESETS.includes(baseOf(s))
@@ -46,7 +46,7 @@ function TargetPicker({ value, onChange }) {
   const entryFor = opt => selected.find(s=>baseOf(s)===opt)
   const emit = arr => onChange(arr.join('; '))
   const isMm = o => /^PTV(G|[123])$/.test(o)
-  const AXES = ['x','y','z']
+  const AXES = [{key:'sup',label:'Sup'},{key:'inf',label:'Inf'},{key:'ant',label:'Ant'},{key:'post',label:'Post'},{key:'rt',label:'Rt Lat'},{key:'lt',label:'Lt Lat'}]
 
   function toggle(opt) {
     const e = entryFor(opt) || (selected.includes(opt) ? opt : null)
@@ -54,16 +54,16 @@ function TargetPicker({ value, onChange }) {
   }
 
   const marginOf = e => (e.match(/\+\s*([\d./]+)\s*mm/) || [])[1] || ''
-  const marginParts = raw => { if (!raw) return ['','','']; const p = raw.split('/'); return p.length===3 ? p : [p[0],p[0],p[0]] }
-  const composeMargin = (x,y,z) => { x=(x||'').trim(); y=(y||'').trim(); z=(z||'').trim()
-    if (!x && !y && !z) return ''
-    return (x===y && y===z) ? x : `${x||0}/${y||0}/${z||0}` }
+  const marginParts = raw => { if (!raw) return AXES.map(()=>''); const p = raw.split('/'); return p.length===AXES.length ? p : AXES.map(()=>p[0]||'') }
+  const composeMargin = vals => { const v = vals.map(x=>(x||'').trim())
+    if (v.every(x=>!x)) return ''
+    return v.every(x=>x===v[0]) ? v[0] : v.map(x=>x||0).join('/') }
   const isAsym = opt => opt in asymMargin ? asymMargin[opt] : marginOf(entryFor(opt)).includes('/')
   function toggleAsym(opt) {
     const makingAsym = !isAsym(opt)
     if (makingAsym) {
-      const [x,y,z] = marginParts(drafts[opt] ?? marginOf(entryFor(opt)))
-      setDrafts(d=>({...d,[opt+'_x']:x,[opt+'_y']:y,[opt+'_z']:z}))
+      const parts = marginParts(drafts[opt] ?? marginOf(entryFor(opt)))
+      setDrafts(d=>{ const n={...d}; AXES.forEach((a,i)=>{n[opt+'_'+a.key]=parts[i]}); return n })
     }
     setAsymMargin(a=>({...a,[opt]:makingAsym}))
   }
@@ -92,10 +92,10 @@ function TargetPicker({ value, onChange }) {
   function setMarginAxis(opt, axis, text) {
     setDrafts(d=>({...d,[opt+'_'+axis]:text}))
     const e = entryFor(opt)
-    const [cx,cy,cz] = marginParts(marginOf(e))
-    const vals = {x: drafts[opt+'_x'] ?? cx, y: drafts[opt+'_y'] ?? cy, z: drafts[opt+'_z'] ?? cz, [axis]: text}
+    const current = marginParts(marginOf(e))
+    const vals = AXES.map((a,i) => a.key===axis ? text : (drafts[opt+'_'+a.key] ?? current[i]))
     const desc = drafts[opt+'__desc'] ?? descOf(opt, e)
-    emit(selected.map(v=>v===e ? composeEntry(opt, composeMargin(vals.x,vals.y,vals.z), desc.trim()) : v))
+    emit(selected.map(v=>v===e ? composeEntry(opt, composeMargin(vals), desc.trim()) : v))
   }
   function setDesc(opt, text) {
     setDrafts(d=>({...d,[opt+'__desc']:text}))
@@ -134,38 +134,44 @@ function TargetPicker({ value, onChange }) {
       {withDetail.length>0 && (
         <div style={{display:'flex',flexDirection:'column',gap:7,marginBottom:10}}>
           {withDetail.map(opt => (
-            <div key={opt} style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-              <span style={{width:52,fontSize:12.5,fontWeight:600,color:'#155eef'}}>{opt}</span>
-              {isMm(opt)
-                ? <>
-                    <span style={{fontSize:12.5,color:'#4a5a70'}}>+</span>
-                    {isAsym(opt) ? (
-                      AXES.map((axis,i) => (
-                        <span key={axis} style={{display:'flex',alignItems:'center',gap:3}}>
-                          <span style={{fontSize:11,color:'#8898aa',textTransform:'uppercase'}}>{axis}</span>
-                          <input style={{...inp,width:58}} type="number" min="0" step="0.5" placeholder="0"
-                            value={drafts[opt+'_'+axis] ?? marginParts(marginOf(entryFor(opt)))[i]}
-                            onChange={e=>setMarginAxis(opt,axis,e.target.value)}
-                            onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt+'_'+axis];return n})}/>
-                        </span>
-                      ))
-                    ) : (
-                      <input style={{...inp,width:90}} type="number" min="0" step="0.5" placeholder="margin"
-                        value={drafts[opt] ?? marginParts(marginOf(entryFor(opt)))[0]} onChange={e=>setMargin(opt,e.target.value)}
-                        onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt];return n})}/>
-                    )}
-                    <span style={{fontSize:12.5,color:'#4a5a70'}}>mm</span>
-                    <button type="button" onClick={()=>toggleAsym(opt)}
-                      style={{border:'none',background:'none',color:'#155eef',fontSize:11.5,cursor:'pointer',padding:0,textDecoration:'underline'}}>
-                      {isAsym(opt) ? 'Use one value' : 'Asymmetric X/Y/Z'}
-                    </button>
-                    <input style={{...inp,flex:1,minWidth:160}} placeholder="Description (optional), e.g. prostate + seminal vesicles"
-                      value={drafts[opt+'__desc'] ?? descOf(opt,entryFor(opt))} onChange={e=>setDesc(opt,e.target.value)}
-                      onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt+'__desc'];return n})}/>
-                  </>
-                : <input style={{...inp,flex:1}} placeholder={opt==='GTV' ? 'Prescription, e.g. 70 Gy / 35# (SIB)' : 'Description, e.g. prostate + seminal vesicles'}
-                    value={drafts[opt] ?? descOf(opt,entryFor(opt))} onChange={e=>setDetail(opt,e.target.value)}
-                      onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt];return n})}/>}
+            <div key={opt} style={{display:'flex',flexDirection:'column',gap:6}}>
+              <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                <span style={{width:52,fontSize:12.5,fontWeight:600,color:'#155eef'}}>{opt}</span>
+                {isMm(opt)
+                  ? <>
+                      <span style={{fontSize:12.5,color:'#4a5a70'}}>+</span>
+                      {!isAsym(opt) && (
+                        <input style={{...inp,width:90}} type="number" min="0" step="0.5" placeholder="margin"
+                          value={drafts[opt] ?? marginParts(marginOf(entryFor(opt)))[0]} onChange={e=>setMargin(opt,e.target.value)}
+                          onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt];return n})}/>
+                      )}
+                      {!isAsym(opt) && <span style={{fontSize:12.5,color:'#4a5a70'}}>mm</span>}
+                      <button type="button" onClick={()=>toggleAsym(opt)}
+                        style={{border:'none',background:'none',color:'#155eef',fontSize:11.5,cursor:'pointer',padding:0,textDecoration:'underline'}}>
+                        {isAsym(opt) ? 'Use one value' : 'Asymmetric (Sup/Inf/Ant/Post/Rt/Lt)'}
+                      </button>
+                      <input style={{...inp,flex:1,minWidth:160}} placeholder="Description (optional), e.g. prostate + seminal vesicles"
+                        value={drafts[opt+'__desc'] ?? descOf(opt,entryFor(opt))} onChange={e=>setDesc(opt,e.target.value)}
+                        onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt+'__desc'];return n})}/>
+                    </>
+                  : <input style={{...inp,flex:1}} placeholder={opt==='GTV' ? 'Prescription, e.g. 70 Gy / 35# (SIB)' : 'Description, e.g. prostate + seminal vesicles'}
+                      value={drafts[opt] ?? descOf(opt,entryFor(opt))} onChange={e=>setDetail(opt,e.target.value)}
+                        onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt];return n})}/>}
+              </div>
+              {isMm(opt) && isAsym(opt) && (
+                <div style={{display:'flex',flexWrap:'wrap',gap:10,marginLeft:60}}>
+                  {AXES.map((axis,i) => (
+                    <span key={axis.key} style={{display:'flex',alignItems:'center',gap:4}}>
+                      <span style={{fontSize:11,color:'#8898aa',width:40}}>{axis.label}</span>
+                      <input style={{...inp,width:58}} type="number" min="0" step="0.5" placeholder="0"
+                        value={drafts[opt+'_'+axis.key] ?? marginParts(marginOf(entryFor(opt)))[i]}
+                        onChange={e=>setMarginAxis(opt,axis.key,e.target.value)}
+                        onBlur={()=>setDrafts(d=>{const n={...d};delete n[opt+'_'+axis.key];return n})}/>
+                      <span style={{fontSize:11,color:'#8898aa'}}>mm</span>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
