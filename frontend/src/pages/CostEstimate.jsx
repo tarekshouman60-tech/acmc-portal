@@ -13,6 +13,15 @@ const CATS = [
   {id:'Quality & Review',color:'#c9f7ee',tc:'#085041',title:'Velocity, peer review, consultations'},
 ]
 
+// Mirrors backend's FIXATION_TO_IMM_CODE — best-effort mapping from the Sim Order's fixation
+// checklist to the matching Immobilization service, so a fresh estimate can start pre-filled
+// with what was actually requested.
+const FIXATION_TO_IMM_CODE = {
+  'SRS mask':'IMM-005', 'Head closed':'IMM-001', 'Head open':'IMM-003',
+  'Head & neck closed':'IMM-002', 'Head & neck open':'IMM-004',
+  'Pelvis':'IMM-006', 'Vac-Lok adult':'IMM-008', 'Vac-Lok pediatric':'IMM-008',
+}
+
 export default function CostEstimate({ navigate, patientId }) {
   const { user } = useAuth()
   const [patient, setPatient] = useState(null)
@@ -27,13 +36,24 @@ export default function CostEstimate({ navigate, patientId }) {
   const [discountPct, setDiscountPct] = useState('')
   const [saved, setSaved] = useState(null)
   const [error, setError] = useState('')
+  // Falls back for any per-fraction service's quantity once the Clinical Order's fraction
+  // count is known, so newly-checked delivery services start matching what's prescribed
+  // instead of defaulting to 1.
+  const [defaultFractions, setDefaultFractions] = useState(null)
+  // Mismatches between this patient's last-saved estimate and what the Sim/Clinical Order
+  // actually ended up requesting (e.g. order changed after the estimate was made).
+  const [reconciliation, setReconciliation] = useState([])
 
   useEffect(() => {
-    api.services().then(setServices)
-    if (!patientId) return
-    api.getPatient(patientId).then(d => {
+    if (!patientId) { api.services().then(setServices); return }
+    Promise.all([api.services(), api.getPatient(patientId)]).then(([svcs, d]) => {
+      setServices(svcs)
       setPatient(d.patient)
+      setReconciliation(d.reconciliation || [])
       const existing = d.cost_estimates?.[0]
+      const sim = d.sim_orders?.[0]
+      const clin = d.clinical_orders?.[0]
+      if (clin?.fractions) setDefaultFractions(clin.fractions)
       if (existing) {
         api.getEstimate(existing.id).then(({items}) => {
           setSelected(new Set(items.map(i => i.service_id)))
@@ -49,6 +69,18 @@ export default function CostEstimate({ navigate, patientId }) {
           })
           setOpenCats(c => new Set([...c, ...items.map(i => i.category)]))
         })
+      } else {
+        // Fresh estimate: pre-fill the immobilization service from the Sim Order's fixation,
+        // if one was already ordered, so the estimate starts matching what was requested.
+        if (sim?.fixation) {
+          const requested = sim.fixation.split(';').map(s=>s.trim()).filter(Boolean)
+          const codes = new Set(requested.map(r=>FIXATION_TO_IMM_CODE[r]).filter(Boolean))
+          const matches = svcs.filter(s => s.category==='Immobilization' && codes.has(s.code))
+          if (matches.length) {
+            setSelected(s => new Set([...s, ...matches.map(m=>m.id)]))
+            setOpenCats(c => new Set([...c, 'Immobilization']))
+          }
+        }
       }
     })
   }, [patientId])
@@ -61,7 +93,7 @@ export default function CostEstimate({ navigate, patientId }) {
     setSelected(s => { const n=new Set(s); n.has(id)?n.delete(id):n.add(id); return n })
   }
 
-  function getQty(id) { return quantities[id] || 1 }
+  function getQty(id) { return quantities[id] || defaultFractions || 1 }
   function setQty(id, v) { setQuantities(q => ({...q,[id]:parseInt(v)||1})) }
 
   function hasPackage() {
@@ -238,6 +270,14 @@ th:last-child,td:last-child{text-align:right}
       {error && <div style={{background:'#ffe4e6',color:'#e11d48',border:'1px solid #fecdd3',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>{error}</div>}
       {saved && <div style={{background:'#d1fae5',color:'#059669',border:'1px solid #a7f3d0',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>✓ {saved.updated ? 'Updated' : 'Saved'} as <strong>{saved.order_ref}</strong></div>}
       {hasPackage() && <div style={{background:'#ffe4e6',color:'#791f1f',border:'1px solid #fecdd3',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>📦 SBRT/SRS Package selected — this is all-inclusive. Other selected services are bundled into the package price and excluded from the total; only the package price plus your own consultation fees are charged.</div>}
+      {reconciliation.length > 0 && (
+        <div style={{background:'#fef3c7',border:'1px solid #fde68a',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12,color:'#92400e'}}>
+          <div style={{fontWeight:700,marginBottom:4}}>⚠️ This saved estimate doesn't match the actual order</div>
+          <ul style={{margin:'0 0 0 18px',padding:0}}>
+            {reconciliation.map((w,i) => <li key={i} style={{marginBottom:2}}>{w.message}</li>)}
+          </ul>
+        </div>
+      )}
 
       {/* Services */}
       <div style={card}>

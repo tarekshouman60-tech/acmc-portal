@@ -150,7 +150,7 @@ export default function PatientDetail({ navigate, patientId }) {
   if (loading) return <div style={{padding:40,textAlign:'center'}}><div style={{width:32,height:32,border:'3px solid #dde3ec',borderTopColor:'#155eef',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto'}}/></div>
   if (!data) return <div style={{padding:40,color:'#e11d48'}}>Patient not found.</div>
 
-  const { patient, sim_orders, clinical_orders, cost_estimates, milestones, billing, payments } = data
+  const { patient, sim_orders, clinical_orders, cost_estimates, milestones, billing, payments, reconciliation } = data
 
   return (
     <div>
@@ -169,6 +169,16 @@ export default function PatientDetail({ navigate, patientId }) {
           </div>
         )}
       </div>
+
+      {/* Estimate vs. actual order mismatch */}
+      {reconciliation?.length > 0 && (
+        <div style={{background:'#fef3c7',border:'1px solid #fde68a',borderRadius:14,padding:'14px 18px',marginBottom:12,color:'#92400e'}}>
+          <div style={{fontWeight:700,fontSize:13,marginBottom:5}}>⚠️ Cost estimate doesn't match the actual order</div>
+          <ul style={{margin:'0 0 0 18px',padding:0,fontSize:12.5}}>
+            {reconciliation.map((w,i) => <li key={i} style={{marginBottom:2}}>{w.message}</li>)}
+          </ul>
+        </div>
+      )}
 
       {/* Patient info */}
       <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'18px 22px',marginBottom:12,display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:14}}>

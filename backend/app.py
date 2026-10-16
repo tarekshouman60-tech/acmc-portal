@@ -462,9 +462,10 @@ async def get_patient(pid: int, db=Depends(get_db), tok=Depends(decode_token)):
     else:
         p = await db.fetchrow("SELECT * FROM patients WHERE id=$1 AND doctor_id=$2", pid, int(tok["sub"]))
     if not p: raise HTTPException(404)
-    sims = await db.fetch("SELECT id,order_ref,status,sim_date_requested,scheduled_at,completion_notes,created_at FROM sim_orders WHERE patient_id=$1 ORDER BY created_at DESC", pid)
+    sims = await db.fetch("SELECT id,order_ref,status,fixation,sim_date_requested,scheduled_at,completion_notes,created_at FROM sim_orders WHERE patient_id=$1 ORDER BY created_at DESC", pid)
     clins = await db.fetch("SELECT id,order_ref,status,technique,total_dose_gy,fractions,planning_status,planning_scheduled_at,planning_notes,replan_count,created_at FROM clinical_orders WHERE patient_id=$1 ORDER BY created_at DESC", pid)
     ests = await db.fetch("SELECT id,order_ref,status,total_egp,has_tbd,created_at FROM cost_estimates WHERE patient_id=$1 ORDER BY created_at DESC", pid)
+    reconciliation = await _reconcile_estimate(db, sims[0] if sims else None, clins[0] if clins else None, ests[0]["id"] if ests else None)
     miles = await db.fetchrow("SELECT * FROM milestones WHERE patient_id=$1", pid)
     billing = await db.fetchrow("""
         SELECT b.*, ce.order_ref as estimate_ref, ce.total_egp as gross_total_egp,
@@ -483,8 +484,51 @@ async def get_patient(pid: int, db=Depends(get_db), tok=Depends(decode_token)):
         "cost_estimates": [dict(r) for r in ests],
         "milestones": dict(miles) if miles else None,
         "billing": dict(billing) if billing else None,
-        "payments": [dict(r) for r in payments]
+        "payments": [dict(r) for r in payments],
+        "reconciliation": reconciliation
     }
+
+# Best-effort mapping from the Sim Order's fixation checklist (SimOrder.jsx's FIXATION list)
+# to the Immobilization service it corresponds to in Price Management — the two were built
+# with their own independent wording, so this is where that gets reconciled.
+FIXATION_TO_IMM_CODE = {
+    'SRS mask': 'IMM-005', 'Head closed': 'IMM-001', 'Head open': 'IMM-003',
+    'Head & neck closed': 'IMM-002', 'Head & neck open': 'IMM-004',
+    'Pelvis': 'IMM-006', 'Vac-Lok adult': 'IMM-008', 'Vac-Lok pediatric': 'IMM-008',
+}
+
+async def _reconcile_estimate(db, sim, clin, estimate_id):
+    """Flag places where the saved cost estimate no longer matches what was actually
+    requested in the Sim Order (fixation/mask) or Clinical Order (fraction count) —
+    e.g. the estimate priced a closed head mask but Sim Order asked for an open one,
+    or billed 20 fractions while the Clinical Order prescribes 25."""
+    warnings = []
+    if not estimate_id: return warnings
+    items = await db.fetch("""SELECT i.quantity, s.code, s.name, s.category, s.per_fraction
+        FROM cost_estimate_items i JOIN services s ON s.id=i.service_id WHERE i.estimate_id=$1""", estimate_id)
+
+    if sim and sim.get("fixation"):
+        requested = [x.strip() for x in sim["fixation"].split(";") if x.strip()]
+        expected_codes = {FIXATION_TO_IMM_CODE[r] for r in requested if r in FIXATION_TO_IMM_CODE}
+        selected_codes = {r["code"] for r in items if r["category"] == "Immobilization"}
+        if expected_codes and not (expected_codes & selected_codes):
+            warnings.append({
+                "type": "fixation",
+                "message": f'Sim Order requests fixation "{", ".join(requested)}", but the cost estimate '
+                           + ("doesn't include a matching immobilization service." if not selected_codes
+                              else "has a different one selected.")
+            })
+
+    if clin and clin.get("fractions"):
+        fx = clin["fractions"]
+        mismatched = [(r["name"], r["quantity"]) for r in items if r["per_fraction"] and r["quantity"] != fx]
+        if mismatched:
+            details = "; ".join(f'{name} billed for {qty} fraction{"s" if qty!=1 else ""}' for name, qty in mismatched)
+            warnings.append({
+                "type": "fractions",
+                "message": f"Clinical Order prescribes {fx} fractions, but the cost estimate bills a different count — {details}."
+            })
+    return warnings
 
 # ── sim orders ────────────────────────────────────────────────────────────────
 @app.post("/api/sim-orders")
