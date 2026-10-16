@@ -405,18 +405,29 @@ th:last-child,td:last-child{text-align:right}
         })}
       </div>
 
-      {/* Discount (doctors only — up to 20%, not applied to consultation/follow-up fees) */}
-      {user?.role === 'doctor' && (
+      {/* Discount — doctors can set it (up to 20%, not applied to consultation/follow-up fees);
+          admin sees it too (read-only here) so it's never invisible on this page once applied —
+          the editable control stays doctor-only, the admin's own full-range discount still lives
+          on the Billing screen. */}
+      {(user?.role === 'doctor' || parseFloat(discountPct) > 0) && (
         <div style={{...card,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
           <div>
             <div style={{fontSize:12.5,fontWeight:600}}>Discount for this patient</div>
-            <div style={{fontSize:11.5,color:'#8898aa',marginTop:1}}>Up to 20%. Doesn't apply to consultation/follow-up fees.</div>
+            <div style={{fontSize:11.5,color:'#8898aa',marginTop:1}}>
+              {user?.role === 'doctor' ? 'Up to 20%. Doesn\'t apply to consultation/follow-up fees.' : 'Applied by the referring doctor when submitting this estimate.'}
+            </div>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:6,marginLeft:'auto'}}>
-            <input type="number" min="0" max="20" step="0.5" placeholder="0" value={discountPct}
-              onChange={e=>setDiscountPct(e.target.value===''?'':String(Math.min(Math.max(parseFloat(e.target.value)||0,0),20)))}
-              style={{width:70,padding:'7px 10px',fontSize:13,border:'1px solid #dde3ec',borderRadius:6,textAlign:'right',fontFamily:'monospace',outline:'none'}}/>
-            <span style={{fontSize:13,color:'#4a5a70'}}>%</span>
+            {user?.role === 'doctor' ? (
+              <>
+                <input type="number" min="0" max="20" step="0.5" placeholder="0" value={discountPct}
+                  onChange={e=>setDiscountPct(e.target.value===''?'':String(Math.min(Math.max(parseFloat(e.target.value)||0,0),20)))}
+                  style={{width:70,padding:'7px 10px',fontSize:13,border:'1px solid #dde3ec',borderRadius:6,textAlign:'right',fontFamily:'monospace',outline:'none'}}/>
+                <span style={{fontSize:13,color:'#4a5a70'}}>%</span>
+              </>
+            ) : (
+              <span style={{fontSize:16,fontWeight:700,fontFamily:'monospace',color:'#059669'}}>{discountPct}%</span>
+            )}
           </div>
         </div>
       )}
