@@ -43,6 +43,11 @@ export default function CostEstimate({ navigate, patientId }) {
   // Mismatches between this patient's last-saved estimate and what the Sim/Clinical Order
   // actually ended up requesting (e.g. order changed after the estimate was made).
   const [reconciliation, setReconciliation] = useState([])
+  // Kept around (not just used at load) so the "Sync with order" button can re-apply them to
+  // an estimate that already existed before the order changed — auto-fill at creation only
+  // ever helps a brand-new estimate, which is the uncommon case once a patient is established.
+  const [simOrder, setSimOrder] = useState(null)
+  const [clinOrder, setClinOrder] = useState(null)
 
   useEffect(() => {
     if (!patientId) { api.services().then(setServices); return }
@@ -53,6 +58,8 @@ export default function CostEstimate({ navigate, patientId }) {
       const existing = d.cost_estimates?.[0]
       const sim = d.sim_orders?.[0]
       const clin = d.clinical_orders?.[0]
+      setSimOrder(sim || null)
+      setClinOrder(clin || null)
       if (clin?.fractions) setDefaultFractions(clin.fractions)
       if (existing) {
         api.getEstimate(existing.id).then(({items}) => {
@@ -95,6 +102,36 @@ export default function CostEstimate({ navigate, patientId }) {
 
   function getQty(id) { return quantities[id] || defaultFractions || 1 }
   function setQty(id, v) { setQuantities(q => ({...q,[id]:parseInt(v)||1})) }
+
+  // Fixes an already-saved estimate to match what the Sim/Clinical Order actually ended up
+  // requesting — same correction auto-fill does for a brand-new estimate, applied on demand
+  // here since overwriting a saved estimate's selections must be something the doctor/admin
+  // chooses, never silent.
+  function syncWithOrder() {
+    if (simOrder?.fixation) {
+      const requested = simOrder.fixation.split(';').map(s=>s.trim()).filter(Boolean)
+      const codes = new Set(requested.map(r=>FIXATION_TO_IMM_CODE[r]).filter(Boolean))
+      const matches = services.filter(s => s.category==='Immobilization' && codes.has(s.code))
+      if (matches.length) {
+        setSelected(s => {
+          const n = new Set([...s].filter(id => services.find(sv=>sv.id===id)?.category !== 'Immobilization'))
+          matches.forEach(m => n.add(m.id))
+          return n
+        })
+        setOpenCats(c => new Set([...c, 'Immobilization']))
+      }
+    }
+    if (clinOrder?.fractions) {
+      const fx = clinOrder.fractions
+      setQuantities(q => {
+        const n = {...q}
+        selected.forEach(id => { if (services.find(s=>s.id===id)?.per_fraction) n[id] = fx })
+        return n
+      })
+      setDefaultFractions(fx)
+    }
+    setReconciliation([])
+  }
 
   function hasPackage() {
     return Array.from(selected).some(sid => services.find(s => s.id === sid)?.category === 'SBRT/SRS Package')
@@ -272,10 +309,17 @@ th:last-child,td:last-child{text-align:right}
       {hasPackage() && <div style={{background:'#ffe4e6',color:'#791f1f',border:'1px solid #fecdd3',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12}}>📦 SBRT/SRS Package selected — this is all-inclusive. Other selected services are bundled into the package price and excluded from the total; only the package price plus your own consultation fees are charged.</div>}
       {reconciliation.length > 0 && (
         <div style={{background:'#fef3c7',border:'1px solid #fde68a',borderRadius:7,padding:'10px 14px',fontSize:13,marginBottom:12,color:'#92400e'}}>
-          <div style={{fontWeight:700,marginBottom:4}}>⚠️ This saved estimate doesn't match the actual order</div>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:4}}>
+            <div style={{fontWeight:700}}>⚠️ This saved estimate doesn't match the actual order</div>
+            <button type="button" onClick={syncWithOrder}
+              style={{padding:'5px 12px',borderRadius:6,border:'1px solid #92400e',background:'#fff',color:'#92400e',cursor:'pointer',fontSize:12,fontWeight:600,whiteSpace:'nowrap'}}>
+              Sync with order
+            </button>
+          </div>
           <ul style={{margin:'0 0 0 18px',padding:0}}>
             {reconciliation.map((w,i) => <li key={i} style={{marginBottom:2}}>{w.message}</li>)}
           </ul>
+          <div style={{fontSize:11.5,marginTop:6,fontStyle:'italic'}}>Updates the selections below to match — review and click Save to apply.</div>
         </div>
       )}
 
