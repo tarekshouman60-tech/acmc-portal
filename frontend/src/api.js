@@ -120,6 +120,7 @@ export const api = {
   addPayment: (data) => req('POST','/payments',data),
   editPayment: (id,data) => req('PATCH',`/payments/${id}`,data),
   setBillingDiscount: (id,data) => req('PATCH',`/billing/${id}/discount`,data),
+  setBillingPayee: (id,payee_name) => req('PATCH',`/billing/${id}/payee`,{payee_name}),
   setDoctorFee: (did, referral_fee_pct) => req('PATCH',`/doctors/${did}/fee`,{referral_fee_pct}),
   createEarning: (data) => req('POST','/earnings',data),
   listEarnings: () => req('GET','/earnings'),

@@ -1063,25 +1063,45 @@ async def edit_payment(pid: int, body: PaymentEdit, db=Depends(get_db), tok=Depe
     return {"ok":True,"balance_egp":bal}
 
 class DiscountUpdate(BaseModel):
-    discount_pct: float
+    discount_pct: Optional[float] = None
+    # Direct override of the final billed total — for an insurance's own negotiated/special
+    # price, or to correct the bill at end of treatment to what was actually delivered (more or
+    # fewer fractions/services than originally estimated), rather than a plain percentage off.
+    final_total_egp: Optional[float] = None
     reason: Optional[str] = None
+
+class PayeeUpdate(BaseModel):
+    payee_name: Optional[str] = None
 
 @app.patch("/api/billing/{bid}/discount")
 async def set_billing_discount(bid: int, body: DiscountUpdate, db=Depends(get_db), tok=Depends(admin_only)):
     b = await db.fetchrow("SELECT * FROM billing WHERE id=$1", bid)
     if not b: raise HTTPException(404)
-    if body.discount_pct < 0 or body.discount_pct > 100:
-        raise HTTPException(400, "Discount % must be between 0 and 100")
     gross_total = await db.fetchval("SELECT total_egp FROM cost_estimates WHERE id=$1", b["estimate_id"])
     consultation_total = await db.fetchval(
         """SELECT COALESCE(SUM(i.subtotal_egp),0) FROM cost_estimate_items i
            JOIN services s ON s.id=i.service_id
            WHERE i.estimate_id=$1 AND s.code IN ('QA-003','QA-004','QA-005')""", b["estimate_id"])
-    # The discount % applies only to the treatment/procedure portion of the bill —
-    # consultation/follow-up fees are always excluded and billed in full.
-    discountable = round(float(gross_total) - float(consultation_total), 2)
-    discount_egp = round(discountable * body.discount_pct / 100, 2)
-    new_total = round(float(gross_total) - discount_egp, 2)
+
+    if body.final_total_egp is not None:
+        # Direct final-amount override: the admin sets the actual billed total outright — e.g.
+        # an insurer's special negotiated rate, or correcting the bill at end of treatment —
+        # with no assumption that it follows the plain percentage-off-non-consultation rule.
+        if body.final_total_egp < 0: raise HTTPException(400, "Final total cannot be negative")
+        new_total = round(float(body.final_total_egp), 2)
+        discount_egp = round(float(gross_total) - new_total, 2)
+        discount_pct = round((discount_egp / float(gross_total)) * 100, 2) if gross_total else 0
+    else:
+        if body.discount_pct is None: raise HTTPException(400, "Provide either discount_pct or final_total_egp")
+        if body.discount_pct < 0 or body.discount_pct > 100:
+            raise HTTPException(400, "Discount % must be between 0 and 100")
+        # The discount % applies only to the treatment/procedure portion of the bill —
+        # consultation/follow-up fees are always excluded and billed in full.
+        discountable = round(float(gross_total) - float(consultation_total), 2)
+        discount_egp = round(discountable * body.discount_pct / 100, 2)
+        new_total = round(float(gross_total) - discount_egp, 2)
+        discount_pct = body.discount_pct
+
     new_balance = round(new_total - float(b["amount_paid_egp"]), 2)
     if new_balance <= 0:
         new_balance = 0; status = "paid"
@@ -1089,10 +1109,16 @@ async def set_billing_discount(bid: int, body: DiscountUpdate, db=Depends(get_db
         status = "partial" if float(b["amount_paid_egp"]) > 0 else "unpaid"
     await db.execute("""UPDATE billing SET total_amount_egp=$1,balance_egp=$2,status=$3,
         discount_pct=$4,discount_egp=$5,discount_reason=$6,discount_by=$7,discount_at=NOW(),updated_at=NOW() WHERE id=$8""",
-        new_total, new_balance, status, body.discount_pct, discount_egp, body.reason, int(tok["sub"]), bid)
+        new_total, new_balance, status, discount_pct, discount_egp, body.reason, int(tok["sub"]), bid)
     if status == "paid" and b["estimate_id"]:
         await _calc_and_save_earning(db, b["estimate_id"])
-    return {"ok": True, "discount_egp": discount_egp, "total_amount_egp": new_total, "balance_egp": new_balance}
+    return {"ok": True, "discount_egp": discount_egp, "discount_pct": discount_pct, "total_amount_egp": new_total, "balance_egp": new_balance}
+
+@app.patch("/api/billing/{bid}/payee")
+async def set_billing_payee(bid: int, body: PayeeUpdate, db=Depends(get_db), tok=Depends(admin_only)):
+    row = await db.fetchrow("UPDATE billing SET payee_name=$1,updated_at=NOW() WHERE id=$2 RETURNING id", body.payee_name, bid)
+    if not row: raise HTTPException(404)
+    return {"ok": True}
 
 # ── dashboard ─────────────────────────────────────────────────────────────────
 @app.get("/api/dashboard")
@@ -1683,6 +1709,7 @@ async def startup_migrate():
             ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_reason TEXT;
             ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_by INTEGER REFERENCES admins(id);
             ALTER TABLE billing ADD COLUMN IF NOT EXISTS discount_at TIMESTAMP;
+            ALTER TABLE billing ADD COLUMN IF NOT EXISTS payee_name VARCHAR(150);
             UPDATE services SET name='Initial + Follow-up Consultation (Oncologist)',
                 notes='Covers both the initial consultation and follow-up review as one combined doctor fee.'
                 WHERE code='QA-003';

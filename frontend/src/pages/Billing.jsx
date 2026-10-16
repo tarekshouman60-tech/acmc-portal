@@ -17,10 +17,15 @@ export default function Billing() {
   const [editSaving, setEditSaving] = useState(false)
   const [editError, setEditError] = useState('')
   const [editingDiscount, setEditingDiscount] = useState(false)
+  const [discountMode, setDiscountMode] = useState('pct') // 'pct' | 'final' — final = direct override (insurance special rate, or correcting the bill to what was actually delivered)
   const [discountPct, setDiscountPct] = useState('')
+  const [finalTotal, setFinalTotal] = useState('')
   const [discountReason, setDiscountReason] = useState('')
   const [discountSaving, setDiscountSaving] = useState(false)
   const [discountError, setDiscountError] = useState('')
+  const [editingPayee, setEditingPayee] = useState(false)
+  const [payeeName, setPayeeName] = useState('')
+  const [payeeSaving, setPayeeSaving] = useState(false)
 
   useEffect(() => { api.patients().then(setPatients) }, [])
 
@@ -71,7 +76,9 @@ export default function Billing() {
   }
 
   function startDiscount() {
+    setDiscountMode('pct')
     setDiscountPct(detail?.billing?.discount_pct ? String(detail.billing.discount_pct) : '')
+    setFinalTotal(detail?.billing ? String(detail.billing.total_amount_egp) : '')
     setDiscountReason(detail?.billing?.discount_reason || '')
     setDiscountError('')
     setEditingDiscount(true)
@@ -79,6 +86,18 @@ export default function Billing() {
 
   async function saveDiscount() {
     if (!detail?.billing) return
+    if (discountMode === 'final') {
+      const total = parseFloat(finalTotal)
+      if (isNaN(total) || total < 0) { setDiscountError('Enter a valid final amount'); return }
+      if (!discountReason.trim()) { setDiscountError('Enter the reason for this final amount (e.g. insurance special rate, or what was actually delivered)'); return }
+      setDiscountSaving(true); setDiscountError('')
+      try {
+        await api.setBillingDiscount(detail.billing.id, { final_total_egp: total, reason: discountReason || null })
+        await load(selected)
+        setEditingDiscount(false)
+      } catch(e) { setDiscountError(e.message) } finally { setDiscountSaving(false) }
+      return
+    }
     const pct = parseFloat(discountPct) || 0
     if (pct < 0) { setDiscountError('Discount % cannot be negative'); return }
     if (pct > 100) { setDiscountError('Discount % cannot exceed 100'); return }
@@ -89,6 +108,20 @@ export default function Billing() {
       await load(selected)
       setEditingDiscount(false)
     } catch(e) { setDiscountError(e.message) } finally { setDiscountSaving(false) }
+  }
+
+  function startPayee() {
+    setPayeeName(detail?.billing?.payee_name || '')
+    setEditingPayee(true)
+  }
+  async function savePayee() {
+    if (!detail?.billing) return
+    setPayeeSaving(true)
+    try {
+      await api.setBillingPayee(detail.billing.id, payeeName.trim() || null)
+      await load(selected)
+      setEditingPayee(false)
+    } catch(e) { setError(e.message) } finally { setPayeeSaving(false) }
   }
 
   const filtered = patients.filter(p => p.full_name.toLowerCase().includes(search.toLowerCase()))
@@ -190,30 +223,92 @@ export default function Billing() {
 
                   {editingDiscount && (
                     <div>
-                      <div style={{fontSize:12,color:'#8898aa',marginBottom:10}}>
-                        Consultation fees (<strong>{fmtEGP(consultationTotal)}</strong>) are excluded — discount % applies only to <strong style={{color:'#155eef'}}>{fmtEGP(discountableMax)}</strong>
+                      <div style={{display:'flex',gap:7,marginBottom:12}}>
+                        {[['pct','By percentage'],['final','Set exact final amount']].map(([m,label])=>(
+                          <button key={m} type="button" onClick={()=>setDiscountMode(m)}
+                            style={{padding:'6px 13px',borderRadius:20,border:'1px solid #dde3ec',fontSize:12,fontWeight:600,cursor:'pointer',
+                              background:discountMode===m?'#155eef':'#fff',color:discountMode===m?'#fff':'#4a5a70'}}>{label}</button>
+                        ))}
                       </div>
                       {discountError && <div style={{background:'#ffe4e6',color:'#e11d48',border:'1px solid #fecdd3',borderRadius:6,padding:'9px 13px',fontSize:13,marginBottom:12}}>{discountError}</div>}
-                      <div style={{display:'grid',gridTemplateColumns:'1fr 2fr',gap:12,marginBottom:12}}>
-                        <div>
-                          <label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>Discount (%)</label>
-                          <input style={inp} type="number" step="0.5" min="0" max="100"
-                            placeholder="e.g. 10"
-                            value={discountPct} onChange={e=>setDiscountPct(e.target.value)}/>
-                          {discountPct !== '' && <div style={{fontSize:11.5,color:'#8898aa',marginTop:4}}>= −{fmtEGP(discountPreviewEgp)}</div>}
-                        </div>
-                        <div>
-                          <label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>Referring doctor's request / reason</label>
-                          <input style={inp} placeholder="e.g. Requested by Dr. Shouman — financial hardship"
-                            value={discountReason} onChange={e=>setDiscountReason(e.target.value)}/>
-                        </div>
-                      </div>
+                      {discountMode === 'pct' ? (
+                        <>
+                          <div style={{fontSize:12,color:'#8898aa',marginBottom:10}}>
+                            Consultation fees (<strong>{fmtEGP(consultationTotal)}</strong>) are excluded — discount % applies only to <strong style={{color:'#155eef'}}>{fmtEGP(discountableMax)}</strong>
+                          </div>
+                          <div style={{display:'grid',gridTemplateColumns:'1fr 2fr',gap:12,marginBottom:12}}>
+                            <div>
+                              <label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>Discount (%)</label>
+                              <input style={inp} type="number" step="0.5" min="0" max="100"
+                                placeholder="e.g. 10"
+                                value={discountPct} onChange={e=>setDiscountPct(e.target.value)}/>
+                              {discountPct !== '' && <div style={{fontSize:11.5,color:'#8898aa',marginTop:4}}>= −{fmtEGP(discountPreviewEgp)}</div>}
+                            </div>
+                            <div>
+                              <label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>Referring doctor's request / reason</label>
+                              <input style={inp} placeholder="e.g. Requested by Dr. Shouman — financial hardship"
+                                value={discountReason} onChange={e=>setDiscountReason(e.target.value)}/>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{fontSize:12,color:'#8898aa',marginBottom:10}}>
+                            Sets the final billed total directly — e.g. the patient's insurance has its own negotiated rate, or the actual treatment delivered differed from the original estimate. Gross total was <strong style={{color:'#155eef'}}>{fmtEGP(grossTotal)}</strong>.
+                          </div>
+                          <div style={{display:'grid',gridTemplateColumns:'1fr 2fr',gap:12,marginBottom:12}}>
+                            <div>
+                              <label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>Final total (EGP)</label>
+                              <input style={inp} type="number" step="0.01" min="0"
+                                placeholder="e.g. 45000"
+                                value={finalTotal} onChange={e=>setFinalTotal(e.target.value)}/>
+                            </div>
+                            <div>
+                              <label style={{display:'block',fontSize:11,fontWeight:600,color:'#4a5a70',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>Reason *</label>
+                              <input style={inp} placeholder="e.g. XYZ Insurance negotiated rate, or patient received 3 fewer fractions"
+                                value={discountReason} onChange={e=>setDiscountReason(e.target.value)}/>
+                            </div>
+                          </div>
+                        </>
+                      )}
                       <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
                         <button onClick={()=>setEditingDiscount(false)} disabled={discountSaving}
                           style={{padding:'8px 16px',borderRadius:6,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:13}}>Cancel</button>
                         <button onClick={saveDiscount} disabled={discountSaving}
                           style={{padding:'8px 18px',borderRadius:6,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
-                          {discountSaving?'Saving…':'Apply Discount'}
+                          {discountSaving?'Saving…':(discountMode==='final'?'Apply Final Amount':'Apply Discount')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Payee */}
+                <div style={{background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:9,padding:'18px 20px',marginBottom:14}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:editingPayee?10:0}}>
+                    <div style={{fontWeight:600,fontSize:13}}>Payee</div>
+                    {!editingPayee && (
+                      <button onClick={startPayee}
+                        style={{padding:'5px 12px',borderRadius:6,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:12,color:'#155eef',fontWeight:500}}>
+                        {detail.billing.payee_name ? '✎ Edit payee' : '+ Add payee'}
+                      </button>
+                    )}
+                  </div>
+                  {!editingPayee && (
+                    <div style={{fontSize:12.5,color:detail.billing.payee_name?'#4a5a70':'#8898aa'}}>
+                      {detail.billing.payee_name || 'Not set — who is actually paying (self, insurance company, employer, etc.)'}
+                    </div>
+                  )}
+                  {editingPayee && (
+                    <div>
+                      <input style={inp} placeholder="e.g. Self-pay, XYZ Insurance, ABC Corp"
+                        value={payeeName} onChange={e=>setPayeeName(e.target.value)}/>
+                      <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:10}}>
+                        <button onClick={()=>setEditingPayee(false)} disabled={payeeSaving}
+                          style={{padding:'8px 16px',borderRadius:6,border:'1px solid #dde3ec',background:'#fff',cursor:'pointer',fontSize:13}}>Cancel</button>
+                        <button onClick={savePayee} disabled={payeeSaving}
+                          style={{padding:'8px 18px',borderRadius:6,border:'none',background:'#155eef',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
+                          {payeeSaving?'Saving…':'Save Payee'}
                         </button>
                       </div>
                     </div>
