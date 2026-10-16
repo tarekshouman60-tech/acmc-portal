@@ -960,7 +960,11 @@ async def get_estimate(eid: int, db=Depends(get_db), tok=Depends(decode_token)):
         e = await db.fetchrow("SELECT ce.*,p.full_name as patient_name FROM cost_estimates ce JOIN patients p ON p.id=ce.patient_id WHERE ce.id=$1 AND ce.doctor_id=$2", eid, int(tok["sub"]))
     if not e: raise HTTPException(404)
     items = await db.fetch("SELECT i.*,s.name as service_name,s.code,s.unit,s.category,s.per_fraction FROM cost_estimate_items i JOIN services s ON s.id=i.service_id WHERE i.estimate_id=$1", eid)
-    return {"estimate":dict(e),"items":[dict(i) for i in items]}
+    # The discount lives on billing, not on the estimate itself — without this, reopening an
+    # estimate that had a discount applied shows a blank discount field (looks like it was
+    # never saved), and resaving without re-entering it would silently wipe it back to 0.
+    billing = await db.fetchrow("SELECT discount_pct,discount_egp,discount_reason,total_amount_egp FROM billing WHERE estimate_id=$1", eid)
+    return {"estimate":dict(e),"items":[dict(i) for i in items],"billing":dict(billing) if billing else None}
 
 # ── milestones (admin) ────────────────────────────────────────────────────────
 @app.patch("/api/patients/{pid}/milestones")

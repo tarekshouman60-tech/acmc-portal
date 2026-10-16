@@ -62,7 +62,7 @@ export default function CostEstimate({ navigate, patientId }) {
       setClinOrder(clin || null)
       if (clin?.fractions) setDefaultFractions(clin.fractions)
       if (existing) {
-        api.getEstimate(existing.id).then(({items}) => {
+        api.getEstimate(existing.id).then(({items, billing}) => {
           setSelected(new Set(items.map(i => i.service_id)))
           setQuantities(q => {
             const n = {...q}
@@ -75,6 +75,9 @@ export default function CostEstimate({ navigate, patientId }) {
             return n
           })
           setOpenCats(c => new Set([...c, ...items.map(i => i.category)]))
+          // Reload a previously-applied discount — without this it looks blank/wiped on reopen,
+          // and resaving without re-entering it would actually wipe it back to 0.
+          if (billing?.discount_pct) setDiscountPct(String(billing.discount_pct))
         })
       } else {
         // Fresh estimate: pre-fill the immobilization service from the Sim Order's fixation,
