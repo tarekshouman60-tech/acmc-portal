@@ -23,6 +23,8 @@ export default function CostEstimate({ navigate, patientId }) {
   const [saving, setSaving] = useState(false)
   // '' means "not entered yet" (shows as TBD); an explicit '0' is a real waived fee, not the same thing.
   const [customFees, setCustomFees] = useState({'QA-003':'','QA-004':'','QA-005':''})
+  // Referring doctors can grant up to a 20% discount themselves when submitting the estimate.
+  const [discountPct, setDiscountPct] = useState('')
   const [saved, setSaved] = useState(null)
   const [error, setError] = useState('')
 
@@ -95,6 +97,26 @@ export default function CostEstimate({ navigate, patientId }) {
     return { total, hasTbd }
   }
 
+  // Consultation/follow-up fees (QA-003/004/005) are never discounted — matches the admin's
+  // existing billing-discount rule, so a doctor-applied discount and an admin-applied one mean
+  // the same thing.
+  function calcConsultationTotal() {
+    let c = 0
+    selected.forEach(sid => {
+      const svc = services.find(s => s.id === sid)
+      if (!svc || !['QA-003','QA-004','QA-005'].includes(svc.code)) return
+      if (hasPackage() && isExcludedByPackage(svc)) return
+      if (customFees[svc.code] !== '') c += parseFloat(customFees[svc.code]) || 0
+    })
+    return c
+  }
+  function calcDiscount(total) {
+    const pct = Math.min(Math.max(parseFloat(discountPct) || 0, 0), 20)
+    const discountable = Math.max(total - calcConsultationTotal(), 0)
+    const discountEgp = Math.round(discountable * pct / 100 * 100) / 100
+    return { pct, discountEgp, billedTotal: Math.round((total - discountEgp) * 100) / 100 }
+  }
+
   async function submit() {
     if (!patientId || selected.size === 0) { setError('Select at least one service'); return }
     setSaving(true); setError('')
@@ -110,13 +132,16 @@ export default function CostEstimate({ navigate, patientId }) {
         }
         return item
       })
-      const res = await api.createEstimate({ patient_id: patientId, items })
+      const payload = { patient_id: patientId, items }
+      if (discountPct !== '') { payload.discount_pct = Math.min(Math.max(parseFloat(discountPct)||0,0),20); payload.discount_reason = 'Discount applied by referring doctor' }
+      const res = await api.createEstimate(payload)
       setSaved(res)
     } catch(e) { setError(e.message) } finally { setSaving(false) }
   }
 
   function openPrint() {
     const { total, hasTbd } = calcTotal()
+    const { pct, discountEgp, billedTotal } = calcDiscount(total)
     const items = Array.from(selected).map(sid => {
       const svc = services.find(s => s.id === sid)
       const qty = svc?.per_fraction ? getQty(sid) : 1
@@ -172,9 +197,11 @@ th:last-child,td:last-child{text-align:right}
   <table>
     <thead><tr><th style="width:80px">Code</th><th>Service</th><th style="width:120px;text-align:center">Qty / Unit</th><th style="width:130px">Amount (EGP)</th></tr></thead>
     <tbody>${rows}</tbody>
-    <tfoot><tr class="tot">
+    <tfoot>
+    ${pct>0 ? `<tr><td colspan="3" style="padding:8px 14px;font-size:12.5px;color:#4a5a70">Discount (${pct}%)</td><td style="padding:8px 14px;font-size:12.5px;color:#e11d48;text-align:right">−${fmtEGP(discountEgp)}</td></tr>` : ''}
+    <tr class="tot">
       <td colspan="3">Total estimated cost</td>
-      <td style="color:#155eef">${total?fmtEGP(total)+(hasTbd?' + TBD':''):'To be confirmed'}</td>
+      <td style="color:#155eef">${total?fmtEGP(billedTotal)+(hasTbd?' + TBD':''):'To be confirmed'}</td>
     </tr></tfoot>
   </table>
   <div class="notice">⚠️ Preliminary cost estimate. Final pricing subject to confirmation by ACMC administration. Items marked "TBD" will be confirmed upon scheduling.</div>
@@ -190,6 +217,7 @@ th:last-child,td:last-child{text-align:right}
   }
 
   const { total, hasTbd } = calcTotal()
+  const { pct: discountPctApplied, discountEgp, billedTotal } = calcDiscount(total)
   const card = {background:'#fff',border:'1px solid #e7ebf1',boxShadow:'0 2px 6px rgba(15,23,42,.06),0 14px 32px -12px rgba(21,94,239,.28)',borderRadius:14,padding:'18px 20px',marginBottom:10}
 
   return (
@@ -290,14 +318,38 @@ th:last-child,td:last-child{text-align:right}
         })}
       </div>
 
+      {/* Discount (doctors only — up to 20%, not applied to consultation/follow-up fees) */}
+      {user?.role === 'doctor' && (
+        <div style={{...card,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+          <div>
+            <div style={{fontSize:12.5,fontWeight:600}}>Discount for this patient</div>
+            <div style={{fontSize:11.5,color:'#8898aa',marginTop:1}}>Up to 20%. Doesn't apply to consultation/follow-up fees.</div>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:6,marginLeft:'auto'}}>
+            <input type="number" min="0" max="20" step="0.5" placeholder="0" value={discountPct}
+              onChange={e=>setDiscountPct(e.target.value===''?'':String(Math.min(Math.max(parseFloat(e.target.value)||0,0),20)))}
+              style={{width:70,padding:'7px 10px',fontSize:13,border:'1px solid #dde3ec',borderRadius:6,textAlign:'right',fontFamily:'monospace',outline:'none'}}/>
+            <span style={{fontSize:13,color:'#4a5a70'}}>%</span>
+          </div>
+        </div>
+      )}
+
       {/* Total bar */}
       <div style={{background:'#155eef',borderRadius:14,padding:'16px 22px',display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
         <div>
           <div style={{color:'rgba(255,255,255,.65)',fontSize:11.5,fontWeight:600,textTransform:'uppercase',letterSpacing:'.05em'}}>Estimated total</div>
-          <div style={{color:'rgba(255,255,255,.45)',fontSize:11.5,marginTop:3}}>{selected.size} service{selected.size!==1?'s':''} selected</div>
+          <div style={{color:'rgba(255,255,255,.45)',fontSize:11.5,marginTop:3}}>
+            {selected.size} service{selected.size!==1?'s':''} selected
+            {discountPctApplied>0 && ` · ${discountPctApplied}% discount (−${fmtEGP(discountEgp)})`}
+          </div>
         </div>
-        <div style={{color:'#fff',fontSize:22,fontWeight:700,fontFamily:'monospace'}}>
-          {selected.size ? (hasTbd ? (total ? fmtEGP(total)+' + TBD' : 'TBD') : fmtEGP(total)) : 'EGP —'}
+        <div style={{textAlign:'right'}}>
+          {discountPctApplied>0 && selected.size>0 && (
+            <div style={{color:'rgba(255,255,255,.5)',fontSize:13,textDecoration:'line-through'}}>{fmtEGP(total)}</div>
+          )}
+          <div style={{color:'#fff',fontSize:22,fontWeight:700,fontFamily:'monospace'}}>
+            {selected.size ? (hasTbd ? (billedTotal ? fmtEGP(billedTotal)+' + TBD' : 'TBD') : fmtEGP(billedTotal)) : 'EGP —'}
+          </div>
         </div>
       </div>
 

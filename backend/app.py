@@ -142,6 +142,8 @@ class EstimateItem(BaseModel):
 
 class EstimateCreate(BaseModel):
     patient_id: int; items: List[EstimateItem]
+    discount_pct: Optional[float] = None
+    discount_reason: Optional[str] = None
 
 class MilestoneUpdate(BaseModel):
     simulation_done: Optional[bool]=None; simulation_date: Optional[date]=None
@@ -877,15 +879,34 @@ async def create_estimate(body: EstimateCreate, db=Depends(get_db), tok=Depends(
             sub = None; unit_price_egp = svc["price_egp"]
             if not excluded: has_tbd = True
         items_data.append((item.service_id, qty, unit_price_egp, sub))
+
+    # Referring doctors can grant their own patient a discount of up to 20% right when they
+    # submit the estimate, without needing an admin to apply it afterward. Admins keep their
+    # existing full-range discount via the separate Billing screen; here an admin creating an
+    # estimate on a doctor's behalf is held to the same 20% cap doctors get, for consistency.
+    discount_pct = body.discount_pct or 0
+    if discount_pct:
+        if discount_pct < 0: raise HTTPException(400, "Discount % cannot be negative")
+        if discount_pct > 20: raise HTTPException(400, "Discount cannot exceed 20%")
+    consultation_total = sum(sub or 0 for (sid, qty, up, sub) in items_data if svc_rows[sid]["code"] in CUSTOM_FEE_CODES)
+    discountable = round(total - consultation_total, 2)
+    discount_egp = round(discountable * discount_pct / 100, 2) if discount_pct else 0
+    billed_total = round(total - discount_egp, 2)
+
     est = await db.fetchrow(
         "INSERT INTO cost_estimates(patient_id,doctor_id,total_egp,has_tbd,order_ref) VALUES($1,$2,$3,$4,$5) RETURNING id",
         body.patient_id, did, total, has_tbd, ref)
     eid = est["id"]
     for (sid, qty, up, sub) in items_data:
         await db.execute("INSERT INTO cost_estimate_items(estimate_id,service_id,quantity,unit_price_egp,subtotal_egp) VALUES($1,$2,$3,$4,$5)", eid, sid, qty, up, sub)
-    # create billing record
-    await db.execute("INSERT INTO billing(estimate_id,patient_id,total_amount_egp,balance_egp) VALUES($1,$2,$3,$4)", eid, body.patient_id, total, total)
-    return {"id":eid,"order_ref":ref,"total_egp":total,"has_tbd":has_tbd}
+    # create billing record — discounted total if a discount was applied at submission
+    await db.execute("""INSERT INTO billing(estimate_id,patient_id,total_amount_egp,balance_egp,
+        discount_pct,discount_egp,discount_reason,discount_by,discount_at)
+        VALUES($1,$2,$3,$3,$4,$5,$6,$7,$8)""",
+        eid, body.patient_id, billed_total, discount_pct, discount_egp, body.discount_reason,
+        int(tok["sub"]) if tok["role"]=="admin" else None, datetime.now() if discount_pct else None)
+    return {"id":eid,"order_ref":ref,"total_egp":total,"has_tbd":has_tbd,
+            "discount_pct":discount_pct,"discount_egp":discount_egp,"billed_total_egp":billed_total}
 
 @app.get("/api/estimates/{eid}")
 async def get_estimate(eid: int, db=Depends(get_db), tok=Depends(decode_token)):
